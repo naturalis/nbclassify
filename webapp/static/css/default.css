@@ -1,0 +1,28 @@
+body {
+            text-align: center;
+}
+        
+#page {
+    width: 960px;
+    text-align: left;
+    margin: 10px auto 20px auto;
+    background-color:#0c0c0c;
+}
+
+#logo {
+    float: left;
+    width: 200px;
+}
+
+/*#sidebar {
+    float: right;
+    width: 200px;
+    border: 1px solid #000;
+}*/
+
+#content {
+    float: left;
+    width: 600px auto;
+    border: 3px solid #DC143C;
+    padding: 10px;
+}

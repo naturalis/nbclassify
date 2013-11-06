@@ -1,0 +1,33 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <title>{% block title %} My Base Template{% endblock %}</title>
+    
+        <link rel="stylesheet" type="text/css" href="{% static "assets/css/default.css" %}">
+
+        <script src="{% static "assets/js/jquery-2.0.0.min.js" %}"></script>
+        <script src="{% static "assets/js/ajax.js" %}"></script>
+        
+</head>
+
+<body>
+        <div id="page">
+    
+    <div id="logo">
+        {% block logo %}
+        <ul>
+            <img src="{% static "assets/images/Naturalis_logo.png" %}" width="100"/>
+        </ul>
+        {% endblock %}
+    </div>
+    
+    <div id="content">
+        {% block content %}This is the content of this block{% endblock %}
+        
+    </div>
+    
+        </div>
+    
+</body>
+</html>
