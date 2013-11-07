@@ -3,5 +3,11 @@
 {% block content %}
 
     <h2>You have uploaded the file!</h2>
+    <p>filename: {{filename}}</p>
+    <p>path: {{path}}</p>
+    <p><img src="/{{path}}" width="200"/></p>
+    <p>Click <a href="/{{path}}">here</a> to view the picture
+    
+    <p>Click <a href="/welcome">here</a> to go back to the welcome screen</p>
     
 {% endblock %}

@@ -10,19 +10,19 @@ body {
 }
 
 #logo {
-    float: right;
+    float: left;
     width: 200px;
 }
 
-#sidebar {
-    float: left;
+/*#sidebar {
+    float: right;
     width: 200px;
     border: 1px solid #000;
-}
+}*/
 
 #content {
     float: left;
-    width: 600px;
-    border: 1px solid #f00;
+    width: 600px auto;
+    border: 3px solid #DC143C;
     padding: 10px;
 }
