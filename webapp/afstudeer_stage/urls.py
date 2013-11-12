@@ -6,9 +6,11 @@ admin.autodiscover()
 
 urlpatterns = patterns('',
     # Examples:
+    url(r'^$', 'orchid.views.welcome'),
     url(r'^welcome/$', 'orchid.views.welcome'),
     url(r'^upload/$', 'orchid.views.upload'),
     url(r'^upload_success/$', 'orchid.views.upload_success'),
+    url(r'^result/$', 'orchid.views.result'),
     # url(r'^$', 'afstudeer_stage.views.home', name='home'),
     # url(r'^afstudeer_stage/', include('afstudeer_stage.foo.urls')),
 
