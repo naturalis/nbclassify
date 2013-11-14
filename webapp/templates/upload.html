@@ -1,13 +1,25 @@
+<!-- Use the base template and override the content block -->
 {% extends "base.html" %}
 
-{% block content %}
 
+{% block content %}
+    <!-- All lines in this block will be diplayd in the content block -->
+    <!-- The displaying content is only for testing and needs to be updated
+    for the real version -->
+    
+    <!-- Display a header to tell this is de upload page -->
     <h2>Upload picture</h2>
+    
+    <!-- Use the form from orchid.views.upload to receive a picture -->
     <form action="" method="post" enctype="multipart/form-data">{% csrf_token %}
     {{form}}
     
+    <!-- Place a submit button under the form, with the text Upload picture inside. 
+    To place it under the form, it is required to display an empty line first-->
+    <p></p>    
     <input type="submit" value="Upload picture" />
     
+    <!-- End of form -->
     </form>
     
 {% endblock %}

@@ -1,9 +1,22 @@
+<!-- Use the base template and override the content block -->
 {% extends "base.html" %}
 
 {% block content %}
+    <!-- All lines in this block will be diplayd in the content block -->
+    <!-- The displaying content is only for testing and needs to be updated
+    for the real version -->
+
+    <!-- Display a header, telling this is the welcome page -->
     <h2>Welcome</h2
+    
+    <!-- Tell the user to click below to upload a picture -->
     <p>Click below to upload a picture</p>
+    
+    <!-- Create a form which contains one button.
+    Once this button is clicked, the webside goes to
+    /upload/ -->
     <form action="/upload/">
+        <!-- The submit button with the text Upload picture inside -->
         <input type="submit" value="Upload picture">
     </form>
 {% endblock %}

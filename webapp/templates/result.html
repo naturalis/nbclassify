@@ -1,8 +1,22 @@
+<!-- Use the base template and override the content block -->
 {% extends "base.html" %}
 
 {% block content %}
-
-    <h2>This is the result.html page!</h2>
-    <p>Var_part: {{var_part}} </p>
+    <!-- All lines in this block will be diplayd in the content block -->
+    <!-- The displaying content is only for testing and needs to be updated
+    for the real version -->
     
+    <!-- Display a header to tell this is de result page -->
+    <h2>This is the result.html page!</h2>
+    
+    <!-- Display the filename -->
+    <p>Filename: {{filename}} </p>
+    
+    <!-- Display the result -->
+    <!-- WARTING: this is a test result, and will always be "This is probably an Orchid"
+    This needs to be changed for the real version! -->
+    <p>Result: {{result}} </p>
+    
+    <!-- make a link to the exit page -->
+    <p><a href="/exit">Exit</a></p>
 {% endblock %}
