@@ -29,9 +29,9 @@ read_infile = infile.read()
 infile.close()
 
 ''' THIS PART NEEDS TO BE DONE YET!'''
-#analyse
-#analyse
-#analyse
+#analyze
+#analyze
+#analyze
 #result in variable result
 
 # Fake result to test the program!
