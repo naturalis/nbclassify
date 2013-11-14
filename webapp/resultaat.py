@@ -35,7 +35,7 @@ infile.close()
 #result in variable result
 
 # Fake result to test the program!
-result = "Orchid"
+result = "test sentence"
 
 # Open an output file, named test.txt
 outfile = open("test.txt", 'w')

@@ -8,7 +8,7 @@ admin.autodiscover()
 urlpatterns = patterns('',
     # The first two urls display both the welcome page.
     # The fist one is for direct use (e.g. for local 127.0.0.1:8000 will
-    # Display the welcome page)
+    # display the welcome page)
     # The second is used in the exit view, because it is not posible to
     # redirect to an empty url
     url(r'^$', 'orchid.views.welcome'),

@@ -1,6 +1,8 @@
 <!-- Use the base template and override the content block -->
 {% extends "base.html" %}
 
+{% block title %}Orchid Identifier--Result{% endblock %}
+
 {% block content %}
     <!-- All lines in this block will be diplayd in the content block -->
     <!-- The displaying content is only for testing and needs to be updated
@@ -16,6 +18,10 @@
     <!-- WARTING: this is a test result, and will always be "This is probably an Orchid"
     This needs to be changed for the real version! -->
     <p>Result: {{result}} </p>
+    
+    <!-- Display the picture, give it a link to view the picter on a new
+    webpage / tab -->
+    <p><a href="/static/assets/uploaded_files/{{filename}}"><img src="/static/assets/uploaded_files/{{filename}}" width="200"/></a></p>
     
     <!-- make a link to the exit page -->
     <p><a href="/exit">Exit</a></p>
