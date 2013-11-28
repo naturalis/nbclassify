@@ -1,32 +1,34 @@
 # import the required modules
-from django.http import HttpResponse
 from django.http import HttpResponseRedirect
-from django.template.loader import get_template
 from django.shortcuts import render_to_response
-from django.template import Context
-from django.views.generic.base import TemplateView
 from forms import UploadPictureForm
 from django.core.context_processors import csrf
-import threading
+from django.contrib import auth
 from time import time
-import models
+from django.contrib.auth.decorators import login_required
 import os
 
-
 # Welcome view (homepage)
-def welcome(request):
-    # remove filename.txt and all files in static/uploaded_files
-    os.system("rm filename.txt")
-    os.system("rm static/uploaded_files/*")
-    
+def welcome(request):    
     # Call the html for de welcome page.
     return render_to_response('welcome.html')
 
 
 #Function to give the uploaded file a variable part in front of the filename
 def processUpload(request, filename):
-    # Create an output file named filename.txt
-    outfile = open('filename.txt', 'w')
+    
+    # Get the IP-adres of the computer
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+        
+    # Replace the '.' in the ip-adres to '_'
+    ip = ip.replace('.', '_')
+    
+    # Create an output file named <ip>_filename.txt
+    outfile = open('%s_filename.txt' %(ip), 'w')
     
     ''' Create the variable part for the filename using a timestamp.
     replace all . in _ to prevent errors for the extension '''
@@ -96,50 +98,131 @@ def upload(request):
 
 # The result view (to display the result of the analisis)
 def result(request):
-    # Read in the filename from filename.txt
-    infile = open('filename.txt', 'r')
-    filename = infile.read().strip()
+    try:
+        # Get the IP-adres of the computer
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+            
+        # Replace the '.' in the ip-adres to '_'
+        ip = ip.replace('.', '_') 
+        
+        # Read in the filename from <ip>_filename.txt
+        infile = open('%s_filename.txt' %(ip), 'r')
+        filename = infile.read().strip()
+        
+        # Close the infile
+        infile.close()
+        
+        # Run the program to identify the orchid
+        # Warning: The program now used is only a test program!
+        os.system("python resultaat.py %s %s" % (filename, ip))
+        
+        # Open the file with the results from the identify program
+        result = open('%s_test.txt' %(ip), 'r')
+        
+        # Read in the results
+        read_result = result.read()
+        
+        # Close the file
+        result.close()
+        
+        # Create the args dictionary and save the csrf in this dictonary   
+        args = {}
+        args.update(csrf(request))
+        
+        # Save the filename and the result in the args dictionary
+        args['filename'] = filename
+        args['result'] = read_result
+        
+        # Call the result html with the args dictionary
+        return render_to_response('result.html', args)
+    except IOError:
+        return HttpResponseRedirect('/sorry')
     
-    # Close the infile
-    infile.close()
-    
-    # Run the program to identify the orchid
-    # Warning: The program now used is only a test program!
-    os.system("python resultaat.py %s" % (filename))
-    
-    # Open the file with the results from the identify program
-    result = open('test.txt', 'r')
-    
-    # Read in the results
-    read_result = result.read()
-    
-    # Close the file
-    result.close()
-    
-
-    # Create the args dictionary and save the csrf in this dictonary   
-    args = {}
-    args.update(csrf(request))
-    
-    # Save the filename and the result in the args dictionary
-    args['filename'] = filename
-    args['result'] = read_result
-    
-    # Call the result html with the args dictionary
-    return render_to_response('result.html', args)
+# if the picuter is removed during a calculation, the sorry function will be called    
+def sorry(request):
+    # Go to the sorry html
+    return render_to_response('sorry.html')
 
 # The exit view (to "close" the app and remove all created temporary files)
 def exit(request):
-    # Read in the filename, save it and close the file
-    infile = open('filename.txt', 'r')
+    # Get the IP-adres of the computer
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+        
+    # Replace the '.' in the ip-adres to '_'
+    ip = ip.replace('.', '_')
+    
+    # Read in the filename from <ip>_filename.txt, save it and close the file
+    infile = open('%s_filename.txt' %(ip), 'r')
     filename = infile.read().strip()
     infile.close()
     
     # Remove all temporary files
-    os.system("rm filename.txt")
+    os.system("rm %s_filename.txt" %(ip))
     os.system("rm static/uploaded_files/%s" %(filename))
-    os.system("rm test.txt")
+    os.system("rm %s_test.txt" %(ip))
     os.system("rm abc.txt")
     
     # Go back to the welcome page
     return HttpResponseRedirect('/welcome')
+
+
+# To remove all leftover files, login is required
+def login(request):
+    # Create a dictionary and put the csrf in it
+    c = {}
+    c.update(csrf(request))
+    
+    #Go to the login html, give it the dictionary
+    return render_to_response('login.html', c)
+
+# Function to check the username and password
+def auth_view(request):
+    # Get the username and password
+    username = request.POST.get('username', '')
+    password = request.POST.get('password', '')
+    ''' If the user and password are incorrect it user will be None
+    Otherwise it will be the user '''
+    user = auth.authenticate(username=username, password=password)
+    
+    ''' Go to the correct page (loggedin for correct login, invalid for
+    invalid login)'''
+    if user is not None:
+        auth.login(request, user)
+        return HttpResponseRedirect('/accounts/loggedin')
+    else:
+        return HttpResponseRedirect('/accounts/invalid')
+
+# Function for after login   
+def loggedin(request):
+    # After login go to the remove page
+    return HttpResponseRedirect('/admin/remove')
+
+# function for logout
+def logout(request):
+    #Log the user out
+    auth.logout(request)
+    #Go back to the welcome page
+    return HttpResponseRedirect('/welcome/')
+
+# Function for invalid login
+def invalid_login(request):
+    # Go to the invalid login html
+    return render_to_response('invalid_login.html')
+
+@login_required
+#User need to be registreded. Even when the user is not active this user can login and remove the files.
+def remove(request):
+    # Remove all the files in the static/uploaded_files folder
+    os.system("rm static/uploaded_files/*")
+    # Remove all .txt files
+    os.system("rm *.txt")
+    # Go to the remove html
+    return render_to_response('remove.html')

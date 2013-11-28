@@ -1,7 +1,8 @@
 <!-- Use the base template and override the content block -->
 {% extends "base.html" %}
 
-{% block title %}Orchid Identifier--Upload succeeded{% endblock %}
+<!-- Override the title -->
+{% block title %}Orchid Identifier - Upload succeeded{% endblock %}
 
 {% block content %}
     <!-- All lines in this block will be diplayd in the content block -->
@@ -21,10 +22,13 @@
     webpage / tab -->
     <p><a href="/{{path}}"><img src="/{{path}}" width="200"/></a></p>
     
-    <!-- make a link to go back to te welcome screen -->
-    <p>Click <a href="/welcome">here</a> to go back to the welcome screen</p>
+    <form action="/result/">
+        <!-- The submit button with the text Upload picture inside -->
+        <input type="submit" value="Result">
+    </form>
     
-    <!-- make a link to go to the result page -->
-    <p>Click <a href="/result">here</a> to see the result</p>
-    
+    <form action="/welcome/">
+        <!-- The submit button with the text Upload picture inside -->
+        <input type="submit" value="Home">
+    </form>
 {% endblock %}

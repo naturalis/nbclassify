@@ -1,0 +1,23 @@
+<!-- Use the base template and override the content block -->
+{% extends "base.html" %}
+
+<!-- Override the title -->
+{% block title %}Orchid Identifier - Error{% endblock %}
+
+{% block content %}
+    <!-- All lines in this block will be diplayd in the content block -->
+    
+    <!-- Header -->
+    <h2>Sorry!</h2>
+    
+    <!-- Explain the error and ask to try again -->
+    <p>During the calculation, your picture has been removed.</p>
+    <p>Please try again</p>
+    
+    <!-- Button to try again -->
+    <form action="/upload/">
+        <!-- The submit button with the text Upload picture inside -->
+        <input type="submit" value="Upload picture">
+    </form> 
+    
+{% endblock %}

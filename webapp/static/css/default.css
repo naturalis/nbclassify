@@ -30,7 +30,7 @@ body {
     width: 200px;
 }
 
-/* Lay-out for sidebar, not used, but available for later
+/* Lay-out for sidebar, not used, but available for later */
 /*#sidebar {
     float: right;
     width: 200px;
@@ -53,4 +53,9 @@ body {
     
     /* Clear 10 pixels around the content, inside de border */
     padding: 10px;
+}
+
+#footer {
+    position:absolute;
+    bottom:10px;
 }

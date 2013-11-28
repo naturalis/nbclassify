@@ -1,9 +1,11 @@
 # Import required modules
 import sys
-import random
 
 # The second argument will be the input file
 file1 = sys.argv[1]
+
+# The third argument will be the variable number
+number = sys.argv[2]
 
 # The standard path to the uploaded files
 path = "static/uploaded_files/"
@@ -14,10 +16,6 @@ full_path = path + file1
 
 
 ''' THE NEXT PART IS ONLY FOR TESTING! THIS WILL BE REMOVED LATER!!!'''
-
-# Create two random numbers
-x = random.randint(0,100)
-y = random.randint(0,100)
 
 # Open the uploaded file (picture) in read modus
 infile = open(full_path, 'r')
@@ -38,7 +36,7 @@ infile.close()
 result = "test sentence"
 
 # Open an output file, named test.txt
-outfile = open("test.txt", 'w')
+outfile = open("%s_test.txt" %(number), 'w')
 
 # Write the result to the output file and close this file
 outfile.write("This is probably a %s" %(result))
