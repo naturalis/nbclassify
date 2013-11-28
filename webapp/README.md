@@ -15,5 +15,5 @@ How to start the app in a network?
 * Find the ip-adres of the local machine
 * Start the command line
 * Go to the direcory which contains manage.py
-* Type python manage.py runserver /<ip-adres/>:8000
+* Type python manage.py runserver ip-adres:8000
 * Open a webbrowser (not Internet Explorer!) and go to ip-adres:8000 (This will work for every computer in the same network)
