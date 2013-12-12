@@ -28,7 +28,7 @@
         {% block logo %}
         <!-- Place the Naturalis logo inside the logo block -->
         <ul>
-            <img src="{% static "assets/images/Naturalis_logo.png" %}" width="100"/>
+            <a href="http://www.naturalis.nl"><img src="{% static "assets/images/Naturalis_logo.png" %}" width="100"/></a>
         </ul>
         <!-- End of the logo block -->
         {% endblock %}
@@ -45,7 +45,7 @@
     <!-- Create a footer block, using the footer lay-out from default.css -->
     <div id="footer">
         <!-- Place some text in the footer block -->
-        {% block footer %}&copy; Patrick Wijntjes{% endblock %}
+        {% block footer %}<p>&copy; Patrick Wijntjes</p>{% endblock %}
     
         <!-- End of the page -->
         </div>

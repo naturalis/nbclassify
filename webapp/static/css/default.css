@@ -18,7 +18,7 @@ body {
     margin: 10px auto 20px auto;
     
     /* Set the background color to black */
-    background-color:#0c0c0c;
+    background-color:white;
 }
 
 /* Lay-out for the logo */
@@ -60,4 +60,49 @@ body {
     /* Place the footer on the bottom */
     position:absolute;
     bottom:10px;
+}
+
+p {
+    font-family: Arial;
+    font-size: 1em;
+}
+
+h1 {
+    font-family: Arial;
+    font-size: 1.9em;
+}
+
+h2 {
+    font-family: Arial;
+    font-size: 1.7em;
+    
+}
+
+h3 {
+    font-family: Arial;
+    font-size: 1.5em;
+}
+
+h4 {
+    font-family: Arial;
+    font-size: 1.3em;
+}
+
+#small {
+    font-size: 0.75em;
+}
+
+form {
+    font-family: Arial;
+    font-size: 1em;
+}
+
+input {
+    font-family: Arial;
+    font-size: 1em;
+}
+
+#button {
+    font-family: Arial;
+    font-size: 1.25em;
 }

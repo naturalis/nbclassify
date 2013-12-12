@@ -13,12 +13,12 @@
     <h2>Upload picture</h2>
     
     <!-- Use the form from orchid.views.upload to receive a picture -->
-    <form action="" method="post" enctype="multipart/form-data">{% csrf_token %}
+    <form action="" method="post" id="form" enctype="multipart/form-data">{% csrf_token %}
     {{form}}
     <p></p>
     <!-- Place a submit button under the form, with the text Upload picture inside. 
     To place it under the form, it is required to display an empty line first-->  
-    <input type="submit" value="Upload picture" />
+    <input type="submit" value="Upload picture" id="button">
     
     <!-- End of form -->
     </form>

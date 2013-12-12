@@ -27,18 +27,18 @@ def processUpload(request, filename):
     # Replace the '.' in the ip-adres to '_'
     ip = ip.replace('.', '_')
     
+    ''' Create the variable part for the filename using a timestamp.
+    replace all . in _ to prevent errors for the extension '''
+    var_part = str(time()).replace('.', '_')     
+    
     # Create an output file named <ip>_filename.txt
     outfile = open('%s_filename.txt' %(ip), 'w')
     
-    ''' Create the variable part for the filename using a timestamp.
-    replace all . in _ to prevent errors for the extension '''
-    var_part = str(time()).replace('.', '_')
-    
     # Place the variable part in front of the filename of the uploaded file
-    os.system("mv static/uploaded_files/%s static/uploaded_files/%s_%s"%(filename, var_part, filename))
+    os.system("mv static/uploaded_files/%s static/uploaded_files/%s_%s"%(filename, ip, filename))
     
     # Write the new filename to the outputfile
-    outfile.write("%s_%s" %(var_part, filename))
+    outfile.write("%s_%s" %(ip, filename))
     
     # Close the outputfile
     outfile.close()
@@ -49,6 +49,15 @@ def processUpload(request, filename):
 
 # The upload view (choice file and upload it)
 def upload(request):
+    
+    # Get the IP-adres of the computer
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+        
+    ip = ip.replace('.', '_')
     
     # Check if the method is POST
     if request.method == 'POST':
@@ -68,7 +77,7 @@ def upload(request):
             ''' save the filename and path in python variables
             use the variable part to create the path'''
             filename = request.FILES["picture"]
-            path = ("static/assets/uploaded_files/%s_%s" % (vari_part, filename))
+            path = ("static/assets/uploaded_files/%s_%s" % (ip, filename))
             
             # Create the args dictionary and save the csrf in this dictonary
             args = {}
@@ -159,6 +168,10 @@ def exit(request):
     # Replace the '.' in the ip-adres to '_'
     ip = ip.replace('.', '_')
     
+    ''' Create the variable part for the filename using a timestamp.
+    replace all . in _ to prevent errors for the extension '''
+    var_part = str(time()).replace('.', '_')    
+    
     # Read in the filename from <ip>_filename.txt, save it and close the file
     infile = open('%s_filename.txt' %(ip), 'r')
     filename = infile.read().strip()
@@ -166,9 +179,8 @@ def exit(request):
     
     # Remove all temporary files
     os.system("rm %s_filename.txt" %(ip))
-    os.system("rm static/uploaded_files/%s" %(filename))
-    os.system("rm %s_test.txt" %(ip))
-    os.system("rm abc.txt")
+    os.system("mv static/uploaded_files/%s results/%s_%s.jpg" %(filename, var_part, filename))
+    os.system("mv %s_test.txt results/%s_%s_result.txt" %(ip, var_part, ip))
     
     # Go back to the welcome page
     return HttpResponseRedirect('/welcome')
@@ -221,8 +233,32 @@ def invalid_login(request):
 #User need to be registreded. Even when the user is not active this user can login and remove the files.
 def remove(request):
     # Remove all the files in the static/uploaded_files folder
-    os.system("rm static/uploaded_files/*")
+    '''os.system("mv static/uploaded_files/*.jpg.jpg results")
+    os.system("mv static/uploaded_files/*.png.jpg results")
+    os.system("mv static/uploaded_files/*.PNG.jpg results")
+    os.system("mv static/uploaded_files/*.JPG.jpg results")
     # Remove all .txt files
-    os.system("rm *.txt")
+    os.system("mv *result.txt results")'''
+    os.system("ls static/uploaded_files > uploads.txt")
+    os.system("ls | egrep *_filename.txt > temps.txt")
     # Go to the remove html
-    return render_to_response('remove.html')
+    
+    os.system("rm static/uploaded_files/*")
+    os.system("rm *filename.txt")
+    
+    uploads_in = open("uploads.txt", 'r')
+    temps_in = open("temps.txt", 'r')
+    
+    uploads = uploads_in.read()
+    temps = temps_in.read()
+    
+    # Create the args dictionary and save the csrf in this dictonary   
+    args = {}
+    args.update(csrf(request))  
+    
+    args['uploads'] = uploads
+    args['temps'] = temps
+    
+    os.system("rm uploads.txt temps.txt")
+    
+    return render_to_response('remove.html', args)
