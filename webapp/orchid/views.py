@@ -8,10 +8,52 @@ from time import time
 from django.contrib.auth.decorators import login_required
 import os
 
+
+def get_device( request ):
+    """ Redirect to the servers list. """
+    device = "a"
+    if 'HTTP_USER_AGENT' in request.META and (
+      request.META['HTTP_USER_AGENT'].startswith( 'BlackBerry' ) or \
+      "Opera Mobi" in request.META.get('HTTP_USER_AGENT') or \
+      "Opera Mini" in request.META.get('HTTP_USER_AGENT') or \
+      "Windows CE" in request.META.get('HTTP_USER_AGENT') or \
+      "MIDP"       in request.META.get('HTTP_USER_AGENT') or \
+      "Palm"       in request.META.get('HTTP_USER_AGENT') or \
+      "NetFront"   in request.META.get('HTTP_USER_AGENT') or \
+      "Nokia"      in request.META.get('HTTP_USER_AGENT') or \
+      "Symbian"    in request.META.get('HTTP_USER_AGENT') or \
+      "UP.Browser" in request.META.get('HTTP_USER_AGENT') or \
+      "UP.Link"    in request.META.get('HTTP_USER_AGENT') or \
+      "WinWAP"     in request.META.get('HTTP_USER_AGENT') or \
+      "Android"    in request.META.get('HTTP_USER_AGENT') or \
+      "DoCoMo"     in request.META.get('HTTP_USER_AGENT') or \
+      "KDDI-"      in request.META.get('HTTP_USER_AGENT') or \
+      "Softbank"   in request.META.get('HTTP_USER_AGENT') or \
+      "J-Phone"    in request.META.get('HTTP_USER_AGENT') or \
+      "IEMobile"   in request.META.get('HTTP_USER_AGENT') or \
+      "iPod"       in request.META.get('HTTP_USER_AGENT') or \
+      "iPhone"     in request.META.get('HTTP_USER_AGENT') ):
+        device = "mobile"
+    else:
+        device = "computer"
+    return device
+
+
+
 # Welcome view (homepage)
-def welcome(request):    
+def welcome(request):
+    device = get_device(request)
+    
+    # Create the args dictionary and save the csrf in this dictonary
+    args = {}
+    args.update(csrf(request))
+    
+    args['device']=device
+        
+    html = device+"_welcome.html"
+    
     # Call the html for de welcome page.
-    return render_to_response('welcome.html')
+    return render_to_response(html, args)
 
 
 #Function to give the uploaded file a variable part in front of the filename
@@ -50,6 +92,8 @@ def processUpload(request, filename):
 # The upload view (choice file and upload it)
 def upload(request):
     
+    abc = request.META.get('HTTP_USER_AGENT')[1]
+    
     # Get the IP-adres of the computer
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
@@ -86,6 +130,7 @@ def upload(request):
             # save the filename and path in the dictionary
             args['filename'] = filename
             args['path'] = path
+            args['abc'] = abc
             
             # Call the upload_succes html and give it the args dictonary
             return render_to_response('upload_succes.html', args)

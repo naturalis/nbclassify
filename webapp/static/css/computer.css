@@ -1,0 +1,108 @@
+/* This is the default lay-out for the webpages */
+
+/* Lay-out for the body */
+body {
+            /* Place the text in the middel of the page */
+            text-align: center;
+}
+
+/* Lay-out for the page */        
+#page {
+    /* the width */
+    width: 960px;
+    
+    /* place the text left */
+    text-align: left;
+    
+    /* clear automatically the area around the page */
+    margin: 10px auto 20px auto;
+    
+    /* Set the background color to black */
+    background-color:white;
+}
+
+/* Lay-out for the logo */
+#logo {
+    /* Place the logo on the leftside of the page */
+    float: left;
+    
+    /* the width of the logo is 200 pixels */
+    width: 200px;
+}
+
+/* Lay-out for sidebar, not used, but available for later */
+/*#sidebar {
+    float: right;
+    width: 200px;
+    border: 1px solid #000;
+}*/
+
+/* Lay-out for the content */
+#content {
+    /* place the content left, because logo is described first, the content will
+    be displayed right of the logo */
+    float: left;
+    
+    /* The width of this box will be automaticly changed to the content self */
+    width: auto;
+    
+    /* Place a border around the content
+    3 pixels widht with a pink-like color, The same color of the
+    Naturalis logo */
+    border: 3px solid #E3004A;
+    
+    /* Clear 10 pixels around the content, inside de border */
+    padding: 10px;
+}
+
+/* Lay-out for the footer */
+#footer {
+    /* Place the footer on the bottom */
+    position:absolute;
+    bottom:10px;
+}
+
+p {
+    font-family: Arial;
+    font-size: 1em;
+}
+
+h1 {
+    font-family: Arial;
+    font-size: 1.9em;
+}
+
+h2 {
+    font-family: Arial;
+    font-size: 1.7em;
+    
+}
+
+h3 {
+    font-family: Arial;
+    font-size: 1.5em;
+}
+
+h4 {
+    font-family: Arial;
+    font-size: 1.3em;
+}
+
+#small {
+    font-size: 0.75em;
+}
+
+form {
+    font-family: Arial;
+    font-size: 1em;
+}
+
+input {
+    font-family: Arial;
+    font-size: 1em;
+}
+
+#button {
+    font-family: Arial;
+    font-size: 0.75em;
+}
