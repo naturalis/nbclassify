@@ -1,4 +1,4 @@
-<!-- Use the base template and override the content block -->
+<!-- Use the computer template and override the content block -->
 {% extends "computer.html" %}
 
 <!-- Override the title -->
@@ -12,10 +12,10 @@
     <!-- Display a header, telling the file is uploaded -->
     <h2>You have uploaded the file!</h2>
     
-    <!-- Display the filename -->
+    <!-- FOR TESTING: Display the filename -->
     <p>filename: {{filename}}</p>
     
-    <!-- Display the path to the file -->
+    <!-- FOR TESTING: Display the path to the file -->
     <p>path: {{path}}</p>
     
     <!-- Display the picture, give it a link to view the picter on a new
@@ -26,9 +26,11 @@
         <!-- The submit button with the text Upload picture inside -->
         <input type="submit" value="Result" id="button">
     </form>
-    
+    <!-- Display an empty line betwee both buttonts-->
+    <p></p>
     <form action="/welcome/">
-        <!-- The submit button with the text Upload picture inside -->
+        <!-- The submit button with the text Home inside -->
         <input type="submit" value="Home" id="button">
     </form>
+    <!-- Display an empty line -->
 {% endblock %}

@@ -1,3 +1,5 @@
+<!-- THIS IS THE STANDARD HTML FOR THE COMPUTER LAY-OUTS -->
+
 <!-- Load in the static function -->
 {% load static %}
 
@@ -12,7 +14,7 @@
     is in the other html files witch extends this html -->
     <title>{% block title %} My Base Template{% endblock %}</title>
         
-        <!-- Use the default.css stylesheet for all the lay-outs -->
+        <!-- Use the compyter.css stylesheet for all the lay-outs -->
         <link rel="stylesheet" type="text/css" href="{% static "assets/css/computer.css" %}">
 
 <!-- end of the head -->        
@@ -23,7 +25,7 @@
         <!-- Create a page -->
         <div id="page">
     
-    <!-- Create a logo block, using the logo lay-out from default.css -->
+    <!-- Create a logo block, using the logo lay-out from compyter.css -->
     <div id="logo">
         {% block logo %}
         <!-- Place the Naturalis logo inside the logo block -->
@@ -34,7 +36,7 @@
         {% endblock %}
     </div>
     
-    <!-- Create a content block, using the content lay-out from default.css -->
+    <!-- Create a content block, using the content lay-out from computer.css -->
     <div id="content">
         <!-- Place a standard text in the content -->
         <!-- This block will be override for all different html pages -->
@@ -42,10 +44,10 @@
         
     </div>
     
-    <!-- Create a footer block, using the footer lay-out from default.css -->
+    <!-- Create a footer block, using the footer lay-out from computer.css -->
     <div id="footer">
         <!-- Place some text in the footer block -->
-        {% block footer %}<p>&copy; Patrick Wijntjes</p>{% endblock %}
+        {% block footer %}<p>&copy;2013-2014 Patrick Wijntjes</p>{% endblock %}
     
         <!-- End of the page -->
         </div>

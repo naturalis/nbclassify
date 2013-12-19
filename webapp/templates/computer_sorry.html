@@ -1,4 +1,4 @@
-<!-- Use the base template and override the content block -->
+<!-- Use the computer template and override the content block -->
 {% extends "computer.html" %}
 
 <!-- Override the title -->
@@ -19,5 +19,11 @@
         <!-- The submit button with the text Upload picture inside -->
         <input type="submit" value="Upload picture" id="button">
     </form> 
+    
+    <!-- Buttont to go back to the homepage -->
+    <form action="/welcome/">
+        <!-- The submit buttont with the thext Home inside -->
+        <input type="submit" value="Home" id="button">
+    </form>
     
 {% endblock %}

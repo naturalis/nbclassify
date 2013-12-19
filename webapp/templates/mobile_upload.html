@@ -1,4 +1,4 @@
-<!-- Use the base template and override the content block -->
+<!-- Use the mobile template and override the content block -->
 {% extends "mobile.html" %}
 
 <!-- Override the title -->
@@ -21,6 +21,11 @@
     <input type="submit" value="Upload picture" id="button">
     
     <!-- End of form -->
+    </form>
+    
+    <!-- Place a button under the form to go back to the home screen -->
+    <form action="/welcome/">
+        <input type="submit" value="Home" id="button">
     </form>
     
 {% endblock %}

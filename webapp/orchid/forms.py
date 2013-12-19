@@ -9,5 +9,7 @@ class UploadPictureForm(forms.ModelForm):
     class Meta:
         # The used model, Orchids in this case
         model = Orchid
-        # The fields to be displayed, in the required order
-        fields = ('title', 'picture')
+        # The field to be displayed
+        '''WARNING: the comma at after 'picture' is required to make it work.
+        Otherwise django will cause a FieldError'''
+        fields = ('picture',)

@@ -1,5 +1,5 @@
 # Import required modules
-import sys
+import sys, random
 
 # The second argument will be the input file
 file1 = sys.argv[1]
@@ -33,7 +33,7 @@ infile.close()
 #result in variable result
 
 # Fake result to test the program!
-result = "test sentence"
+result = random.choice(["test sentence", "fake sentance", "stupid sentence"])
 
 # Open an output file, named test.txt
 outfile = open("%s_test.txt" %(number), 'w')

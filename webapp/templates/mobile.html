@@ -1,3 +1,5 @@
+<!-- THIS IS THE STANDARD HTML FOR MOBILE DEVICES -->
+
 <!-- Load in the static function -->
 {% load static %}
 
@@ -12,7 +14,7 @@
     is in the other html files witch extends this html -->
     <title>{% block title %} My Base Template{% endblock %}</title>
         
-        <!-- Use the default.css stylesheet for all the lay-outs -->
+        <!-- Use the mobile.css stylesheet for all mobile lay-outs -->
         <link rel="stylesheet" type="text/css" href="{% static "assets/css/mobile.css" %}">
 
 <!-- end of the head -->        
@@ -23,29 +25,29 @@
         <!-- Create a page -->
         <div id="page">
     
-    <!-- Create a logo block, using the logo lay-out from default.css -->
+    <!-- Create a logo block, using the logo lay-out from mobile.css -->
     <div id="logo">
         {% block logo %}
         <!-- Place the Naturalis logo inside the logo block -->
         <ul>
-            <a href="http://www.naturalis.nl"><img src="{% static "assets/images/Naturalis_logo.png" %}" width="100"/></a>
+            <a href="http://www.naturalis.nl"><img src="{% static "assets/images/Naturalis_logo.png" %}" width="250"/></a>
         </ul>
         <!-- End of the logo block -->
         {% endblock %}
     </div>
     
-    <!-- Create a content block, using the content lay-out from default.css -->
+    <!-- Create a content block, using the content lay-out from mobile.css -->
     <div id="content">
         <!-- Place a standard text in the content -->
-        <!-- This block will be override for all different html pages -->
+        <!-- This block will be override for all mobile html pages -->
         {% block content %}This is the content of this block{% endblock %}
         
     </div>
     
-    <!-- Create a footer block, using the footer lay-out from default.css -->
+    <!-- Create a footer block, using the footer lay-out from mobile.css -->
     <div id="footer">
         <!-- Place some text in the footer block -->
-        {% block footer %}<p>&copy; Patrick Wijntjes</p>{% endblock %}
+        {% block footer %}<p>&copy;2013-2014 Patrick Wijntjes</p>{% endblock %}
     
         <!-- End of the page -->
         </div>
