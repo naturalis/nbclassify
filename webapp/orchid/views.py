@@ -91,8 +91,7 @@ def processUpload(request, filename):
 
 # The upload view (choice file and upload it)
 def upload(request):
-    
-    abc = request.META.get('HTTP_USER_AGENT')[1]
+    device = get_device(request)  
     
     # Get the IP-adres of the computer
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -130,10 +129,11 @@ def upload(request):
             # save the filename and path in the dictionary
             args['filename'] = filename
             args['path'] = path
-            args['abc'] = abc
+                
+            html = device+"_upload_succes.html"              
             
             # Call the upload_succes html and give it the args dictonary
-            return render_to_response('upload_succes.html', args)
+            return render_to_response(html, args)
     
     # When the method is not POST    
     else:
@@ -147,11 +147,13 @@ def upload(request):
     # Save the empty form in the dictionary
     args['form'] = UploadPictureForm()
     
+    html = device+"_upload.html"
     # Call the upload html and give it the args dictionary
-    return render_to_response('upload.html', args)
+    return render_to_response(html, args)
 
 # The result view (to display the result of the analisis)
 def result(request):
+    device = get_device(request)
     try:
         # Get the IP-adres of the computer
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -192,14 +194,17 @@ def result(request):
         args['result'] = read_result
         
         # Call the result html with the args dictionary
-        return render_to_response('result.html', args)
+        html = device+"_result.html"
+        return render_to_response(html, args)
     except IOError:
         return HttpResponseRedirect('/sorry')
     
 # if the picuter is removed during a calculation, the sorry function will be called    
 def sorry(request):
+    device = get_device(request)
     # Go to the sorry html
-    return render_to_response('sorry.html')
+    html = device+"_sorry.html"
+    return render_to_response(html)
 
 # The exit view (to "close" the app and remove all created temporary files)
 def exit(request):
@@ -233,12 +238,14 @@ def exit(request):
 
 # To remove all leftover files, login is required
 def login(request):
+    device = get_device(request)
     # Create a dictionary and put the csrf in it
     c = {}
     c.update(csrf(request))
     
     #Go to the login html, give it the dictionary
-    return render_to_response('login.html', c)
+    html=device+"_login.html"
+    return render_to_response(html, c)
 
 # Function to check the username and password
 def auth_view(request):
@@ -271,12 +278,15 @@ def logout(request):
 
 # Function for invalid login
 def invalid_login(request):
+    device = get_device(request)
     # Go to the invalid login html
-    return render_to_response('invalid_login.html')
+    html = device+"invalid_login.html"
+    return render_to_response(html)
 
 @login_required
 #User need to be registreded. Even when the user is not active this user can login and remove the files.
 def remove(request):
+    device = get_device(request)
     # Remove all the files in the static/uploaded_files folder
     '''os.system("mv static/uploaded_files/*.jpg.jpg results")
     os.system("mv static/uploaded_files/*.png.jpg results")
@@ -306,4 +316,5 @@ def remove(request):
     
     os.system("rm uploads.txt temps.txt")
     
-    return render_to_response('remove.html', args)
+    html = device+"_remove.html"
+    return render_to_response(html, args)
