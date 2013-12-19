@@ -1,4 +1,4 @@
-/* This is the default lay-out for the webpages */
+/* This is the default lay-out for computers */
 
 /* Lay-out for the body */
 body {
@@ -17,7 +17,7 @@ body {
     /* clear automatically the area around the page */
     margin: 10px auto 20px auto;
     
-    /* Set the background color to black */
+    /* Set the background color to white */
     background-color:white;
 }
 
@@ -62,46 +62,58 @@ body {
     bottom:10px;
 }
 
+/* For all Font-settings below the Naturalis housestyle is aplied.
+Which means that the Arial font is everywhere used */
+
+/* Font-settings of p */
 p {
     font-family: Arial;
     font-size: 1em;
 }
 
+/* Font-settings of h1 */
 h1 {
     font-family: Arial;
     font-size: 1.9em;
 }
 
+/* Font-settings of h2 */
 h2 {
     font-family: Arial;
     font-size: 1.7em;
     
 }
 
+/* Font-settings of h3 */
 h3 {
     font-family: Arial;
     font-size: 1.5em;
 }
 
+/* Font-settings of h4 */
 h4 {
     font-family: Arial;
     font-size: 1.3em;
 }
 
+/* id small, used to make text in p smaller than the settings for p */
 #small {
     font-size: 0.75em;
 }
 
+/* Font-settings of form */
 form {
     font-family: Arial;
     font-size: 1em;
 }
 
+/* Font-settings of inut */
 input {
     font-family: Arial;
     font-size: 0.75em;
 }
 
+/* id button, for styling the individual buttons */
 #button {
     font-family: Arial;
     font-size: 0.75em;
