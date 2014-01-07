@@ -12,6 +12,9 @@
     <!-- Display a header to tell this is de upload page -->
     <h2>Upload picture</h2>
     
+    <!-- Font-size needs te be changed!!!!! -->
+    <p style="color:red; font-size:0.9em"><em>{{message}}</em></p>
+    
     <!-- Use the form from orchid.views.upload to receive a picture -->
     <form action="" method="post" enctype="multipart/form-data">{% csrf_token %}
     {{form}}
@@ -23,6 +26,7 @@
     <!-- End of form -->
     </form>
     
+    <p></p>
     <!-- Place a button under the form to go back to the home screen -->
     <form action="/welcome/">
         <input type="submit" value="Home" id="button">

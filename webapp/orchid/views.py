@@ -100,11 +100,15 @@ def upload(request):
         ip = x_forwarded_for.split(',')[0]
     else:
         ip = request.META.get('REMOTE_ADDR')
-        
+
+    # Replace the '.' in the ip-adres to '_'
     ip = ip.replace('.', '_')
     
+    message = ""
     # Check if the method is POST
     if request.method == 'POST':
+        
+        message = "You didn't select a picture"
         
         # Save the user input from the form
         form = UploadPictureForm(request.POST, request.FILES)
@@ -141,6 +145,7 @@ def upload(request):
     else:
         # Create a form to upload a picture
         form = UploadPictureForm()
+        message = ""
         
     # Create the args dictionary and save the csrf in this dictonary    
     args = {}
@@ -148,6 +153,7 @@ def upload(request):
     
     # Save the empty form in the dictionary
     args['form'] = UploadPictureForm()
+    args['message'] = message
     
     # Save the html name, with the used device
     html = device+"_upload.html"
@@ -291,7 +297,7 @@ def invalid_login(request):
     #Get the used device, using the get_device function
     device = get_device(request)
     # Go to the invalid login html, for the correct device
-    html = device+"invalid_login.html"
+    html = device+"_invalid_login.html"
     return render_to_response(html)
 
 @login_required
