@@ -94,6 +94,8 @@ class Offlickr:
                 page=str(n),
                 min_upload_date=dateLo,
                 max_upload_date=dateHi,
+                #The folowing line is added by Patrick Wijntjes, 14-01-2014
+                privacy_filter=5
                 )
             if self.__testFailure(rsp):
                 return None
@@ -400,11 +402,12 @@ def backupPhoto(
 
     fileWrite(offlickr.dryrun, t_dir, id + '.xml', metadata)
 
-    # Get comments
+    #The following lines were commented out by Patrick Wijntjes, 14-01-2014
+    '''# Get comments
 
     photoComments = offlickr.getPhotoComments(id)
     fileWrite(offlickr.dryrun, t_dir, id + '-comments.xml',
-              photoComments)
+              photoComments)'''
 
     # Do we want the picture too?
 
@@ -418,7 +421,7 @@ def backupPhoto(
 
     # if it's a Video, we cannot trust the format that getInfo told us.
     # we have to make an extra round trip to grab the Content-Disposition
-
+    isPrivateFailure = False
     if isVideo:
         sourceconnection = urllib.urlopen(source)
         try:
