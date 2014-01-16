@@ -105,10 +105,12 @@ def upload(request):
     ip = ip.replace('.', '_')
     
     message = ""
+    style = ""
     # Check if the method is POST
     if request.method == 'POST':
         
         message = "You didn't select a picture"
+        style = "color:red"
         
         # Save the user input from the form
         form = UploadPictureForm(request.POST, request.FILES)
@@ -145,7 +147,6 @@ def upload(request):
     else:
         # Create a form to upload a picture
         form = UploadPictureForm()
-        message = ""
         
     # Create the args dictionary and save the csrf in this dictonary    
     args = {}
@@ -154,13 +155,14 @@ def upload(request):
     # Save the empty form in the dictionary
     args['form'] = UploadPictureForm()
     args['message'] = message
+    args['style'] = style
     
     # Save the html name, with the used device
     html = device+"_upload.html"
     # Call the upload html, for the correct device and give it the args dictionary
     return render_to_response(html, args)
 
-# The result view (to display the result of the analisis)
+# The result view (to display the result of the analysis)
 def result(request):
     #Get the used device, using the get_device function
     device = get_device(request)
@@ -208,19 +210,14 @@ def result(request):
         # Call the result html, for the correct device, with the args dictionary
         return render_to_response(html, args)
     except IOError:
-        '''If an IOError arise, the picture is uploaded just whene the administrator removed all
+        '''If an IOError occure, the picture is uploaded just when the administrator removed all
         unused files. So the uploaded picture is also removed. Send the user to the sorry page,
         which tells the user to try uploading again.'''
-        return HttpResponseRedirect('/sorry')
-    
-# if the picuter is removed during a calculation, the sorry function will be called    
-def sorry(request):
-    #Get the used device, using the get_device function
-    device = get_device(request)
-    # Save the html name with the used device
-    html = device+"_sorry.html"
-    # Go to the sorry html, for the correct device
-    return render_to_response(html)
+        # Save the html name with the used device
+        html = device+"_sorry.html"
+        # Go to the sorry html, for the correct device
+        return render_to_response(html)
+
 
 # The exit view (to "close" the app and remove all created temporary files)
 def exit(request):
@@ -259,13 +256,13 @@ def login(request):
     #Get the used device, using the get_device function
     device = get_device(request)
     # Create a dictionary and put the csrf in it
-    c = {}
-    c.update(csrf(request))
+    args = {}
+    args.update(csrf(request))
     
     #Save the html name with the used device
     html=device+"_login.html"
     #Go to the login html, for the correct device, give it the dictionary
-    return render_to_response(html, c)
+    return render_to_response(html, args)
 
 # Function to check the username and password
 def auth_view(request):
@@ -306,8 +303,8 @@ def remove(request):
     #Get the used device, using the get_device function
     device = get_device(request)
     # List all the files that will be removed using a command line command (ls)
-    '''Save the pictures that will be removed in uploads.txt and the
-     temporary files in temps.txt'''
+    '''Save the name(s) of the picture(s) that will be removed in uploads.txt and the
+     name(s) of the temporary file(s) in temps.txt'''
     os.system("ls static/uploaded_files > uploads.txt")
     os.system("ls | egrep *_filename.txt > temps.txt")
     
@@ -315,7 +312,7 @@ def remove(request):
     os.system("rm static/uploaded_files/*")
     os.system("rm *filename.txt")
     
-    #Read the content of the uploads.txt file and the temps.txt file and save it in
+    #Read the content of the uploads.txt file and the temps.txt file and save the content in
     # Python variables
     uploads_in = open("uploads.txt", 'r')
     temps_in = open("temps.txt", 'r')

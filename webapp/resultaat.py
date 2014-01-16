@@ -4,7 +4,7 @@ import sys, random
 # The second argument will be the input file
 file1 = sys.argv[1]
 
-# The third argument will be the variable number
+# The third argument will be the ip
 number = sys.argv[2]
 
 # The standard path to the uploaded files
@@ -35,7 +35,7 @@ infile.close()
 # Fake result to test the program!
 result = random.choice(["test sentence", "fake sentance", "stupid sentence"])
 
-# Open an output file, named test.txt
+# Open an output file, named <ip>_test.txt
 outfile = open("%s_test.txt" %(number), 'w')
 
 # Write the result to the output file and close this file

@@ -13,10 +13,10 @@
     <h2>Upload picture</h2>
     
     <!-- Font-size needs te be changed!!!!! -->
-    <p style="color:red; font-size:0.9em"><em>{{message}}</em></p>
+    <p style="{{style}}; font-size:0.9em"><em>{{message}}</em></p>
     
     <!-- Use the form from orchid.views.upload to receive a picture -->
-    <form action="" method="post" enctype="multipart/form-data">{% csrf_token %}
+    <form action="" method="post" style="{{style}}" enctype="multipart/form-data">{% csrf_token %}
     {{form}}
     <p></p>
     <!-- Place a submit button under the form, with the text Upload picture inside. 
