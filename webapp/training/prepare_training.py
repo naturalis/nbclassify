@@ -68,7 +68,7 @@ loops from start to end, EXCLUDING the end, you use the index of "/t</tags>\n"''
         #When the loop ends, close the output file
         output.close()
     '''If there are no tags, a ValueError arise. Except this Error and print
-a message that the file has no tags'''
+    a message that the file has no tags'''
     except ValueError:
         print "%s has no tags"%(infile)
     #Close the output file

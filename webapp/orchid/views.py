@@ -44,6 +44,18 @@ def get_device( request ):
     #Return the device
     return device
 
+def check_upload(upload):
+    picture = ["jpg","tif","bmp","gif","png","jpeg","psd","pspimage","thm","yuv"]
+    
+    name = str(upload)
+    extension = name.lower().split(".")[-1]
+    
+    if extension in picture:
+        return True
+    else:
+        name = name.replace(" ","\ ")
+        os.system("rm static/uploaded_files/%s"%(name))        
+        return False
 
 
 # Welcome view (homepage)
@@ -121,27 +133,47 @@ def upload(request):
             # Save the form
             form.save()
             
-            # run the processUpload function to place the ip in front of the name of the uploaded file
-            processUpload(request, request.FILES["picture"]) # zie hier nog een extra regel
+            is_picture = check_upload(request.FILES["picture"])
             
-            ''' save the filename and path in python variables
-            use the variable part (the ip) to create the path'''
-            filename = request.FILES["picture"]
-            path = ("static/assets/uploaded_files/%s_%s" % (ip, filename))
+            if is_picture:
             
-            # Create the args dictionary and save the csrf in this dictonary
-            args = {}
-            args.update(csrf(request))
+                # run the processUpload function to place the ip in front of the name of the uploaded file
+                processUpload(request, request.FILES["picture"]) # zie hier nog een extra regel
+                
+                ''' save the filename and path in python variables
+                use the variable part (the ip) to create the path'''
+                filename = request.FILES["picture"]
+                path = ("static/assets/uploaded_files/%s_%s" % (ip, filename))
+                
+                # Create the args dictionary and save the csrf in this dictonary
+                args = {}
+                args.update(csrf(request))
+                
+                # save the filename and path in the dictionary
+                args['filename'] = filename
+                args['path'] = path
+                
+                # Save the html name, whit the used device
+                html = device+"_upload_succes.html"              
+                
+                # Call the upload_succes html, for the correct device and give it the args dictonary
+                return render_to_response(html, args)
             
-            # save the filename and path in the dictionary
-            args['filename'] = filename
-            args['path'] = path
-            
-            # Save the html name, whit the used device
-            html = device+"_upload_succes.html"              
-            
-            # Call the upload_succes html, for the correct device and give it the args dictonary
-            return render_to_response(html, args)
+            else:
+                # Create the args dictionary and save the csrf in this dictonary    
+                args = {}
+                args.update(csrf(request))
+                
+                # Save the empty form in the dictionary
+                args['form'] = UploadPictureForm()
+                args['message'] = message
+                args['style'] = style
+                
+                # Save the html name, with the used device
+                html = device+"_upload.html"
+                # Call the upload html, for the correct device and give it the args dictionary
+                return render_to_response(html, args)                
+                
     
     # When the method is not POST    
     else:
