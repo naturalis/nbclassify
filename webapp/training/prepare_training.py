@@ -2,6 +2,9 @@
 #Modified date: 16-01-2014
 
 import os
+
+os.system("clear")
+
 #Download the pictures from Flickr using the open source scirpt Offlickr.py
 print "Downloading the pictures and the meta data files"
 os.system("python Offlickr.py -p -n -i 113733456@N06 -d .")
@@ -67,8 +70,8 @@ loops from start to end, EXCLUDING the end, you use the index of "/t</tags>\n"''
             output.write("\n")
         #When the loop ends, close the output file
         output.close()
-    '''If there are no tags, a ValueError arise. Except this Error and print
-    a message that the file has no tags'''
+        '''If there are no tags, a ValueError arise. Except this Error and print
+a message that the file has no tags'''
     except ValueError:
         print "%s has no tags"%(infile)
     #Close the output file
@@ -79,3 +82,101 @@ loops from start to end, EXCLUDING the end, you use the index of "/t</tags>\n"''
 #os.system("rm *.xml")
 #Print a message to tell the program is done
 print "Done"
+
+os.system("mkdir Round Oblong Spur LRound LOblong LSpur")
+os.system("clear")
+os.system("ls | egrep '.jpg' > pictures.txt")
+pictures = open("pictures.txt", 'r').readlines()
+for picture in pictures:
+    no_enter = picture.strip()
+    name = no_enter.split(".jpg")[0]
+    ID = picture.split(".")[0]
+    #print ID + "_tags.txt"
+    tags = ID + "_tags.txt"
+    tag = open(tags, 'r').readlines()
+    print "convert %s to %s.png" %(no_enter, name)
+    os.system("convert %s %s.png" %(no_enter, name))
+    if "Look-a-Like_round\n" in tag:
+        os.system("mv %s.png LRound/%s.png" %(name, name))
+        os.system("mv %s LRound/%s" %(tags, tags))
+    elif "Look-a-Like_oblong\n" in tag:
+        os.system("mv %s.png LOblong/%s.png" %(name, name))
+        os.system("mv %s LOblong/%s" %(tags, tags))
+    elif "Look-a-Like_spur\n" in tag:
+        os.system("mv %s.png LSpur/%s.png" %(name, name))
+        os.system("mv %s LSpur/%s" %(tags, tags))
+    elif "Round\n" in tag:
+        os.system("mv %s.png Round/%s.png" %(name, name))
+        os.system("mv %s Round/%s" %(tags, tags))
+    elif "Oblong\n" in tag:
+        os.system("mv %s.png Oblong/%s.png" %(name, name))
+        os.system("mv %s Oblong/%s" %(tags, tags))
+    elif "Spur\n" in tag:
+        os.system("mv %s.png Spur/%s.png" %(name, name))
+        os.system("mv %s Spur/%s" %(tags, tags))
+    else:
+        tag.close()
+        print y, "NO"
+os.system("rm *.jpg pictures.txt")
+
+
+'''os.system("ls | egrep '\.png' > files.txt")
+os.system("mkdir Oblong Round Spur LOblong LRound LSpur")
+os.system("clear")
+
+files = open('files.txt', 'r')
+
+print "Moving the files to its own directory (Oblong, Round or Spur)"
+for x in files:
+    ID = x.split(".")[0]
+    #print ID + "_tags.txt"
+    tags = ID + "_tags.txt"
+    tag = open(tags, 'r').readlines()
+    if "Look-a-like_round\n" in tag:
+        os.system("mv %s LRound/%s" %(x.strip(), x.strip()))
+        os.system("mv %s LRound/%s" %(tags, tags))
+    elif "Look-a-Like_oblong\n" in tag:
+        os.system("mv %s LOblong/%s" %(x.strip(), x.strip()))
+        os.system("mv %s LOblong/%s" %(tags, tags))
+    elif "Look-a-Like_spur\n" in tag:
+        os.system("mv %s LSpur/%s" %(x.strip(), x.strip()))
+        os.system("mv %s LSpur/%s" %(tags, tags))
+    elif "Round\n" in tag:
+        os.system("mv %s Round/%s" %(x.strip(), x.strip()))
+        os.system("mv %s Round/%s" %(tags, tags))
+    elif "Oblong\n" in tag:
+        os.system("mv %s Oblong/%s" %(x.strip(), x.strip()))
+        os.system("mv %s Oblong/%s" %(tags, tags))
+    elif "Spur\n" in tag:
+        os.system("mv %s Spur/%s" %(x.strip(), x.strip()))
+        os.system("mv %s Spur/%s" %(tags, tags))
+    else:
+        tag.close()
+        print y, "NO"
+os.system("rm files.txt")'''
+print "Done"
+
+os.system("clear")
+
+print "Create trainings data"
+
+os.system("sh run_splitter.sh")
+
+os.system("for i in $(ls -d */); do echo ${i%%/} >> directories; done")
+
+directories = open("directories", 'r').readlines()
+
+catagory = 0
+for directory in directories:
+    directory = directory.strip()
+    print "run traindata.pl for %s" %(directory)
+    if directory[0] == "L":
+        catagory = -1
+    else:
+        catagory = 1
+    os.system("perl traindata.pl -d %s -c %s > %s.tsv" %(directory, catagory, directory))
+
+os.system("mkdir traindata")
+os.system("mv *.tsv ./traindata")
+os.system("rm directories")
+

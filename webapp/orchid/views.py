@@ -78,6 +78,10 @@ def welcome(request):
 #Function to give the uploaded file a variable part in front of the filename
 def processUpload(request, filename):
     
+    filename2 = str(filename).replace(" ","_")
+    filename = str(filename).replace(" ","\ ")
+    
+    
     # Get the IP-adres of the computer
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
@@ -92,10 +96,10 @@ def processUpload(request, filename):
     outfile = open('%s_filename.txt' %(ip), 'w')
     
     # Place the variable part (the ip) in front of the filename of the uploaded file
-    os.system("mv static/uploaded_files/%s static/uploaded_files/%s_%s"%(filename, ip, filename))
+    os.system("mv static/uploaded_files/%s static/uploaded_files/%s_%s"%(filename, ip, filename2))
     
     # Write the new filename to the outputfile
-    outfile.write("%s_%s" %(ip, filename))
+    outfile.write("%s_%s" %(ip, filename2))
     
     # Close the outputfile
     outfile.close()
@@ -142,7 +146,7 @@ def upload(request):
                 
                 ''' save the filename and path in python variables
                 use the variable part (the ip) to create the path'''
-                filename = request.FILES["picture"]
+                filename = str(request.FILES["picture"]).replace(" ", "_")
                 path = ("static/assets/uploaded_files/%s_%s" % (ip, filename))
                 
                 # Create the args dictionary and save the csrf in this dictonary
