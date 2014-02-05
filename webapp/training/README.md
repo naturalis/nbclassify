@@ -9,6 +9,7 @@ Required for Offlickr.py
 Required for prepare_training.sh
 ----------------------------------
 * convert using ImageMagick and jpegscr
+
 download jpegscr here:http://www.ijg.org/files/jpegsrc.v8c.tar.gz  
 downlaod ImageMagick here: http://www.imagemagick.org/download/
 then cd to the download location of jpegscr and run the next commands:
