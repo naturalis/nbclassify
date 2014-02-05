@@ -28,8 +28,6 @@ sudo make install (Password required!)
 
 after this cd to the download location of ImageMagick and run the following commands:
 
-cd /usr/local/src
-
 tar xvfz ImageMagick-6.6.9-5.tar.gz
 
 cd ImageMagick-6.6.9-5
