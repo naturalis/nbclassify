@@ -94,7 +94,7 @@ class Offlickr:
                 page=str(n),
                 min_upload_date=dateLo,
                 max_upload_date=dateHi,
-                #The folowing line is added by Patrick Wijntjes, 14-01-2014
+                #The next line is added by Patrick Wijntjes, 14-01-2014
                 privacy_filter=5
                 )
             if self.__testFailure(rsp):
