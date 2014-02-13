@@ -41,7 +41,7 @@ opendir my $dh, $dir or die $!;
 while( my $entry = readdir $dh ) {
 
 	# only read png files created by splitter.pl
-	if ( $entry =~ /(\d+,\d+)\.png/ ) {
+	if ( $entry =~ /(\d+,?\d*)\.png/ ) {
 		my $nucleus = $1;
 		my @row = ( $nucleus );
 		
