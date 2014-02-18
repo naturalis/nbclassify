@@ -85,6 +85,7 @@ do
     cd $genus
     mkdir $species
     mv $f $species
+    mv $tags $species
     cd ..
     #    rm $tags
 done
@@ -108,22 +109,28 @@ do
     echo "Content: $content"
     if [[ $content == *Look-a-Like_round* ]]
     then
-        mv $var.png  LRound/$var.png
+        mv $var.png  LRound/
+        mv $tags LRound/
     elif [[ $content == *Look-a-Like_oblong* ]]
     then
-        mv $var.png LOblong/$var.png
+        mv $var.png LOblong/
+        mv $tags    LOblong/
     elif [[ $content == *Look-a-Like_spur* ]]
     then
-        mv $var.png LSpur/$var.png
+        mv $var.png LSpur/
+        mv $tags LSpur/
     elif [[ $content == *Round* ]]
     then
-        mv $var.png Round/$var.png
+        mv $var.png Round/
+        mv $tags Round/
     elif [[ $content == *Oblong* ]]
     then
-        mv $var.png Oblong/$var.png
+        mv $var.png Oblong/
+        mv $tags Oblong/
     elif [[ $content == *Spur* ]]
         then
-        mv $var.png Spur/$var.png
+        mv $var.png Spur/
+        mv $tags Spur/
     else
         echo "No correct tag found"
     fi
@@ -186,116 +193,6 @@ do
                 done
             done
         done
-
-#======================================================================================#
-#                               Flower
-    elif [[ $d == Flower* ]]
-    then
-        cd ${d%%/}
-        for i in $(ls -d */)
-        do
-            size=10000
-            t=0.85
-            q=$t
-#  echo "Y2: $i"
-#           echo "Size: $size"
-#           echo "-t: $t"
-            if [[ $i == *C* ]]
-            then
-#                echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-                t=0.9
-            fi
-
-            cd ${i%%/}
-            for x in $(ls -d */)
-            do
-                y=${x%%/}
-#               echo "Y3: $y"
-                if [[ $y == *vie* ]]
-                then
-#                   echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-                    t=0.9
-                elif [[ $y == *vicotria* ]]
-                then
-                    size=7000
-                elif [[ $y == *druryi* ]]
-                then
-                    size=20000
-                elif [[ $y == *tigrinum* ]]
-                then
-                    size=20000
-                elif [[ $y == *delenatii* ]]
-                then
-                    t=0.95
-                else
-                    size=10000
-                fi
-                for g in ./$y/*.png
-                do
-                    if [[ $g == *12342093963* ]]
-                    then
-#                       echo "1"
-                        q=0.9
-                    elif [[ $g == *12342327174* ]]
-                    then
-#                       echo "2"
-                        q=0.95
-                    elif [[ $g == *12342204914* ]]
-                    then
-#                       echo "3"
-                        q=0.9
-                    elif [[ $g == *12341889003* ]]
-                    then
-#                       echo "4"
-                        q=0.9
-                    elif [[ $g == *12341158664* ]]
-                    then
-#                       echo "5"
-                        q=0.9
-                    elif [[ $g == *12340702965* ]]
-                    then
-#                       echo "6"
-                        q=0.9
-                    elif [[ $g == *12340849735* ]]
-                    then
-#                       echo "7"
-                        q=0.95
-                    elif [[ $g == *12342126885* ]]
-                    then
-#                       echo "8"
-                        q=0.95
-                    elif [[ $g == *12342401264* ]]
-                    then
-#                       echo "9"
-                        q=0.95
-                    else
-#                       echo "10"
-                        q=$t
-                    fi
-                    echo "Splitting $g"
-#                   echo "Size: $size"
-#                   echo "Q: $q"
-#                   echo "-t: $t"
-#                   echo "________________________________________"
-                    perl ../../splitter.pl -t $q -i $g
-                    for FILENAME in *,*.png
-                    do
-                        FILESIZE=$(stat -f%z $FILENAME)
-#                       echo "$FILENAME: $FILESIZE"
-                        if (( FILESIZE > size ))
-                        then
-                        mv $FILENAME ./$y
-                        else
-                        rm $FILENAME
-                        fi
-                    done
-                done
-#           echo "----------------------------"
-            done
-#       echo "================================"
-        cd ..
-        done
-    cd ..
     fi
 done
 
