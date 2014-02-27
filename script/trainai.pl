@@ -68,7 +68,7 @@ while( my $entry = readdir $dh ) {
 my $train = AI::FANN::TrainData->new(@interdigitated);
 
 # create the AI
-my $ann = AI::FANN->new_standard( $neurons, $neurons + 1, 1 );
+my $ann = AI::FANN->new_standard( $neurons, $neurons + 1, $categories );
 $ann->hidden_activation_function(FANN_SIGMOID_SYMMETRIC);
 $ann->output_activation_function(FANN_SIGMOID_SYMMETRIC);
 
