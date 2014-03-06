@@ -1,0 +1,26 @@
+<!-- Use the computer template and override the content block -->
+{% extends "computer.html" %}
+
+<!-- Override the title -->
+{% block title %}Orchid Identifier - Invalid login{% endblock %}
+
+{% block content %}
+    <!-- All lines in this block will be diplayd in the content block -->
+    
+    <!-- Display a header, telling the login details are incorrect -->
+    <h2>Your login details are invalid!</h2>
+    
+    <!-- Button to login again -->
+    <form action="/accounts/login/">
+        <!-- The submit button with the text Try again inside -->
+        <input type="submit" value="Try again" id="button">
+    </form>
+    
+    <p></p>
+    <!-- Button to go back to the welcome page -->
+    <form action="/welcome/">
+        <!-- The submit button with the text Home inside -->
+        <input type="submit" value="Home" id="button">
+    </form>
+    
+{% endblock %}

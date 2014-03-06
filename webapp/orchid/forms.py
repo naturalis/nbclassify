@@ -9,5 +9,3 @@ class UploadPictureForm(forms.ModelForm):
     class Meta:
         # The used model, Orchids in this case
         model = Orchid
-        # The fields to be displayed, in the required order
-        fields = ('title', 'picture')

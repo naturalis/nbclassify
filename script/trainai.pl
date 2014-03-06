@@ -11,12 +11,14 @@ my $epochs  = 50000;
 my $target  = 0.0001;
 my $datadir = 'data/traindata';
 my $outfile = 'data/ai/butterbeetle.ann';
+my $categories = 1;
 GetOptions(
-	'verbose+'  => \$verbosity,
-	'datadir=s' => \$datadir,
-	'epochs=i'  => \$epochs,
-	'target=f'  => \$target,
-	'outfile=s' => \$outfile,
+	'verbose+'     => \$verbosity,
+	'datadir=s'    => \$datadir,
+	'epochs=i'     => \$epochs,
+	'target=f'     => \$target,
+	'outfile=s'    => \$outfile,
+	'categories=i' => \$categories,
 );
 
 # instantiate helper objects
@@ -48,13 +50,16 @@ while( my $entry = readdir $dh ) {
 			# first cell
 			my $file = shift @fields;
 			
-			# last cell
-			my $categ = pop @fields;
+			# last cells
+			my @categ;
+			for my $i ( 1 .. $categories ) {
+				push @categ, pop @fields;
+			}
 			
 			# see AI::FANN docs for datastructure
-			push @interdigitated, \@fields, [ $categ ];
+			push @interdigitated, \@fields, \@categ;
 			$neurons = scalar @fields; # +1 in hidden layer
-			$log->info("read fingerprint for $file ($categ)");
+			$log->info("read fingerprint for $file (@categ)");
 		}
 	}
 }
@@ -63,7 +68,7 @@ while( my $entry = readdir $dh ) {
 my $train = AI::FANN::TrainData->new(@interdigitated);
 
 # create the AI
-my $ann = AI::FANN->new_standard( $neurons, $neurons + 1, 1 );
+my $ann = AI::FANN->new_standard( $neurons, $neurons + 1, $categories );
 $ann->hidden_activation_function(FANN_SIGMOID_SYMMETRIC);
 $ann->output_activation_function(FANN_SIGMOID_SYMMETRIC);
 

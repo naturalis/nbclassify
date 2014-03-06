@@ -1,0 +1,94 @@
+@media handheld {
+    /* Lay-out for the body */
+    body {
+                /* Place the text in the middel of the page */
+                text-align: center;
+    }
+    
+    
+    /* Lay-out for the logo */
+    #logo {
+        /* Place the logo on the leftside of the page */
+        float: left;
+        
+        /* the width of the logo is 200 pixels */
+        width: 200px;
+    }
+    
+    /* Lay-out for sidebar, not used, but available for later */
+    /*#sidebar {
+        float: right;
+        width: 200px;
+        border: 1px solid #000;
+    }*/
+    
+    /* Lay-out for the content */
+    #content {
+        /* place the content left, because logo is described first, the content will
+        be displayed right of the logo */
+        float: left;
+        
+        /* The width of this box will be automaticly changed to the content self */
+        width: auto;
+        
+        /* Place a border around the content
+        3 pixels widht with a pink-like color, The same color of the
+        Naturalis logo */
+        border: 13px solid #E3004A;
+        
+        /* Clear 10 pixels around the content, inside de border */
+        padding: 10px;
+    }
+    
+    /* Lay-out for the footer */
+    #footer {
+        /* Place the footer on the bottom */
+        position:absolute;
+        bottom:10px;
+    }
+    
+    p {
+        font-family: Arial;
+        font-size: 2em;
+    }
+    
+    h1 {
+        font-family: Arial;
+        font-size: 3.8em;
+    }
+    
+    h2 {
+        font-family: Arial;
+        font-size: 3.4em;
+        
+    }
+    
+    h3 {
+        font-family: Arial;
+        font-size: 3em;
+    }
+    
+    h4 {
+        font-family: Arial;
+        font-size: 2.6em;
+    }
+    
+    #small {
+        font-size: 1.25em;
+    }
+    
+    form {
+        font-family: Arial;
+        font-size: 2em;
+    }
+    
+    input {
+        font-family: Arial;
+        font-size: 2em;
+    }
+    
+    #button {
+        font-family: Arial;
+        font-size: 2.5em;
+    }
+}

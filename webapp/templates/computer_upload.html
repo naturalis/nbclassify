@@ -1,0 +1,34 @@
+<!-- Use the computer template and override the content block -->
+{% extends "computer.html" %}
+
+<!-- Override the title -->
+{% block title %}Orchid Identifier - Upload picture{% endblock %}
+
+{% block content %}
+    <!-- All lines in this block will be diplayd in the content block -->
+    <!-- The displaying content is only for testing and needs to be updated
+    for the real version -->
+    
+    <!-- Display a header to tell this is de upload page -->
+    <h2>Upload picture</h2>
+    
+    <p style="color:red; font-size:0.9em"><em>{{message}}</em></p>
+    
+    <!-- Use the form from orchid.views.upload to receive a picture -->
+    <form action="" method="post" style="{{style}}" enctype="multipart/form-data">{% csrf_token %}
+    {{form}}
+    <p></p>
+    <!-- Place a submit button under the form, with the text Upload picture inside. 
+    To place it under the form, it is required to display an empty line first-->  
+    <input type="submit" value="Upload picture" id="button">
+    
+    <!-- End of form -->
+    </form>
+    
+    <p></p>
+    <!-- Place a button under the form to go back to the home screen -->
+    <form action="/welcome/">
+        <input type="submit" value="Home" id="button">
+    </form>
+    
+{% endblock %}

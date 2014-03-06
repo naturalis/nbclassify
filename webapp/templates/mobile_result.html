@@ -1,0 +1,32 @@
+<!-- Use the mobile template and override the content block -->
+{% extends "mobile.html" %}
+
+<!-- Override the title -->
+{% block title %}Orchid Identifier - Result{% endblock %}
+
+{% block content %}
+    <!-- All lines in this block will be diplayd in the content block -->
+    <!-- The displaying content is only for testing and needs to be updated
+    for the real version -->
+    
+    <!-- Display a header to tell this is de result page -->
+    <h2>Results</h2>
+    
+    <!-- FOR TESTING: Display the filename -->
+    <p>Filename: {{filename}} </p>
+    
+    <!-- Display the result -->
+    <!-- WARNING: this is a test result, and will always be a random sentence
+    This needs to be changed for the real version! -->
+    <p>Result: {{result}} </p>
+    
+    <!-- Display the picture, give it a link to view the picter on a new
+    webpage / tab -->
+    <!-- Misschien de grootte aanpassen! -->
+    <p><a href="/static/assets/uploaded_files/{{filename}}"><img src="/static/assets/uploaded_files/{{filename}}" width="200"/></a></p>
+    
+    <form action="/exit/">
+        <!-- The submit button with the text Upload picture inside -->
+        <input type="submit" value="Exit" id="button">
+    </form>
+{% endblock %}
