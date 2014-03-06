@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use Getopt::Long;
+use Data::Dumper;
 use AI::FANN ':all';
 use Fingerprint 'make_fingerprint';
 use Bio::Phylo::Util::Logger ':levels';
@@ -41,12 +42,7 @@ while( my $entry = readdir $dh ) {
 		$log->debug("made fingerprint of file");
 		
 		# do the classification
-		my $result = $ann->run(\@fingerprint)->[0];
-		if ( $result < 0 ) {
-			$log->info("*** $entry is a beetle");
-		}
-		else {
-			$log->info("*** $entry is a butterfly");
-		}
+		my $result = $ann->run(\@fingerprint);
+		print Dumper($result);
 	}
 }
