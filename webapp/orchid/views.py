@@ -213,6 +213,8 @@ def result(request):
         # Replace the '.' in the ip-adres to '_'
         ip = ip.replace('.', '_') 
         
+        os.system("sh converter.sh %s"%(ip))
+        
         # Read in the filename from <ip>_filename.txt
         infile = open('%s_filename.txt' %(ip), 'r')
         filename = infile.read().strip()
@@ -222,10 +224,11 @@ def result(request):
         
         # Run the program to identify the orchid
         # Warning: The program now used is only a test program!
-        os.system("python resultaat.py %s %s" % (filename, ip))
+        os.system("python classify.py %s %s" % (filename, ip))
+        os.system("python result.py %s" % (ip))
         
         # Open the file with the results from the identify program
-        result = open('%s_test.txt' %(ip), 'r')
+        result = open('%s_result.txt' %(ip), 'r')
         
         # Read in the results
         read_result = result.read()
@@ -240,6 +243,7 @@ def result(request):
         # Save the filename and the result in the args dictionary
         args['filename'] = filename
         args['result'] = read_result
+        args['ip'] = ip
         
         # Save the html name with the used device
         html = device+"_result.html"
@@ -280,8 +284,10 @@ def exit(request):
     # Move the uploaded picture and its result to the result directory,
     # Save it as timestamp_ip.jpg and timestamp_ip_result.txt
     os.system("rm %s_filename.txt" %(ip))
-    os.system("mv static/uploaded_files/%s results/%s_%s.jpg" %(filename, var_part, filename))
-    os.system("mv %s_test.txt results/%s_%s_result.txt" %(ip, var_part, ip))
+    os.system("mv static/uploaded_files/%s/%s results/%s_%s" %(ip, filename, var_part, filename))
+    os.system("rm -r static/uploaded_files/%s" %(ip))
+    os.system("mv %s_out.txt results/%s_%s_result1.txt" %(ip, var_part, ip))
+    os.system("mv %s_result.txt results/%s_%s_section.txt" %(ip, var_part, ip))
     
     # Go back to the welcome page
     return HttpResponseRedirect('/welcome')
@@ -345,7 +351,7 @@ def remove(request):
     os.system("ls | egrep *_filename.txt > temps.txt")
     
     #Remove all the unused pictures and their temporary files
-    os.system("rm static/uploaded_files/*")
+    os.system("rm -r static/uploaded_files/*")
     os.system("rm *filename.txt")
     
     #Read the content of the uploads.txt file and the temps.txt file and save the content in

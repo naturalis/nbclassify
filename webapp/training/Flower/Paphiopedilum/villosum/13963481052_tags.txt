@@ -1,0 +1,5 @@
+Paphiopedilum_villosum
+
+section:Paphiopedilum
+species:villosum
+Flower

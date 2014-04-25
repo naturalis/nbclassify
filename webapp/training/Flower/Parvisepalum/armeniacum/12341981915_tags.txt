@@ -1,0 +1,5 @@
+armenicum4
+
+subgenus:Parvisepalum
+species:armeniacum
+Flower

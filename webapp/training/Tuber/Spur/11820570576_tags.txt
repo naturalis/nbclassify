@@ -1,0 +1,8 @@
+MT-2NB_2
+
+Orchid_spur
+Orchid
+Spur
+genus:Dactylorhiza
+species:romana
+Tuber

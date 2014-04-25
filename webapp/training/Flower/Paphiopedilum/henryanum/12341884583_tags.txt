@@ -1,0 +1,5 @@
+henryanum9
+
+section:Paphiopedilum
+species:henryanum
+Flower

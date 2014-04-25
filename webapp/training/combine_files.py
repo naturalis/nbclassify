@@ -1,7 +1,7 @@
 import os
 
 #Save all tsv files created with add_columns.py in files.txt
-os.system("ls | egrep 'new' > files.txt")
+os.system("ls | egrep '.tsv' > files.txt")
 
 #Read the content of files.txt and save it as a list
 files = open('files.txt', 'r').readlines()

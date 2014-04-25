@@ -1,0 +1,5 @@
+helenae14
+
+section:Paphiopedilum
+species:helenae
+Flower

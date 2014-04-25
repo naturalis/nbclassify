@@ -52,6 +52,7 @@ do
 #                echo "Z: $z"
 #               pwd
 #               echo "perl ../../traindata2.pl -d ./$b > $b.tsv"
+				echo "run traindata2.pl for $b"
                 #Run the traindata2 script and redirect the output to a tsv file.
                 #Give this file the name of the current directory
                 perl ../../traindata2.pl -d ./$b -c 0 > $b.tsv

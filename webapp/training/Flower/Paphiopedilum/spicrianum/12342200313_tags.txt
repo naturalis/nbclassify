@@ -1,0 +1,5 @@
+spicerianum7
+
+section:Paphiopedilum
+species:spicrianum
+Flower

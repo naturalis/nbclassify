@@ -1,0 +1,5 @@
+Pardalopetalum_lowii4
+
+section:Pardalopetalum
+species:lowii
+Flower

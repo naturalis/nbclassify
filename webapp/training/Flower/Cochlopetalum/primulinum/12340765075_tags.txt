@@ -1,0 +1,5 @@
+Paphiopedilum primulinum
+
+section:Cochlopetalum
+species:primulinum
+Flower

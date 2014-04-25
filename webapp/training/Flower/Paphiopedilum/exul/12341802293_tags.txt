@@ -1,0 +1,5 @@
+exul9
+
+section:Paphiopedilum
+species:exul
+Flower

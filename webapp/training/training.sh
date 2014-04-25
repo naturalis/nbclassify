@@ -16,9 +16,10 @@ python get_tags.py
 #remove all xml files and the list of xml files saved in a
 rm *.xml a
 
-echo "Done"
-
 clear
+echo "Pictures downloaded"
+echo "Press enter to continue"
+read
 
 #===================================================================================================#
 #                               Divide pictures between Flower and Tuber                            #
@@ -60,9 +61,10 @@ done
 #Remove the jpg that will not be used anymore
 rm *.jpg
 
-echo "Done"
-
 clear
+echo "Pictures divided between flower and tuber"
+echo "Press enter to continue"
+read
 
 #===================================================================================================#
 #        Divide the pictures in Flower between the different genera and the different species       #
@@ -76,7 +78,7 @@ for f in *.png
 do
 #echo "File: $f"
     var=(${f//./ }$0)
-e#cho "Var: $var"
+#echo "Var: $var"
     tags="$var""_tags.txt"
 #   echo "Tag: $tags"
     #Create variables that will be used to create directories.
@@ -105,6 +107,9 @@ done
 #After looping through the png files in the Flower directory go out of this directory
 cd ..
 clear
+echo "Flower pictures divided"
+echo "Press enter to continue"
+read
 
 #===================================================================================================#
 #                       Devide the pictures in Tuber between shape(L-a-L)                           #
@@ -155,8 +160,10 @@ do
 done
 #After looping through the png files in the Tuber directory go out of this directory
 cd ..
-
 clear
+echo "Tuber pictures divided"
+echo "Press enter to continue"
+read
 
 #===================================================================================================#
 #                               Split all pictures of Tuber                                         #
@@ -208,6 +215,125 @@ do
         done
     done
 done
+cd ..
 
 clear
-echo "Done"
+echo "Tuber pictures splited"
+#echo "Press enter to continue"
+#read
+
+#cd Flower
+#Loop through all directories in this folder
+#for i in $(ls -d */)
+#do
+#    y=${i%%/}
+#	
+	#Set parameter values
+#	size=4000
+#	t=0.85
+	
+#	if [[ $y == *Barbata* ]]
+#	then
+#		t=0.85
+#		size=10000
+#	elif [[ $y == *Cochlopetalum* ]]
+#	then
+#		t=0.7
+#	elif [[ $y == *Paphiopedilum* ]]
+#	then
+#		t=0.75
+#	fi
+	
+#	echo "Y1: $y"
+#	echo "Size: $size"
+#	echo "-t: $t"
+#	echo "--------------------------------------------"
+	
+#	if [[ $y == *Brachypetalum* ]]
+#	then
+#		continue
+#	else
+#		cd $y
+#		if [[ $y == *Barbata* || $y == *Coryopedilum* || $y == *Pardalopetalum* ]]
+#		then
+#			echo "Y2: $y moet helemaal"
+#			echo "+++++++++++++++++++++++++++++++++++++"
+#			for a in $(ls -d */)
+#			do
+#				b=${a%%/}
+#				echo "B1: $b"
+#				echo "_____________________________________"
+#				echo "-t: $t"
+#				echo "============================================="
+#				cd $b
+#				mkdir original
+#				for file in *.png
+#				do
+#					echo "perl ../../../splitter.pl -t $t -i $file"
+#					perl ../../../splitter.pl -t $t -i $file
+#					echo "mv $file ./original"
+#					mv $file ./original
+#					for FILENAME in *,*.png
+#					do
+#						FILESIZE=$(stat -f%z $FILENAME)
+						#           echo "$FILENAME: $FILESIZE"
+#						if (( FILESIZE < size ))
+#						then
+#						rm $FILENAME
+#						else
+#						continue
+#						fi
+#					done
+#				done
+#				cd ..
+#			done
+#		elif [[ $y == *Cochlopetalum* ]]
+#		then
+#			cd glaucophyllum
+#			ls
+#			mkdir original
+#			echo "perl ../../../splitter.pl -t $t -i 13239075545.png"
+#			perl ../../../splitter.pl -t $t -i 13239075545.png
+#			echo "mv 13239075545.png ./original"
+#			mv 13239075545.png ./original
+#			cd ..
+#		elif [[ $y == *Paphiopedilum* ]]
+#		then
+#			cd villosum
+#			ls
+#			mkdir original
+#			echo "perl ../../../splitter.pl -t $t -i 13239599774.png"
+#			perl ../../../splitter.pl -t $t -i 13239599774.png
+#			echo "mv 13239599774.png ./original"
+#			mv 13239599774.png ./original
+#			cd ..
+#		elif [[ $y == *Parvisepalum* ]]
+#		then
+#			cd armeniacum
+#			ls
+#			mkdir original
+#			echo "perl ../../../splitter.pl -t $t -i 13218412065.png"
+#			perl ../../../splitter.pl -t $t -i 13218412065.png
+#			echo "mv 13218412065.png ./original"
+#			mv 13218412065.png ./original
+#			echo "perl ../../../splitter.pl -t $t -i 13218413845.png"
+#			perl ../../../splitter.pl -t $t -i 13218413845.png
+#			echo "mv 13218413845.png ./original"
+#			mv 13218413845.png ./original
+#			cd ../vietnamense
+#			ls
+#			mkdir original
+#			echo "perl ../../../splitter.pl -t $t -i 13218572413.png"
+#			perl ../../../splitter.pl -t $t -i 13218572413.png
+#			echo "mv 13218572413.png ./original"
+#			mv 13218572413.png ./original
+#			cd ..
+#		cd ..
+#		fi
+		
+#		cd ..
+#	fi
+#done
+
+#clear
+#echo "Flower pictures splited"

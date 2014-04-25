@@ -1,0 +1,5 @@
+Coryopedilum_philippinense1
+
+section:Coryopedilum
+species:philippinense
+Flower

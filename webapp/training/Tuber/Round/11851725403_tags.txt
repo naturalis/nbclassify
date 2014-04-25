@@ -1,0 +1,8 @@
+MT-1M.5_6
+
+Orchid
+Orchid_round
+Round
+genus:Orchis
+species:militaris
+Tuber

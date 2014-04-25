@@ -1,0 +1,5 @@
+tranlienianum12
+
+section:Paphiopedilum
+species:tranlienianum
+Flower

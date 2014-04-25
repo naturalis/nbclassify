@@ -1,0 +1,5 @@
+Paphiopedilum niveum
+
+subgenus:Brachypetalum
+species:niveum
+Flower

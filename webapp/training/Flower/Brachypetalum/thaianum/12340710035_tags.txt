@@ -1,0 +1,5 @@
+thaianum16 phot
+
+subgenus:Brachypetalum
+species:thaianum
+Flower

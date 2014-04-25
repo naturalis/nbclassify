@@ -1,0 +1,8 @@
+AQ-1NB.1_5
+
+Orchid_round
+Orchid
+Round
+genus:Anacamptis
+species:pyramidalis
+Tuber

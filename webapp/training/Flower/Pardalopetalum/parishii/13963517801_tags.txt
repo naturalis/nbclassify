@@ -1,0 +1,5 @@
+197,907Paphiopedilumparishii1
+
+section:Pardalopetalum
+species:parishii
+Flower

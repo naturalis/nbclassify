@@ -1,0 +1,8 @@
+Ka-1_7
+
+Orchid_spur
+Orchid
+Spur
+genus:Dactylorhiza
+species:incarnata
+Tuber

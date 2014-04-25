@@ -1,0 +1,5 @@
+Coryopedilum_adductum1
+
+section:Coryopedilum
+species:adductum
+Flower

@@ -1,0 +1,5 @@
+Parvisepalum_delenatii1
+
+subgenus:Parvisepalum
+species:delenatii
+Flower

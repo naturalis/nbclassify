@@ -1,0 +1,5 @@
+helenae13 fma aureum
+
+section:Paphiopedilum
+species:helenae
+Flower

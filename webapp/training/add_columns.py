@@ -15,12 +15,12 @@ maxi = 0
 #Get the path working directory
 path = os.path.dirname(os.path.realpath("add_columns.py"))
 #The output file for the lenght will named as the directory
-file = path.split("/")[-1] + ".txt"
-lenght = open(file, 'w')
+#file = path.split("/")[-1] + ".txt"
+#lenght = open(file, 'w')
 
 #add information to the output lists
 for q in range(number):
-    out.append(0)
+    out.append(-1)
     header.append("C%s"%(q+1))
 
 #Loop through the list of files
@@ -36,7 +36,7 @@ for x in range(number):
     for a in range(len(z)):
         #Create variables, b is the content list, i is the output list
         b = z[a].split("\t")
-        i = b
+        i = b[:-2]
         #When a is 0, it is the header
         if a == 0:
             #Add the header list to the output list
@@ -56,8 +56,8 @@ for x in range(number):
             else:
                 pass
             #Change the last column (=catagory) from a zero with an enter to a zero without an enter
-            i[-1] = 0
-            #Add the list of 0's (and 1's for column x == counter) to the output list
+##            i[-1] = 0
+            #Add the list of -1's (and 1's for column x == counter) to the output list
             for f in range(number):
                 i.append(out[f])
             #Write the contentn of the output list to the output file
@@ -70,10 +70,10 @@ for x in range(number):
     if maxi < len(i):
         maxi = len(i)
     #Set the column with 1 back to 0 for the next file
-    out[x] = 0
+    out[x] = -1
     #Add 1 to the counter.
     counter += 1
-    #os.system("rm %s"%(y))
+    os.system("mv %s %s"%(y, y.split(".")[0]))
 
 #Close the output file
 output.close()
@@ -81,8 +81,8 @@ output.close()
 os.system("rm files.txt")
 #print "Maxi:", maxi
 #Writhe the highest number of columns to the lenght output file
-lenght.write("%s"% (maxi))
+#lenght.write("%s"% (maxi))
 #Close the lenght output file
-lenght.close()
+#lenght.close()
 #Move the output file out the Flower directory
-os.system("mv %s ../"%(file))
+#os.system("mv %s ../"%(file))

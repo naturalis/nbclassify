@@ -47,7 +47,7 @@ loops from start to end, EXCLUDING the end, you use the index of "/t</tags>\n"''
         for y in range(start, end):
             #print read_file[y].strip().split(" ")[3].split('"')[1]
             #Write the text between <tag> and </tag> to the output file
-            output.write(read_file[y].strip().split(" ")[3].split('"')[1])
+            output.write(read_file[y].strip().split(" ")[4].split('"')[1])
             #Write an enter to the output file
             output.write("\n")
         #When the loop ends, close the output file
