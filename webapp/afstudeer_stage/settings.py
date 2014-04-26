@@ -12,7 +12,7 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': '/Users/patric/Documents/School/stage/stage-project/afstudeer_stage/data.db',                      # Or path to database file if using sqlite3.
+        'NAME': '/Users/patric/Documents/School/stage/img-classify/webapp/data.db',                      # Or path to database file if using sqlite3.
         # The following settings are not used with sqlite3:
         'USER': '',
         'PASSWORD': '',
@@ -50,7 +50,7 @@ USE_TZ = True
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/var/www/example.com/media/"
-MEDIA_ROOT = '/Users/patric/Documents/School/stage/stage-project/afstudeer_stage/static/'
+MEDIA_ROOT = '/Users/patric/Documents/School/stage/img-classify/webapp/static/'
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
@@ -69,7 +69,7 @@ STATIC_URL = '/static/'
 
 # Additional locations of static files
 STATICFILES_DIRS = (
-    ('assets', '/Users/patric/Documents/School/stage/stage-project/afstudeer_stage/static'),
+    ('assets', '/Users/patric/Documents/School/stage/img-classify/webapp/static'),
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
@@ -109,7 +109,7 @@ ROOT_URLCONF = 'afstudeer_stage.urls'
 WSGI_APPLICATION = 'afstudeer_stage.wsgi.application'
 
 TEMPLATE_DIRS = (
-    '/Users/patric/Documents/School/stage/stage-project/afstudeer_stage/templates',
+    '/Users/patric/Documents/School/stage/img-classify/webapp/templates',
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
