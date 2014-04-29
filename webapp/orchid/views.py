@@ -92,8 +92,8 @@ def processUpload(request, filename):
     # Replace the '.' in the ip-adres to '_'
     ip = ip.replace('.', '_')    
     
-    # Create an output file named <ip>_filename.txt
-    outfile = open('%s_filename.txt' %(ip), 'w')
+    # Create an output file named <ip>.filename.txt
+    outfile = open('%s.filename.txt' %(ip), 'w')
     
     # Place the variable part (the ip) in front of the filename of the uploaded file
     os.system("mv static/uploaded_files/%s static/uploaded_files/%s_%s"%(filename, ip, filename2))
@@ -215,8 +215,8 @@ def result(request):
         
         os.system("sh converter.sh %s"%(ip))
         
-        # Read in the filename from <ip>_filename.txt
-        infile = open('%s_filename.txt' %(ip), 'r')
+        # Read in the filename from <ip>.filename.txt
+        infile = open('%s.filename.txt' %(ip), 'r')
         filename = infile.read().strip()
         
         # Close the infile
@@ -275,15 +275,15 @@ def exit(request):
     replace all . in _ to prevent errors for the extension '''
     var_part = str(time()).replace('.', '_')    
     
-    # Read in the filename from <ip>_filename.txt, save it and close the file
-    infile = open('%s_filename.txt' %(ip), 'r')
+    # Read in the filename from <ip>.filename.txt, save it and close the file
+    infile = open('%s.filename.txt' %(ip), 'r')
     filename = infile.read().strip()
     infile.close()
     
-    # Remove the temporary file <ip>_filename.txt
+    # Remove the temporary file <ip>.filename.txt
     # Move the uploaded picture and its result to the result directory,
     # Save it as timestamp_ip.jpg and timestamp_ip_result.txt
-    os.system("rm %s_filename.txt" %(ip))
+    os.system("rm %s.filename.txt" %(ip))
     os.system("mv static/uploaded_files/%s/%s results/%s_%s" %(ip, filename, var_part, filename))
     os.system("rm -r static/uploaded_files/%s" %(ip))
     os.system("mv %s_out.txt results/%s_%s_result1.txt" %(ip, var_part, ip))
@@ -348,7 +348,7 @@ def remove(request):
     '''Save the name(s) of the picture(s) that will be removed in uploads.txt and the
      name(s) of the temporary file(s) in temps.txt'''
     os.system("ls static/uploaded_files > uploads.txt")
-    os.system("ls | egrep *_filename.txt > temps.txt")
+    os.system("ls | egrep *.filename.txt > temps.txt")
     
     #Remove all the unused pictures and their temporary files
     os.system("rm -r static/uploaded_files/*")

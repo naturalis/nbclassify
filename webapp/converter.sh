@@ -1,26 +1,38 @@
 echo "Arg: $1"
 
-cat "$1_filename.txt"
+ip="$1"
+echo "IP: $ip"
+
+cat "$ip.filename.txt"
 
 #Loop through every jpg file
 cd static/uploaded_files/
-mkdir $1
-for i in $1*.jpg
+mkdir $ip
+for i in $ip*.jpg
 do
 #echo "File: $i"
-    var=(${i//./ }$0)
-   echo "Var: $var"
+    IFS=.
+    set $i
+    var="$1.png"
+    x="$1.jpg"
+   	echo "Var: $var"
+   	echo "1: $1"
+   	echo "2:$2"
+   	echo "I: $i"
+   	echo "X: $x"
+   	echo "IP: $ip"
     #Conver from jpg to png
-    echo "Convert $i to $var.png"
-    convert $i $var.png
-    rm $i
-    sed -i -e 's/.jpg/.png/g' "../../$1_filename.txt"
+    echo "Convert $x to $var"
+    convert "$x" "$var"
+    rm "$x"
+    echo "sed -i -e 's/.jpg/.png/g' \"../../$ip.filename.txt\""
+    sed -i -e 's/.jpg/.png/g' "../../$ip.filename.txt"
     rm ../../*-e
     echo "---------------------------------------------"
 done
 
-for a in $1*.png
+for a in $ip*.png
 do
-	mkdir $1
-	mv $a ./$1
+	echo "mv $a ./$ip"
+	mv "$a" ./$ip
 done
