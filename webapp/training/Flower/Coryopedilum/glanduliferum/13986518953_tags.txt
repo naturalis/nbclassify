@@ -1,5 +1,0 @@
-Coryopedilum_glanduliferum3
-
-section:Coryopedilum
-species:glanduliferum
-Flower

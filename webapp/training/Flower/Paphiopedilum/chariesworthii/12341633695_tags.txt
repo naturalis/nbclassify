@@ -1,5 +1,0 @@
-Paphiopedilum charlesworthii 'Bigtime'
-
-sections:Paphiopedilum
-species:chariesworthii
-Flower

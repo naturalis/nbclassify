@@ -1,5 +1,0 @@
-spicerianum14
-
-section:Paphiopedilum
-species:spicrianum
-Flower

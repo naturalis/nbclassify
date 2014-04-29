@@ -1,8 +1,0 @@
-Platanthera_bifolia
-
-Orchid_oblong
-Orchid
-Oblong
-genus:Platanthera
-species:bifolia
-Tuber

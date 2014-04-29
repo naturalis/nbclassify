@@ -1,5 +1,0 @@
-Barbata_purpuratum3
-
-section:Barbata
-species:purpuratum
-Flower

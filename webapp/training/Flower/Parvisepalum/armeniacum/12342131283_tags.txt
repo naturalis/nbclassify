@@ -1,5 +1,0 @@
-armenicum6 v.flava
-
-subgenus:Parvisepalum
-species:armeniacum
-Flower

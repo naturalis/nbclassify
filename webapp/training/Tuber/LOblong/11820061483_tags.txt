@@ -1,8 +1,0 @@
-arum maculatum1
-
-Look-a-Like_oblong
-Look-a-Like
-Oblong
-genus:Arum
-species:maculatum
-Tuber

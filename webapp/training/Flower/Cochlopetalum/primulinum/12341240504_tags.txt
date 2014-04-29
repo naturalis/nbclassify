@@ -1,5 +1,0 @@
-primulinum9
-
-section:Cochlopetalum
-species:primulinum
-Flower

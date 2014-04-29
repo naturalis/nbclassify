@@ -1,5 +1,0 @@
-concolor20 phot
-
-subgenus:Brachypetalum
-species:concolor
-Flower

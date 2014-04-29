@@ -1,5 +1,0 @@
-druryi6
-
-section:Paphiopedilum
-species:druryi
-Flower

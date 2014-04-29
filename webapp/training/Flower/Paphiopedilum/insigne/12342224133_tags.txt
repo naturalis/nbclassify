@@ -1,5 +1,0 @@
-insigne3
-
-section:Paphiopedilum
-species:insigne
-Flower

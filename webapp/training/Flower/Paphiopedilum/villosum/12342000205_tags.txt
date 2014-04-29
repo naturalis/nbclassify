@@ -1,5 +1,0 @@
-villosum5
-
-section:Paphiopedilum
-species:villosum
-Flower

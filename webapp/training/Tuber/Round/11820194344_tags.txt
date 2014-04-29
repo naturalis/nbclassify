@@ -1,8 +1,0 @@
-Anacamptis_quadripunctata_groot
-
-Orchid_round
-Orchid
-Round
-genus:Anacamptis
-species:quadripunctata
-Tuber

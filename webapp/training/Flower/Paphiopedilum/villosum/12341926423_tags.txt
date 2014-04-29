@@ -1,5 +1,0 @@
-villosum14
-
-section:Paphiopedilum
-species:villosum
-Flower

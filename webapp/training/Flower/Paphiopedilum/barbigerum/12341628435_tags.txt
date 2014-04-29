@@ -1,5 +1,0 @@
-barbigerum8
-
-section:Paphiopedilum
-species:barbigerum
-Flower

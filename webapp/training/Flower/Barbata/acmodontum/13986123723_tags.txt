@@ -1,5 +1,0 @@
-Barbata_acmodontum1
-
-section:Barbata
-species:acmodontum
-Flower

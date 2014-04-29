@@ -1,5 +1,0 @@
-liemianum2
-
-section:Cochlopetalum
-species:liemianum
-Flower

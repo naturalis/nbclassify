@@ -1,5 +1,0 @@
-glaucophyllum19 PR3
-
-section:Cochlopetalum
-species:glaucophyllum
-Flower

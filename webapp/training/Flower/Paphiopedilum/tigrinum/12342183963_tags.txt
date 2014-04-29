@@ -1,5 +1,0 @@
-tigrinum11
-
-section:Paphiopedilum
-species:tigrinum
-Flower

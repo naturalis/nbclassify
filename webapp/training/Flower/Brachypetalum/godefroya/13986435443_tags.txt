@@ -1,5 +1,0 @@
-Brachypetalum_godefroya6
-
-subgenus:Brachypetalum
-species:godefroya
-Flower

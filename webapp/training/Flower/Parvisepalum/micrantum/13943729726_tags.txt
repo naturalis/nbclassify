@@ -1,5 +1,0 @@
-Parvisepalum_micrantum1
-
-subgenus:Parvisepalum
-species:micrantum
-Flower

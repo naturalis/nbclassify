@@ -1,5 +1,0 @@
-exul14
-
-section:Paphiopedilum
-species:exul
-Flower

@@ -1,5 +1,0 @@
-Barbata_hennisianum1
-
-section:Barbata
-species:hennisianum
-Flower

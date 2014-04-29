@@ -1,5 +1,0 @@
-Barbata_mastersianum5
-
-section:Barbata
-species:mastersianum
-Flower

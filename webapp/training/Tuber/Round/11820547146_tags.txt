@@ -1,8 +1,0 @@
-Humantoglossum_hircimum
-
-Orchid_round
-Orchid
-Round
-genus:Humantoglossum
-species:hircimum
-Tuber

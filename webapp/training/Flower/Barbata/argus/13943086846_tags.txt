@@ -1,5 +1,0 @@
-Barbata_argus1
-
-section:Barbata
-species:argus
-Flower

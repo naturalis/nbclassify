@@ -1,8 +1,0 @@
-Ma-1
-
-Orchid_spur
-Orchid
-Spur
-genus:Dactylorhiza
-species:incarnata
-Tuber

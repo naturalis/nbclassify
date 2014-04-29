@@ -1,8 +1,0 @@
-polygonatum verticillatum
-
-Look-a-Like_oblong
-Look-a-Like
-Oblong
-species:verticillatum
-genus:Polygonatum
-Tuber

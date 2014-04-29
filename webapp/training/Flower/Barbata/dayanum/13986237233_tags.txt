@@ -1,5 +1,0 @@
-Barbata_dayanum2
-
-section:Barbata
-species:dayanum
-Flower

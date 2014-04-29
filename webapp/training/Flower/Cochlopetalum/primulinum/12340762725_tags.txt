@@ -1,5 +1,0 @@
-primulinum8 var flavum
-
-section:Cochlopetalum
-species:primulinum
-Flower

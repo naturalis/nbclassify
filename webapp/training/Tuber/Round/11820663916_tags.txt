@@ -1,8 +1,0 @@
-Ophrys_sicula
-
-Orchid_round
-Orchid
-Round
-genus:Ophrys
-species:sicula
-Tuber

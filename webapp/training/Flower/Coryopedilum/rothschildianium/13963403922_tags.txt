@@ -1,5 +1,0 @@
-Coryopedilum_rothschildianium1_2
-
-section:Coryopedilum
-species:rothschildianium
-Flower

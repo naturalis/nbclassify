@@ -1,5 +1,0 @@
-primulinum6
-
-section:Cochlopetalum
-species:primulinum
-Flower

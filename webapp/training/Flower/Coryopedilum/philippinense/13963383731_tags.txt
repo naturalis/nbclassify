@@ -1,5 +1,0 @@
-39,412
-
-section:Coryopedilum
-species:philippinense
-Flower

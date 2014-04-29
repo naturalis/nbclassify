@@ -1,5 +1,0 @@
-Coryopedilum_wilhelminiae2
-
-section:Coryopedilum
-species:wilhelminiae
-Flower

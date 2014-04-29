@@ -1,5 +1,0 @@
-Parvisepalum_emersonii2
-
-subgenus:Parvisepalum
-species:emersonii
-Flower

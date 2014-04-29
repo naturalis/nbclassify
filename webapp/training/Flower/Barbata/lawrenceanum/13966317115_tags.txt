@@ -1,5 +1,0 @@
-Barbata_lawrenceanum1
-
-section:Barbata
-species:lawrenceanum
-Flower

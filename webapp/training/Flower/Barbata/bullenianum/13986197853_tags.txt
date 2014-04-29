@@ -1,5 +1,0 @@
-Barbata_bullenianum
-
-section:Barbata
-species:bullenianum
-Flower

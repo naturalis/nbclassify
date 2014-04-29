@@ -1,5 +1,0 @@
-Barbata_urbanianum2
-
-section:Barbata
-species:urbanianum
-Flower

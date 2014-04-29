@@ -1,8 +1,0 @@
-Ophrys_speculum_klein
-
-Orchid_round
-Orchid
-Round
-genus:Ophrys
-species:speculum
-Tuber

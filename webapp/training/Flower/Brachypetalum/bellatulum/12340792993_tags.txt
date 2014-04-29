@@ -1,5 +1,0 @@
-bellatulum8
-
-subgenus:Brachypetalum
-species:bellatulum
-Flower

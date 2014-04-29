@@ -1,5 +1,0 @@
-glaucophyllum13
-
-section:Cochlopetalum
-species:glaucophyllum
-Flower

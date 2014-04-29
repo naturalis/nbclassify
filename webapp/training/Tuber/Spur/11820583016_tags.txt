@@ -1,8 +1,0 @@
-TEH-1.1_6
-
-Orchid_spur
-Orchid
-Spur
-genus:Dactylorhiza
-species:incarnata
-Tuber

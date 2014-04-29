@@ -1,5 +1,0 @@
-Barbata_hookerae1
-
-section:Barbata
-species:hookerae
-Flower

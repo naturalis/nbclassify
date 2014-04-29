@@ -1,5 +1,0 @@
-Barbata_tonsum1
-
-section:Barbata
-species:tonsum
-Flower

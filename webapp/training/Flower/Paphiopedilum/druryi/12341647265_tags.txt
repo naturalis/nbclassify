@@ -1,5 +1,0 @@
-druryi13 DruidSpring
-
-section:Paphiopedilum
-species:druryi
-Flower

@@ -1,8 +1,0 @@
-TMR-1_2
-
-Orchid_spur
-Orchid
-Spur
-genus:Dactylorhiza
-species:incarnata
-Tuber

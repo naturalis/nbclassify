@@ -1,5 +1,0 @@
-helenae11
-
-section:Paphiopedilum
-species:helenae
-Flower

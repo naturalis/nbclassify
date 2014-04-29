@@ -1,5 +1,0 @@
-Parvisepalum_armeniacum5
-
-subgenus:Parvisepalum
-species:armeniacum
-Flower

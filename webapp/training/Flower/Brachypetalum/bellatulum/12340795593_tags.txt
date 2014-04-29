@@ -1,5 +1,0 @@
-bellatulum2 phot
-
-subgenus:Brachypetalum
-species:bellatulum
-Flower

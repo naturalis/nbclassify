@@ -1,5 +1,0 @@
-Parvisepalum_vietnamense1
-
-section:Parvisepalum
-species:vietnamense
-Flower

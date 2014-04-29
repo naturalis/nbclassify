@@ -1,5 +1,0 @@
-druryi15 MarriottMagnum
-
-section:Paphiopedilum
-species:druryi
-Flower

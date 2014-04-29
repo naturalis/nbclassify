@@ -1,5 +1,0 @@
-Parvisepalum_malipoense4
-
-subgenus:Parvisepalum
-species:malipoense
-Flower

@@ -1,8 +1,0 @@
-asparagus officinalis
-
-Look-a-Like_spur
-Look-a-Like
-Spur
-genus:Asparagus
-species:officinalis
-Tuber

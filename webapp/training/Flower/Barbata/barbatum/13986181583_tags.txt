@@ -1,5 +1,0 @@
-Barbata_barbatum2
-
-section:Barbata
-species:barbatum
-Flower

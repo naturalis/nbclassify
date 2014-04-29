@@ -1,5 +1,0 @@
-primulinum21 var purpurascens
-
-section:Cochlopetalum
-species:primulinum
-Flower

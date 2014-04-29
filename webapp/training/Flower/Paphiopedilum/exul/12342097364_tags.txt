@@ -1,5 +1,0 @@
-exul13
-
-section:Paphiopedilum
-species:exul
-Flower

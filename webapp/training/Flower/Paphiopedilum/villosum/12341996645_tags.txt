@@ -1,5 +1,0 @@
-villosum8 lightless
-
-section:Paphiopedilum
-species:villosum
-Flower
