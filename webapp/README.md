@@ -2,7 +2,9 @@ dependencies
 ============
 * python2.7
 * Django 1.6.4 (sudo pip install Django==1.6.4)
-* convert using ImageMagick and jpegscr
+* ImageMagick (c library) and Image::Magick (perl bindings)
+* FANN (c library) version 2.2.0 and AI::FANN (perl bindings)
+* Bio::Phylo (for logging)
 
 How to start the app locally?
 =============================

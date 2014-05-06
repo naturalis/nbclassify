@@ -18,7 +18,7 @@
         /* clear automatically the area around the page */
         margin: 10px auto 20px auto;
         
-        /* Set the background color to black */
+        /* Set the background color to white */
         background-color:white;
     }
     
@@ -35,7 +35,7 @@
     /*#sidebar {
         float: right;
         width: 200px;
-        border: 1px solid #000;
+        border: 1px solid #E3004A;
     }*/
     
     /* Lay-out for the content */
@@ -44,7 +44,7 @@
         be displayed right of the logo */
         float: left;
         
-        /* The width of this box will be automaticly changed to the content self */
+        /* The width of this box will be automaticly changed to the content */
         width: auto;
         
         /* Place a border around the content
@@ -63,46 +63,55 @@
         bottom:10px;
     }
     
+    /* Standard font settings for a paragraph */
     p {
         font-family: Arial;
         font-size: 1em;
     }
     
+    /* Standard font settings for a Header1 */
     h1 {
         font-family: Arial;
         font-size: 1.9em;
     }
     
+    /* Standard font settings for a Header2 */
     h2 {
         font-family: Arial;
         font-size: 1.7em;
         
     }
     
+    /* Standard font settings for a Header3 */
     h3 {
         font-family: Arial;
         font-size: 1.5em;
     }
     
+    /* Standard font settings for a Header4 */
     h4 {
         font-family: Arial;
         font-size: 1.3em;
     }
     
+    /* Standard font settings for text with id small */
     #small {
         font-size: 0.75em;
     }
     
+    /* Standard font settings for the forms */
     form {
         font-family: Arial;
         font-size: 1em;
     }
     
+    /* Standard font settings for the input box */
     input {
         font-family: Arial;
         font-size: 1em;
     }
     
+    /* Standard font settings for the text with id button */
     #button {
         font-family: Arial;
         font-size: 1.25em;

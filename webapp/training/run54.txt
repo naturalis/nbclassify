@@ -1,0 +1,11 @@
+MacBook-Pro-van-Patrick:training patric$ date;perl trainai.pl -d Flower/ -c 7 -o flower54.ann -t 0.0000001;date
+ma 28 apr 2014 14:31:30 CEST
+Max epochs    50000. Desired error: 0.0000001000.
+Epochs            1. Current error: 0.2377588600. Bit fail 3255.
+Epochs          500. Current error: 0.0018237194. Bit fail 4.
+Epochs         1000. Current error: 0.0003322072. Bit fail 0.
+Epochs         1500. Current error: 0.0000531867. Bit fail 0.
+Epochs         2000. Current error: 0.0000050136. Bit fail 0.
+Epochs         2376. Current error: 0.0000000953. Bit fail 0.
+ma 28 apr 2014 14:35:22 CEST
+MacBook-Pro-van-Patrick:training patric$ 

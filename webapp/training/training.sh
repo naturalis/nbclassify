@@ -1,3 +1,4 @@
+#Clear the screen.
 clear
 
 #===================================================================================================#
@@ -8,16 +9,22 @@ clear
 python Offlickr.py -p -n -i 113733456@N06 -d .
 
 #List all xml files and save it in a
-ls | egrep xml > a
+ls | egrep xml > xml_files.txt
 
 #Get the tags for every picture
 python get_tags.py
 
-#remove all xml files and the list of xml files saved in a
-rm *.xml a
+#remove all xml files and the list of xml files saved in xml_files.txt
+rm *.xml xml_files.txt
 
+
+#Clear the screen, ask the user to check manualy if al pictures are download correctly. If not, download them by hand.
 clear
 echo "Pictures downloaded"
+echo "Please check the downloaded pictures."
+echo "Download all broken pictures by hand."
+echo "log in on Flickr with the shared naturalis account and go to:"
+echo "https://www.flickr.com/photos/113733456@N06/<picture_id>/sizes/o/"
 echo "Press enter to continue"
 read
 
@@ -31,36 +38,32 @@ mkdir Flower Tuber Tuber/LOblong Tuber/LSpur Tuber/LRound Tuber/Oblong Tuber/Rou
 #Loop through every jpg file
 for i in *.jpg
 do
-#echo "File: $i"
-    var=(${i//./ }$0)
-#   echo "Var: $var"
-    tags="$var""_tags.txt"
-#   echo "Tag: $tags"
+    name=(${i//./ }$0)
+    tags="$name""_tags.txt"
     #Conver from jpg to png
-    echo "Convert $i to $var.png"
-    convert $i $var.png
+    echo "Convert $i to $name.png"
+    convert $i $name.png
     content=$(cat $tags)
-#   echo "Content: $content"
     echo "---------------------------------------------"
     #Divide the pictiure and tags between Tuber and Flower
     if [[ $content == *Tuber* ]]
     then
-        mv $var.png Tuber
+        mv $name.png Tuber
         mv $tags Tuber
     elif [[ $content == *Flower* ]]
     then
-        mv $var.png Flower
+        mv $name.png Flower
         mv $tags Flower
     else
         echo "No correct tag found"
         echo "=================================================="
     fi
-    #rm $tags
 done
 
 #Remove the jpg that will not be used anymore
 rm *.jpg
 
+#Clear the screen, print a message and wait for input from the user.
 clear
 echo "Pictures divided between flower and tuber"
 echo "Press enter to continue"
@@ -74,38 +77,34 @@ read
 cd Flower
 
 #Loop through the png files
-for f in *.png
+for files in *.png
 do
-#echo "File: $f"
-    var=(${f//./ }$0)
-#echo "Var: $var"
-    tags="$var""_tags.txt"
-#   echo "Tag: $tags"
+    name=(${files//./ }$0)
+    tags="$name""_tags.txt"
     #Create variables that will be used to create directories.
     content=$(cat $tags)
-    genusi=$(sed -n '3p' < $tags)
+    sectioni=$(sed -n '3p' < $tags)
     speciesi=$(sed -n '4p' < $tags)
-    genus=(${genusi##*:})
+    section=(${sectioni##*:})
     species=(${speciesi##*:})
-#echo "Speciesi: $speciesi"
-#   echo "Species: $species"
-    #Create a direcory with the name of the genus
-    mkdir $genus
+    #Create a direcory with the name of the section
+    mkdir $section
     #Move the picure and tag file to the the correct directory
-    mv $f $genus
-    mv $tags $genus
-    #Go into the genus directory and create a directory wiht the name of the species
-    cd $genus
+    mv $files $section
+    mv $tags $section
+    #Go into the section directory and create a directory wiht the name of the species
+    cd $section
     mkdir $species
     #Move the picture and tag file to the correct directory
-    mv $f $species
+    mv $files $species
     mv $tags $species
     #Go back to the Flower directory
     cd ..
-    #    rm $tags
 done
 #After looping through the png files in the Flower directory go out of this directory
 cd ..
+
+#Clear the screen, print a message and wait for input from the user
 clear
 echo "Flower pictures divided"
 echo "Press enter to continue"
@@ -118,222 +117,110 @@ read
 #Go into the Tuber Directory
 cd Tuber
 
-for f in *.png
+for files in *.png
 do
-#echo "File: $f"
     #Create the variables to divide the pictures.
-    var=(${f//./ }$0)
-#   echo "Var: $var"
-    tags="$var""_tags.txt"
-#   echo "Tag: $tags"
+    name=(${files//./ }$0)
+    tags="$name""_tags.txt"
     content=$(cat $tags)
-#   echo "Content: $content"
     #Divide the pictures to the correct directory
     if [[ $content == *Look-a-Like_round* ]]
     then
-        mv $var.png  LRound/
+        mv $name.png  LRound/
         mv $tags LRound/
     elif [[ $content == *Look-a-Like_oblong* ]]
     then
-        mv $var.png LOblong/
+        mv $name.png LOblong/
         mv $tags    LOblong/
     elif [[ $content == *Look-a-Like_spur* ]]
     then
-        mv $var.png LSpur/
+        mv $name.png LSpur/
         mv $tags LSpur/
     elif [[ $content == *Round* ]]
     then
-        mv $var.png Round/
+        mv $name.png Round/
         mv $tags Round/
     elif [[ $content == *Oblong* ]]
     then
-        mv $var.png Oblong/
+        mv $name.png Oblong/
         mv $tags Oblong/
     elif [[ $content == *Spur* ]]
         then
-        mv $var.png Spur/
+        mv $name.png Spur/
         mv $tags Spur/
     else
         echo "No correct tag found"
     fi
-    #rm $tags
 done
 #After looping through the png files in the Tuber directory go out of this directory
 cd ..
+
+#Clear the screen, print a message and ask the user if he wants to split the Tuber pictures.
 clear
 echo "Tuber pictures divided"
-echo "Press enter to continue"
-read
+read -p "Do you want to split the pictures of Tuber? (y or n)" split
 
 #===================================================================================================#
 #                               Split all pictures of Tuber                                         #
 #===================================================================================================#
 
-#Go into the Tuber directory
-cd Tuber
+# When the input starts y or a Y split the Tuber pictures
+case "$split" in
+    y*|Y*)
+        #Go into the Tuber directory
+        cd Tuber
 
-#Loop through all directories in this folder
-for i in $(ls -d */)
-do
-    y=${i%%/}
-#           echo "Y1: $y"
-    #Set standard parameter values
-    size=10000
-    t=0.65
-    #Some directories requires other values for size or for t
-    if [[ $y == *LO* ]]
-    then
-        size=50000
-    elif [[ $y == *LS* ]]
-    then
-        size=50000
-    elif [[ $y == R* ]]
-    then
-        t=0.6
-    fi
-    #Loop through all pictures
-    for f in ./$y/*.png
-    do
-        #Split the picture, using the given parameter values
-        echo "Splitting $f"
-        #       echo "-t: $t"
-        #       echo "Size: $size"
-#               pwd
-#               echo "+++++++++++++++++++++++++++++++++++++++++++++"
-        perl ../splitter.pl -t $t -i $f
-        #Remove the noise pictures using the file size
-        for FILENAME in *,*.png
+        #Loop through all directories in this folder
+        for directories in $(ls -d */)
         do
-            FILESIZE=$(stat -f%z $FILENAME)
-            #           echo "$FILENAME: $FILESIZE"
-            if (( FILESIZE > size ))
+            directory=${directories%%/}
+            #Set standard parameter values
+            size=10000
+            t=0.65
+            #Some directories requires other values for size or for t
+            if [[ $directory == *LO* ]]
             then
-            mv $FILENAME ./$y
-            else
-            rm $FILENAME
+                size=50000
+            elif [[ $directory == *LS* ]]
+            then
+                size=50000
+            elif [[ $directory == R* ]]
+            then
+                t=0.6
             fi
+            #Loop through all pictures
+            for files in ./$directory/*.png
+            do
+                #Split the picture, using the given parameter values
+                echo "Splitting $files"
+                perl ../splitter.pl -t $t -i $files
+                #Remove the noise pictures using the file size
+                for FILENAME in *,*.png
+                do
+                    FILESIZE=$(stat -f%z $FILENAME)
+                    if (( FILESIZE > size ))
+                    then
+                    mv $FILENAME ./$directory
+                    else
+                    rm $FILENAME
+                    fi
+                done
+            done
         done
-    done
-done
-cd ..
+        #When this step is finished go out of the Tuber directory
+        cd ..
 
-clear
-echo "Tuber pictures splited"
-#echo "Press enter to continue"
-#read
+        #Clear the screen and print a message
+        clear
+        echo "Tuber pictures splited" ;;
 
-#cd Flower
-#Loop through all directories in this folder
-#for i in $(ls -d */)
-#do
-#    y=${i%%/}
-#	
-	#Set parameter values
-#	size=4000
-#	t=0.85
-	
-#	if [[ $y == *Barbata* ]]
-#	then
-#		t=0.85
-#		size=10000
-#	elif [[ $y == *Cochlopetalum* ]]
-#	then
-#		t=0.7
-#	elif [[ $y == *Paphiopedilum* ]]
-#	then
-#		t=0.75
-#	fi
-	
-#	echo "Y1: $y"
-#	echo "Size: $size"
-#	echo "-t: $t"
-#	echo "--------------------------------------------"
-	
-#	if [[ $y == *Brachypetalum* ]]
-#	then
-#		continue
-#	else
-#		cd $y
-#		if [[ $y == *Barbata* || $y == *Coryopedilum* || $y == *Pardalopetalum* ]]
-#		then
-#			echo "Y2: $y moet helemaal"
-#			echo "+++++++++++++++++++++++++++++++++++++"
-#			for a in $(ls -d */)
-#			do
-#				b=${a%%/}
-#				echo "B1: $b"
-#				echo "_____________________________________"
-#				echo "-t: $t"
-#				echo "============================================="
-#				cd $b
-#				mkdir original
-#				for file in *.png
-#				do
-#					echo "perl ../../../splitter.pl -t $t -i $file"
-#					perl ../../../splitter.pl -t $t -i $file
-#					echo "mv $file ./original"
-#					mv $file ./original
-#					for FILENAME in *,*.png
-#					do
-#						FILESIZE=$(stat -f%z $FILENAME)
-						#           echo "$FILENAME: $FILESIZE"
-#						if (( FILESIZE < size ))
-#						then
-#						rm $FILENAME
-#						else
-#						continue
-#						fi
-#					done
-#				done
-#				cd ..
-#			done
-#		elif [[ $y == *Cochlopetalum* ]]
-#		then
-#			cd glaucophyllum
-#			ls
-#			mkdir original
-#			echo "perl ../../../splitter.pl -t $t -i 13239075545.png"
-#			perl ../../../splitter.pl -t $t -i 13239075545.png
-#			echo "mv 13239075545.png ./original"
-#			mv 13239075545.png ./original
-#			cd ..
-#		elif [[ $y == *Paphiopedilum* ]]
-#		then
-#			cd villosum
-#			ls
-#			mkdir original
-#			echo "perl ../../../splitter.pl -t $t -i 13239599774.png"
-#			perl ../../../splitter.pl -t $t -i 13239599774.png
-#			echo "mv 13239599774.png ./original"
-#			mv 13239599774.png ./original
-#			cd ..
-#		elif [[ $y == *Parvisepalum* ]]
-#		then
-#			cd armeniacum
-#			ls
-#			mkdir original
-#			echo "perl ../../../splitter.pl -t $t -i 13218412065.png"
-#			perl ../../../splitter.pl -t $t -i 13218412065.png
-#			echo "mv 13218412065.png ./original"
-#			mv 13218412065.png ./original
-#			echo "perl ../../../splitter.pl -t $t -i 13218413845.png"
-#			perl ../../../splitter.pl -t $t -i 13218413845.png
-#			echo "mv 13218413845.png ./original"
-#			mv 13218413845.png ./original
-#			cd ../vietnamense
-#			ls
-#			mkdir original
-#			echo "perl ../../../splitter.pl -t $t -i 13218572413.png"
-#			perl ../../../splitter.pl -t $t -i 13218572413.png
-#			echo "mv 13218572413.png ./original"
-#			mv 13218572413.png ./original
-#			cd ..
-#		cd ..
-#		fi
-		
-#		cd ..
-#	fi
-#done
+    #If the input is something different print a message and don't split the pictures
+    *)
+        #Print a message that the pictures will not be split
+        echo "The pictures wouldn't be split" ;;
+esac
 
-#clear
-#echo "Flower pictures splited"
+#Print a finish message
+echo "The program is finished"
+echo "To create traindata"
+echo "Please run sh create_traindata.sh"

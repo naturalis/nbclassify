@@ -44,17 +44,25 @@ def get_device( request ):
     #Return the device
     return device
 
+# Function to check if the uploaded file is a picture
 def check_upload(upload):
-    picture = ["jpg","tif","bmp","gif","png","jpeg","psd","pspimage","thm","yuv"]
+    #Create a list with picture extentions
+    picture = ["jpg","png","jpeg"]
     
+    #Get the extension from the uploaded file
     name = str(upload)
     extension = name.lower().split(".")[-1]
     
+    #Check if the extension is in the picture list
     if extension in picture:
+        #If it is, return true
         return True
+    #Otherwise
     else:
+        #Remove the file from the server
         name = name.replace(" ","\ ")
-        os.system("rm static/uploaded_files/%s"%(name))        
+        os.system("rm static/uploaded_files/%s"%(name))
+        #Retrun false
         return False
 
 
@@ -66,8 +74,6 @@ def welcome(request):
     # Create the args dictionary and save the csrf in this dictonary
     args = {}
     args.update(csrf(request))
-    # ONLY FOR TESTING! Save the device in the args dictionary
-    args['device']=device
     # Save the html name, with the used device
     html = device+"_welcome.html"
     
@@ -78,8 +84,10 @@ def welcome(request):
 #Function to give the uploaded file a variable part in front of the filename
 def processUpload(request, filename):
     
-    filename2 = str(filename).replace(" ","_")
+    #To use paths spaces need to be replaced by \<space>
     filename = str(filename).replace(" ","\ ")
+    #To make the new filename easier to acces repalce the spaces by "_"
+    filename2 = str(filename).replace(" ","_")
     
     
     # Get the IP-adres of the computer
@@ -119,12 +127,17 @@ def upload(request):
 
     # Replace the '.' in the ip-adres to '_'
     ip = ip.replace('.', '_')
-    
+
+    #If the user uploaded a file that isn't a picture, a message will be displaid.
+    #Also the color of the upload button will be red.
+    #To make this posible, the variables need to be created befor the if statement.
     message = ""
     style = ""
     # Check if the method is POST
     if request.method == 'POST':
         
+        #If the method is POST give the message and style variables the
+        #correct values
         message = "You didn't select a picture"
         style = "color:red"
         
@@ -137,12 +150,14 @@ def upload(request):
             # Save the form
             form.save()
             
+            #Check if the uploaded file is a picture
             is_picture = check_upload(request.FILES["picture"])
             
+            #When the uploaded file is a picture
             if is_picture:
             
                 # run the processUpload function to place the ip in front of the name of the uploaded file
-                processUpload(request, request.FILES["picture"]) # zie hier nog een extra regel
+                processUpload(request, request.FILES["picture"])
                 
                 ''' save the filename and path in python variables
                 use the variable part (the ip) to create the path'''
@@ -163,12 +178,13 @@ def upload(request):
                 # Call the upload_succes html, for the correct device and give it the args dictonary
                 return render_to_response(html, args)
             
+            #When the uploaded file isn't a picture
             else:
                 # Create the args dictionary and save the csrf in this dictonary    
                 args = {}
                 args.update(csrf(request))
                 
-                # Save the empty form in the dictionary
+                # Save the empty form, message and style in the dictionary
                 args['form'] = UploadPictureForm()
                 args['message'] = message
                 args['style'] = style
@@ -188,7 +204,7 @@ def upload(request):
     args = {}
     args.update(csrf(request))
     
-    # Save the empty form in the dictionary
+    # Save the empty form, message and style in the dictionary
     args['form'] = UploadPictureForm()
     args['message'] = message
     args['style'] = style
@@ -213,6 +229,7 @@ def result(request):
         # Replace the '.' in the ip-adres to '_'
         ip = ip.replace('.', '_') 
         
+        #Run converter.sh to convert jpg files to png
         os.system("sh converter.sh %s"%(ip))
         
         # Read in the filename from <ip>.filename.txt
@@ -222,15 +239,16 @@ def result(request):
         # Close the infile
         infile.close()
         
-        # Run the program to identify the orchid
-        # Warning: The program now used is only a test program!
+        # Run the program to classify the orchid
         os.system("python classify.py %s %s" % (filename, ip))
+        #After the previous step a list with numbers is created.
+        #Runt result.py to translate this list to a readable result.
         os.system("python result.py %s" % (ip))
         
-        # Open the file with the results from the identify program
+        # Open the file with the result from the result.py program
         result = open('%s_result.txt' %(ip), 'r')
         
-        # Read in the results
+        # Read in the result
         read_result = result.read()
         
         # Close the file
@@ -240,7 +258,7 @@ def result(request):
         args = {}
         args.update(csrf(request))
         
-        # Save the filename and the result in the args dictionary
+        # Save the filename, the result and the ip in the args dictionary
         args['filename'] = filename
         args['result'] = read_result
         args['ip'] = ip
@@ -272,7 +290,7 @@ def exit(request):
     ip = ip.replace('.', '_')
     
     ''' Create the variable part for the filename using a timestamp.
-    replace all . in _ to prevent errors for the extension '''
+    replace all . into _ to prevent errors for the extension '''
     var_part = str(time()).replace('.', '_')    
     
     # Read in the filename from <ip>.filename.txt, save it and close the file
@@ -282,11 +300,11 @@ def exit(request):
     
     # Remove the temporary file <ip>.filename.txt
     # Move the uploaded picture and its result to the result directory,
-    # Save it as timestamp_ip.jpg and timestamp_ip_result.txt
+    # Save it as timestamp_ip.png, timestamp_ip_result.txt and timestamp_ip_section.txt
     os.system("rm %s.filename.txt" %(ip))
     os.system("mv static/uploaded_files/%s/%s results/%s_%s" %(ip, filename, var_part, filename))
     os.system("rm -r static/uploaded_files/%s" %(ip))
-    os.system("mv %s_out.txt results/%s_%s_result1.txt" %(ip, var_part, ip))
+    os.system("mv %s_out.txt results/%s_%s_result.txt" %(ip, var_part, ip))
     os.system("mv %s_result.txt results/%s_%s_section.txt" %(ip, var_part, ip))
     
     # Go back to the welcome page
@@ -315,7 +333,7 @@ def auth_view(request):
     Otherwise it will be the user '''
     user = auth.authenticate(username=username, password=password)
     
-    ''' Go to the correct page (admin/remove for correct login, invalid for
+    ''' Go to the correct page (admin/remove for correct login, accounts/invalid for
     invalid login)'''
     if user is not None:
         #Login the user

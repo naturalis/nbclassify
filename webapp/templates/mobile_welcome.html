@@ -6,8 +6,6 @@
 
 {% block content %}
     <!-- All lines in this block will be diplayd in the content block -->
-    <!-- The displaying content is only for testing and needs to be updated
-    for the real version -->
 
     <!-- Display a header, telling this is the welcome page -->
     <h2>Welcome</h2
@@ -16,7 +14,7 @@
     <h4>Welcome on the orchid identifier website of Naturalis</h4>
     <p>After uploading a picture the website will identify the orchid.<BR>
     Please click the upload picture button below to upload a picture.<BR>
-    <em>You can upload a picture of a tuber, a leaf or a flower.</em></p>
+    <em>You can upload a picture of a tuber.</em></p>
     
     <!-- Create a form which contains two buttons.
     The first button is for uploading the file -->
@@ -33,6 +31,4 @@
         <input type="submit" value="Remove unused files" id="button">
     </form>
     
-    <!-- FOR TESTING: Print the used divise -->
-    <p>device: {{device}}</p>
 {% endblock %}
