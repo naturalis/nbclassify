@@ -111,7 +111,7 @@ echo "Press enter to continue"
 read
 
 #===================================================================================================#
-#                       Devide the pictures in Tuber between shape(L-a-L)                           #
+#                       Divide the pictures in Tuber between shape(L-a-L)                           #
 #===================================================================================================#
 
 #Go into the Tuber Directory
