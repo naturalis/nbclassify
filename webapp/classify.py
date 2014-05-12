@@ -10,7 +10,7 @@ def create_variables():
     ip = sys.argv[2]
 
     #Set ann to the ann that will be used.
-    ann = "ann/flower41.ann"
+    ann = "ann/flower51.ann"
 
     # The standard path to the uploaded files
     path = "static/uploaded_files/%s/"%(ip)
