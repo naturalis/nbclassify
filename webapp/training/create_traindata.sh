@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 #Loop throug the directories
 for directories in $(ls -d */)
 do
@@ -66,4 +67,4 @@ clear
 #Print a finish message
 echo "Done"
 echo "Please modify the flower data:"
-echo "Run: sh modify_flower_data.sh"
+echo "Run: ./modify_flower_data.sh"

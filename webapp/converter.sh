@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 #This script is running when the website is used
 #Because of this, print statemens are not used.
 

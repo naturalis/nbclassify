@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 #Go into the Flower directory
 cd Flower
 

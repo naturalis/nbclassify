@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 #Clear the screen.
 clear
 
@@ -223,4 +225,4 @@ esac
 #Print a finish message
 echo "The program is finished"
 echo "To create traindata"
-echo "Please run sh create_traindata.sh"
+echo "Please run: ./create_traindata.sh"
