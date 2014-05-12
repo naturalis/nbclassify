@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #Loop throug the directories
 for directories in $(ls -d */)
 do
