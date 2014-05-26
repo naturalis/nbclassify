@@ -34,7 +34,7 @@ $log->info("going to read traindata from $datadir");
 opendir my $dh, $datadir or die $!;
 while( my $entry = readdir $dh ) {
 	if ( $entry =~ /\.tsv$/ ) {
-	
+
 		# read the table
 		$log->info("going to read $datadir/$entry");
 		open my $fh, '<', "$datadir/$entry" or die $!;
@@ -46,16 +46,13 @@ while( my $entry = readdir $dh ) {
 				@header = @fields;
 				next LINE;
 			}
-			
-			# first cell
+
+			# First field is the filename.
 			my $file = shift @fields;
-			
-			# last cells
-			my @categ;
-			for my $i ( 1 .. $categories ) {
-				push @categ, pop @fields;
-			}
-			
+
+			# Splice the classification fields from the field list.
+			my @categ = splice @fields, scalar @fields - $categories, $categories;
+
 			# see AI::FANN docs for datastructure
 			push @interdigitated, \@fields, \@categ;
 			$neurons = scalar @fields; # +1 in hidden layer
