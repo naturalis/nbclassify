@@ -1,43 +1,34 @@
-Requirements for the different scripts
-=======================================
+# Requirements
 
-Required for Offlickr.py
-------------------------
-* libxml2 (brew install --with-python libxml2. When this doesn't work: 1) brew edit libxml2 change "--without-python" into "--with-python" 2) run the command again)
-* flickrapi (download zip form http://pypi.python.org/pypi/flickrapi, unzip the file, in the terminal go to the directory, run: python setup.py install)
+## Offlickr.py
 
-Required for prepare_training.sh
-----------------------------------
-* convert using ImageMagick and jpegscr
+* libxml2 (with Python bindings)
+* flickrapi
 
-download jpegscr here:http://www.ijg.org/files/jpegsrc.v8c.tar.gz  
+To instal on Debian (based) systems:
 
-downlaod ImageMagick here: http://www.imagemagick.org/download/
+    sudo apt-get install libxml2 python-libxml2 python-flickrapi
 
-then cd to the download location of jpegscr and run the next commands:
+To instal on Mac OS via pip and Homebrew:
 
-tar xvfz jpeg-8c.tar.gz
+    sudo easy_install pip
+    sudo pip install flickrapi
+    brew install --with-python libxml2
 
-cd jpeg-8c
+When the `brew` command fails:
 
-./configure --enable-shared --prefix=$CONFIGURE_PREFIX
+1. Run `brew edit libxml2` and change "--without-python" into "--with-python"
+2. Run the command again
 
-make
 
-sudo make install (Password required!)
+## prepare_training.sh
 
-after this cd to the download location of ImageMagick and run the following commands:
+* ImageMagick
 
-tar xvfz ImageMagick-6.6.9-5.tar.gz (Use the numbers of your version!)
+To instal on Debian (based) systems:
 
-cd ImageMagick-6.6.9-5 (Use the numbers of your version!)
+    sudo apt-get install imagemagick
 
-export CPPFLAGS=-I/usr/local/include
+To instal on Mac OS via Homebrew:
 
-export LDFLAGS=-L/usr/local/lib
-
-./configure --prefix=/usr/local --disable-static --with-modules --without-perl --without-magick-plus-plus --with-quantum-depth=8 --disable-openmp
-
-make
-
-sudo make install
+    brew install imagemagick
