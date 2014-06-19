@@ -5,11 +5,11 @@
 * libxml2 (with Python bindings)
 * flickrapi
 
-To instal on Debian (based) systems:
+To install on Debian (based) systems:
 
     sudo apt-get install libxml2 python-libxml2 python-flickrapi
 
-To instal on Mac OS via pip and Homebrew:
+To install on Mac OS via pip and Homebrew:
 
     sudo easy_install pip
     sudo pip install flickrapi
@@ -25,10 +25,10 @@ When the `brew` command fails:
 
 * ImageMagick
 
-To instal on Debian (based) systems:
+To install on Debian (based) systems:
 
     sudo apt-get install imagemagick
 
-To instal on Mac OS via Homebrew:
+To install on Mac OS via Homebrew:
 
     brew install imagemagick
