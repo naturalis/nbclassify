@@ -29,7 +29,7 @@ for my $axis ( qw(vert horiz) ) {
 	for my $color ( qw(red green blue) ) {
 		my $max = $axis eq 'horiz' ? $resolution / 2 : $resolution;
 		for my $i ( 1 .. $max ) {
-			print "${axis}.${color}.${i}\t";	
+			print "${axis}.${color}.${i}\t";
 		}
 	}
 }
@@ -41,20 +41,20 @@ opendir my $dh, $dir or die $!;
 while( my $entry = readdir $dh ) {
 
 	# only read png files created by splitter.pl
-	if ( $entry =~ /(\d+,?\d*)\.png/ ) {
+	if ( $entry =~ /(.*)\.png/ ) {
 		my $nucleus = $1;
 		my @row = ( $nucleus );
-		
+
 		# read image
 		my $img = Image::Magick->new;
-		push @row, make_fingerprint( 
+		push @row, make_fingerprint(
 			'file'       => $dir . '/' . $entry,
 			'resolution' => $resolution,
 		);
 		$log->info("created fingerprint for $entry");
-		
+
 		push @row, $category;
 		print join("\t", @row), "\n";
-	}	
+	}
 }
 
