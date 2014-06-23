@@ -24,7 +24,7 @@ rm *.xml xml_files.txt
 clear
 echo "Pictures downloaded"
 echo "Please check the downloaded pictures."
-echo "Download all broken pictures by hand."
+echo "Download all broken pictures by hand:"
 echo "log in on Flickr with the shared naturalis account and go to:"
 echo "https://www.flickr.com/photos/113733456@N06/<picture_id>/sizes/o/"
 echo "Press enter to continue"
@@ -113,7 +113,7 @@ echo "Press enter to continue"
 read
 
 #===================================================================================================#
-#                       Divide the pictures in Tuber between shape(L-a-L)                           #
+#                       Devide the pictures in Tuber between shape(L-a-L)                           #
 #===================================================================================================#
 
 #Go into the Tuber Directory
@@ -160,69 +160,61 @@ cd ..
 #Clear the screen, print a message and ask the user if he wants to split the Tuber pictures.
 clear
 echo "Tuber pictures divided"
-read -p "Do you want to split the pictures of Tuber? (y or n)" split
+echo "Press enter to continue"
+read
 
 #===================================================================================================#
 #                               Split all pictures of Tuber                                         #
 #===================================================================================================#
 
-# When the input starts y or a Y split the Tuber pictures
-case "$split" in
-    y*|Y*)
-        #Go into the Tuber directory
-        cd Tuber
+#Go into the Tuber directory
+cd Tuber
 
-        #Loop through all directories in this folder
-        for directories in $(ls -d */)
-        do
-            directory=${directories%%/}
-            #Set standard parameter values
-            size=10000
-            t=0.65
-            #Some directories requires other values for size or for t
-            if [[ $directory == *LO* ]]
-            then
-                size=50000
-            elif [[ $directory == *LS* ]]
-            then
-                size=50000
-            elif [[ $directory == R* ]]
-            then
-                t=0.6
-            fi
-            #Loop through all pictures
-            for files in ./$directory/*.png
-            do
-                #Split the picture, using the given parameter values
-                echo "Splitting $files"
-                perl ../splitter.pl -t $t -i $files
-                #Remove the noise pictures using the file size
-                for FILENAME in *,*.png
-                do
-                    FILESIZE=$(stat -f%z $FILENAME)
-                    if (( FILESIZE > size ))
-                    then
-                    mv $FILENAME ./$directory
-                    else
-                    rm $FILENAME
-                    fi
-                done
-            done
-        done
-        #When this step is finished go out of the Tuber directory
-        cd ..
+#Loop through all directories in this folder
+for directories in $(ls -d */)
+do
+	directory=${directories%%/}
+	#Set standard parameter values
+	size=10000
+	t=0.65
+	#Some directories requires other values for size or for t
+	if [[ $directory == *LO* ]]
+	then
+		size=50000
+	elif [[ $directory == *LS* ]]
+	then
+		size=50000
+	elif [[ $directory == R* ]]
+	then
+		t=0.6
+	fi
+	#Loop through all pictures
+	for files in ./$directory/*.png
+	do
+		#Split the picture, using the given parameter values
+		echo "Splitting $files"
+		perl ../splitter.pl -t $t -i $files
+		#Remove the noise pictures using the file size
+		for FILENAME in *,*.png
+		do
+			FILESIZE=$(stat -f%z $FILENAME)
+			if (( FILESIZE > size ))
+			then
+				mv $FILENAME ./$directory
+			else
+				rm $FILENAME
+			fi
+		done
+	done
+done
+#When this step is finished go out of the Tuber directory
+cd ..
 
-        #Clear the screen and print a message
-        clear
-        echo "Tuber pictures splited" ;;
-
-    #If the input is something different print a message and don't split the pictures
-    *)
-        #Print a message that the pictures will not be split
-        echo "The pictures wouldn't be split" ;;
-esac
+#Clear the screen and print a message
+clear
+echo "Tuber pictures splited"
 
 #Print a finish message
 echo "The program is finished"
 echo "To create traindata"
-echo "Please run: ./create_traindata.sh"
+echo "Please run ./create_traindata.sh"

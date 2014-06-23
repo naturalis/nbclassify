@@ -76,6 +76,7 @@ def change_files(header, out_list, number, files, counter, maxi):
         #Add 1 to the counter.
         counter += 1
         os.system("mv %s %s"%(y, y.split(".")[0]))
+    print "\nnumber of categories: ", counter
     clean_up(output)
 
 def clean_up(output):

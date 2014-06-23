@@ -23,7 +23,7 @@ python ../add_columns.py
 echo "Finished"
 
 echo "To train a neural network use the folowing command:"
-echo "perl trainai.pl -d <directory_with_traindata> -c <number_of_catogories> -o <output>"
+echo "perl trainai.pl -d <directory_with_traindata> -c <number_of_categories> -o <output>"
 echo "To change the Desired Error add -t <desired_error>"
 echo "To change the number of epoch add -e <epochs>"
 echo "To follow the run time add date; before and ;date after the command"

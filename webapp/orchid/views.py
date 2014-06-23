@@ -260,7 +260,8 @@ def result(request):
         
         # Save the filename, the result and the ip in the args dictionary
         args['filename'] = filename
-        args['result'] = read_result
+        args['section'] = read_result
+        args['genus'] = "Paphiopedilum"
         args['ip'] = ip
         
         # Save the html name with the used device
