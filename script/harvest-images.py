@@ -69,7 +69,7 @@ def main():
         args.db = os.path.join(args.output, "photos.db")
 
     # Initialize Flickr downloader.
-    fdl = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
+    flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
 
     # Flickr search options.
     search_options = {}
@@ -78,7 +78,7 @@ def main():
     if args.per_page is not None: search_options['per_page'] = args.per_page
 
     # Download and organize photos.
-    harvester = ImageHarvester(fdl, args.db)
+    harvester = ImageHarvester(flickr, args.db)
     n = harvester.archive_taxon_photos(args.output, **search_options)
     if n > 0:
         logging.info("Finished processing %d photos" % n)
@@ -88,19 +88,20 @@ def main():
 class ImageHarvester(object):
     """Harvest images from a Flickr account."""
 
-    def __init__(self, fdl, db_file):
+    def __init__(self, flickr, db_file):
         self.conn = None
         self.cursor = None
         self.re_filename_replace = re.compile(r'[\s]+')
-        self.set_flickr_downloader(fdl)
+        self.re_tags_ignore = re.compile(r'vision:')
+        self.set_flickr_downloader(flickr)
         self.db_connect(db_file)
 
-    def set_flickr_downloader(self, fdl):
+    def set_flickr_downloader(self, flickr):
         """Set the Flickr downloader."""
-        if isinstance(fdl, FlickrDownloader):
-            self.fdl = fdl
+        if isinstance(flickr, FlickrDownloader):
+            self.flickr = flickr
         else:
-            raise ValueError("Expected an instance of FlickrDownloader")
+            raise TypeError("Expected an instance of FlickrDownloader")
 
     def db_connect(self, db_file):
         """Connect to the database, if one already exists.
@@ -194,6 +195,27 @@ class ImageHarvester(object):
             FOREIGN KEY (photo_id) REFERENCES photos (id) ON DELETE CASCADE,
             FOREIGN KEY (taxon_id) REFERENCES taxa (id) ON DELETE RESTRICT
         );
+
+        CREATE TABLE tags
+        (
+            id INTEGER,
+            name VARCHAR NOT NULL,
+
+            PRIMARY KEY (id),
+            UNIQUE (name)
+        );
+
+        CREATE TABLE photos_tags
+        (
+            id INTEGER,
+            photo_id INTEGER NOT NULL,
+            tag_id INTEGER NOT NULL,
+
+            PRIMARY KEY (id),
+            UNIQUE (photo_id, tag_id),
+            FOREIGN KEY (photo_id) REFERENCES photos (id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE RESTRICT
+        );
         """)
 
         # Commit the transaction.
@@ -213,17 +235,35 @@ class ImageHarvester(object):
             time.sleep(2)
             self.remove_db(db_file, tries)
 
-    def db_insert_photo(self, photo_id, path, info):
-        """Insert a new photo into the database."""
+    def db_insert_photo(self, photo_id, path, info, target='.'):
+        """Set meta data for a photo in the database.
+
+        Sets the meta data `info` for photo with ID `photo_id` and file
+        path `path` in the database, where `path` should be the path
+        constructed from meta data. If `path` is not relative from the
+        current directory, `target` should be set to the containing
+        directory, which is prepended to `path` to get the photo's real
+        path. By default `target` is set to the current directory.
+
+        So if the photo's path is
+        ``/path/to/Genus/Subgenus/Section/species/123.jpg``, then `path`
+        should be ``Genus/Subgenus/Section/species/123.jpg`` and `target` is
+        ``/path/to/``. Only `path` is stored in the database.
+
+        This function checks whether an existing entry in the database
+        matches the file's MD5 hash. If they don't match, the file entry is
+        deleted and a new one is created.
+        """
         str(int(photo_id))
-        if not os.path.isfile(path):
-            raise IOError("File '%s' doesn't exist" % path)
+        real_path = os.path.join(target, path)
+        if not os.path.isfile(real_path):
+            raise IOError("Cannot open %s (no such file)" % real_path)
         if not xml.etree.ElementTree.iselement(info):
-            raise ValueError("Argument `info` is not an xml.etree.ElementTree element")
+            raise TypeError("Argument `info` is not an xml.etree.ElementTree element")
 
         # Get the MD5 hash.
         hasher = hashlib.md5()
-        with open(path, 'rb') as fh:
+        with open(real_path, 'rb') as fh:
             buf = fh.read()
             hasher.update(buf)
 
@@ -231,15 +271,13 @@ class ImageHarvester(object):
         self.cursor.execute("SELECT md5sum FROM photos WHERE id=?;", [photo_id])
         md5sum = self.cursor.fetchone()
         if md5sum:
-            if md5sum[0] == hasher.hexdigest():
-                return
+            if md5sum[0] != hasher.hexdigest():
+                # Remove the photo record if the MD5 sums don't match.
+                warning.info("MD5 sum mismatch; updating photo record..." % photo_id)
+                self.cursor.execute("DELETE FROM photos WHERE id=?;", [photo_id])
+                self.conn.commit()
 
-            # Remove the photo record if the MD5 sums don't match.
-            warning.info("MD5 sum mismatch; updating photo record..." % photo_id)
-            self.cursor.execute("DELETE FROM photos WHERE id=?;", [photo_id])
-            self.conn.commit()
-
-        # Get dict of all ranks {name: id}.
+        # Get dict of all ranks {name: id, ...}.
         self.cursor.execute("SELECT name, id FROM ranks;")
         ranks = self.cursor.fetchall()
         ranks = dict(ranks)
@@ -251,11 +289,11 @@ class ImageHarvester(object):
         description = None if description.text == '' else description.text
 
         # Insert the photo into the database.
-        self.conn.execute("INSERT INTO photos VALUES (?,?,?,?,?);",
+        self.conn.execute("INSERT OR IGNORE INTO photos VALUES (?,?,?,?,?);",
             [photo_id, hasher.hexdigest(), path, title, description])
 
-        # Process photo tags.
-        tags = self.fdl.info_get_tags(info)
+        # Process photo's taxon tags.
+        tags = self.flickr_info_get_tags(info, dict)
         for key, val in tags.items():
             # Check if key is a known rank. If not, skip tag.
             rank_id = ranks.get(key)
@@ -266,11 +304,15 @@ class ImageHarvester(object):
             taxon_id = self.db_insert_taxon(rank_id, val)
 
             # Connect the photo to this taxon.
-            self.conn.execute("INSERT INTO photos_taxa (photo_id, taxon_id) VALUES (?,?);",
+            self.conn.execute("INSERT OR IGNORE INTO photos_taxa (photo_id, taxon_id) VALUES (?,?);",
                 [photo_id, taxon_id])
 
         # Commit the transaction.
         self.conn.commit()
+
+        # Set the tags for this photo.
+        tags = self.flickr_info_get_tags(info, list)
+        self.db_set_photo_tags(photo_id, tags)
 
     def db_insert_taxon(self, rank_id, taxon_name):
         """Insert a taxon in the database.
@@ -285,6 +327,36 @@ class ImageHarvester(object):
             [rank_id, taxon_name])
         taxon_id = self.cursor.fetchone()
         return int(taxon_id[0])
+
+    def db_set_photo_tags(self, photo_id, tags):
+        """Sets the tags for a photo in the database.
+
+        This method assumes that the tags from `tags` already exist in the
+        database. The photo with ID `photo_id` will be linked to the tags.
+        """
+        self.cursor.execute("DELETE FROM photos_tags WHERE photo_id=?;",
+            [photo_id])
+        self.cursor.executemany("INSERT INTO photos_tags (photo_id, tag_id) SELECT ?,id FROM tags WHERE name=?;",
+            [(photo_id, t) for t in tags])
+        self.conn.commit()
+
+    def db_set_tags(self):
+        """Sets all Flickr user tags in the database.
+
+        Run this method before calling :meth:`db_set_photo_tags`. Existing
+        tags are kept, missing tags are added.
+        """
+        who = self.flickr.execute('tags.getListUserRaw')
+        if who is False:
+            raise RuntimeError("Failed to obtain user tags list from Flickr")
+
+        # Construct list of raw tags and filter out unwanted tags.
+        tags = [t.find('raw').text for t in who.find('tags')]
+        tags = [t for t in tags if not self.re_tags_ignore.match(t)]
+
+        self.cursor.executemany('INSERT OR IGNORE INTO tags (name) VALUES (?);',
+            [(t,) for t in tags])
+        self.conn.commit()
 
     def archive_taxon_photos(self, target, **kwargs):
         """Download taxon photos to a taxonomic directory hierarchy.
@@ -307,17 +379,25 @@ class ImageHarvester(object):
         if self.cursor is None:
             raise ValueError("No database cursor set")
 
-        photos = self.fdl.photos_search(**kwargs)
+        photos = self.flickr.execute('photos.search', **kwargs)
+        if photos is False:
+            raise RuntimeError("Failed to obtain photo list from Flickr")
+
+        # Make sure that all tags are set in the database.
+        self.db_set_tags()
+
+        # Download each photo and set meta data in the database.
         n = 0
         for n, photo in enumerate(photos, start=1):
             photo_id = photo.get('id')
-            info = self.fdl.get_photo_info(photo_id)
-            tags = self.fdl.info_get_tags(info)
+            info = self.flickr.execute('photos.getInfo', photo_id=photo_id)
+            if info is False:
+                raise RuntimeError("Failed to obtain photo info from Flickr")
+            tags = self.flickr_info_get_tags(info, dict)
             ext = info.get('originalformat')
 
             # Construct the save path for the photo.
             photo_dir = os.path.join(
-                target,
                 tags.get('genus', 'genus_null'),
                 tags.get('subgenus', 'subgenus_null'),
                 tags.get('section', 'section_null'),
@@ -326,43 +406,75 @@ class ImageHarvester(object):
             filename = "%s.%s" % (photo_id, ext)
             filename = self.re_filename_replace.sub('-', filename)
             photo_path = os.path.join(photo_dir, filename)
+            abs_path = os.path.join(target, photo_path)
 
             # Check if the folder exists. If not, create it.
-            if not os.path.exists(photo_dir):
-                logging.info("Creating directory %s" % photo_dir)
-                os.makedirs(photo_dir)
+            if not os.path.exists(abs_path):
+                logging.info("Creating directory %s" % abs_path)
+                os.makedirs(abs_path)
 
             # Download the photo.
-            if not os.path.isfile(photo_path):
-                logging.info("Downloading photo %s to %s ..." % (photo_id, photo_path))
-                self.fdl.download_photo(photo_id, photo_path)
+            if not os.path.isfile(abs_path):
+                logging.info("Downloading photo %s to %s ..." % (photo_id, abs_path))
+                self.flickr.download_photo(photo_id, abs_path)
             else:
                 logging.info("Photo %s already exists. Skipping download." % (photo_id))
 
             # Insert the photo into the database.
-            self.db_insert_photo(photo_id, photo_path, info)
+            self.db_insert_photo(photo_id, photo_path, info, target)
 
         return n
+
+    def flickr_info_get_tags(self, info, format=list):
+        """Returns the tags from a photo info object.
+
+        If `format` is ``list``, the raw tag values are returned in a list.
+        If `format` is ``dict``, the tags are returned as a dictionary. Tags
+        of the format ``key:value`` are stored as a key:value pair in
+        the dictionary. Otherwise the key will be the raw tag value, and the
+        corresponding value will be None.
+        """
+        if not xml.etree.ElementTree.iselement(info):
+            raise TypeError("Argument `info` is not an xml.etree.ElementTree element")
+        if format is list:
+            out = []
+        elif format is dict:
+            out = {}
+        else:
+            raise ValueError("Unkown format '%s'" % format)
+
+        tags = info.find('tags')
+        for tag in tags:
+            raw = tag.get('raw').strip()
+            if format is list:
+                out.append(raw)
+            else:
+                e = raw.split(':')
+                if len(e) == 2:
+                    out[e[0]] = e[1]
+                else:
+                    out[raw] = None
+        return out
 
 class FlickrDownloader(object):
     """Download photos with metadata from Flickr."""
 
-    def __init__(self, key, secret, uid, format='etree'):
+    def __init__(self, key, secret, uid):
         self.key = key
         self.secret = secret
         self.uid = uid
         self.token = None
         self.frob = None
-        self.flickr = flickrapi.FlickrAPI(key, secret)
+        self.api = flickrapi.FlickrAPI(key, secret, format='etree')
 
         # Flickr's two-phase authentication.
-        self.token, self.frob = self.flickr.get_token_part_one(perms='read')
+        self.token, self.frob = self.api.get_token_part_one(perms='read')
 
         if self.token:
             # We have a token, but it might not be valid.
             logging.info("Flickr token found")
             try:
-                self.flickr.auth_checkToken()
+                self.api.auth_checkToken()
             except flickrapi.FlickrError:
                 self.token = None
 
@@ -371,67 +483,36 @@ class FlickrDownloader(object):
             logging.info("Please authorize this program via Flickr. Redirecting to Flickr...")
             raw_input("Press ENTER after you authorized this program")
 
-        self.flickr.get_token_part_two((self.token, self.frob))
-
-        # If the token is valid, we can call the decorated function.
+        self.api.get_token_part_two((self.token, self.frob))
         logging.info("Flickr authorization success")
 
-    def get_photoset_list(self):
-        if self.token == None:
-            raise ValueError("Not authorized by Flickr")
+    def execute(self, method, *args, **kwargs):
+        """Execute a method of the Flickr API.
 
-        rsp = self.flickr.photosets_getList(api_key=self.key, user_id=self.uid)
-        if rsp.get('stat') != 'ok':
-            logging.error("flickr.photosets.getList failed")
-            return None
-        return rsp[0]
+        The method name `method` can be followed by the method specific
+        arguments. Returns the result or True on success, False otherwise.
 
-    def photos_search(self, **kwargs):
-        """Return a list of photos matching some criteria.
-
-        Wrapper for ``flickr.photos.search``. See the Flickr API for the
-        available arguments.
+        The Flickr method arguments `api_key` and `user_id` are automatically
+        added and can be omitted when calling this method.
         """
-        if self.token == None:
-            raise ValueError("Not authorized by Flickr")
-
-        rsp = self.flickr.photos_search(api_key=self.key, user_id=self.uid,
-            **kwargs)
+        if self.token is None:
+            raise ValueError("Token not set")
+        if not isinstance(method, str):
+            raise TypeError("Argument `func` must be a string")
+        try:
+            m = method.replace('.', '_')
+            m = re.sub("^flickr_", "", m)
+            m = getattr(self.api, m)
+        except AttributeError:
+            raise ValueError("Flickr API method '%s' not found" % method)
+        rsp = m(api_key=self.key, user_id=self.uid, *args, **kwargs)
         if rsp.get('stat') != 'ok':
-            logging.error("flickr.photos.search failed")
-            return None
-        return rsp[0]
-
-    def get_photo_info(self, photo_id):
-        """Get information about a photo."""
-        rsp = self.flickr.photos_getInfo(api_key=self.key, photo_id=photo_id)
-        if rsp.get('stat') != 'ok':
-            logging.error("flickr.photos.getInfo failed")
-            return None
-        return rsp[0]
-
-    def info_get_tags(self, info):
-        """Returns a tags dictionary from a photo info object.
-
-        Tags of the format ``key:value`` are stored as a key:value pair in the
-        dictionary. Otherwise the key will be the raw value of the tag, and the
-        corresponding value will be None.
-        """
-        tags = info.find('tags')
-        d = {}
-        for tag in tags:
-            raw = tag.get('raw')
-            e = raw.split(':')
-            d[e[0].strip()] = e[1].strip() if len(e) == 2 else None
-        return d
-
-    def get_photo_sizes(self, photo_id):
-        """Return a string with is a list of available sizes for a photo."""
-        rsp = self.flickr.photos_getSizes(api_key=self.key, photo_id=photo_id)
-        if rsp.get('stat') != 'ok':
-            logging.error("flickr.photos.getSizes failed")
-            return None
-        return rsp[0]
+            logging.error("Method '%' failed" % method)
+            return False
+        if len(rsp) > 0:
+            return rsp[0]
+        else:
+            return True
 
     def get_photo_urls(self, photo_id):
         """Return the URLs for the photo.
@@ -441,8 +522,8 @@ class FlickrDownloader(object):
         returned by ``flickr.photos.getSizes``.
         """
         urls = {}
-        sizes = self.get_photo_sizes(photo_id)
-        if sizes == None:
+        sizes = self.execute('photos.getSizes', photo_id=photo_id)
+        if sizes is False:
             logging.error("Failed to get sizes for photo %s" % photo_id)
             return None
         for size in sizes:
