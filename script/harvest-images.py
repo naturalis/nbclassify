@@ -119,8 +119,6 @@ class ImageHarvester(object):
 
         This deletes any existing database file.
         """
-        logging.info("Creating new database %s..." % db_file)
-
         # Check if the folder exists. If not, create it.
         db_dir = os.path.dirname(db_file)
         if not os.path.exists(db_dir):
@@ -131,6 +129,8 @@ class ImageHarvester(object):
         if os.path.isfile(db_file):
             logging.info("Deleting existing database file...")
             self.remove_db()
+
+        logging.info("Creating new database %s..." % db_file)
 
         # Create a new database.
         self.conn = sqlite.connect(db_file)
@@ -235,15 +235,15 @@ class ImageHarvester(object):
             time.sleep(2)
             self.remove_db(db_file, tries)
 
-    def db_insert_photo(self, photo_id, path, info, target='.'):
+    def db_insert_photo(self, photo_info, path, target='.'):
         """Set meta data for a photo in the database.
 
-        Sets the meta data `info` for photo with ID `photo_id` and file
-        path `path` in the database, where `path` should be the path
-        constructed from meta data. If `path` is not relative from the
-        current directory, `target` should be set to the containing
-        directory, which is prepended to `path` to get the photo's real
-        path. By default `target` is set to the current directory.
+        Sets the meta data `photo_info` for a photo with file path `path`
+        in the database, where `path` should be the path constructed from
+        meta data. If `path` is not relative from the current directory,
+        `target` should be set to the containing directory, which is
+        prepended to `path` to get the photo's real path. By default
+        `target` is set to the current directory.
 
         So if the photo's path is
         ``/path/to/Genus/Subgenus/Section/species/123.jpg``, then `path`
@@ -254,12 +254,14 @@ class ImageHarvester(object):
         matches the file's MD5 hash. If they don't match, the file entry is
         deleted and a new one is created.
         """
-        str(int(photo_id))
         real_path = os.path.join(target, path)
         if not os.path.isfile(real_path):
             raise IOError("Cannot open %s (no such file)" % real_path)
-        if not xml.etree.ElementTree.iselement(info):
-            raise TypeError("Argument `info` is not an xml.etree.ElementTree element")
+        if not xml.etree.ElementTree.iselement(photo_info):
+            raise TypeError("Argument `photo_info` is not an xml.etree.ElementTree element")
+
+        # Photo ID must be an integer.
+        photo_id = int(photo_info.get('id'))
 
         # Get the MD5 hash.
         hasher = hashlib.md5()
@@ -273,7 +275,7 @@ class ImageHarvester(object):
         if md5sum:
             if md5sum[0] != hasher.hexdigest():
                 # Remove the photo record if the MD5 sums don't match.
-                warning.info("MD5 sum mismatch; updating photo record..." % photo_id)
+                warning.info("MD5 sum mismatch for photo %d; updating photo record..." % photo_id)
                 self.cursor.execute("DELETE FROM photos WHERE id=?;", [photo_id])
                 self.conn.commit()
 
@@ -283,9 +285,9 @@ class ImageHarvester(object):
         ranks = dict(ranks)
 
         # Get meta data.
-        title = info.find('title')
+        title = photo_info.find('title')
         title = None if title.text == '' else title.text
-        description = info.find('description')
+        description = photo_info.find('description')
         description = None if description.text == '' else description.text
 
         # Insert the photo into the database.
@@ -293,7 +295,7 @@ class ImageHarvester(object):
             [photo_id, hasher.hexdigest(), path, title, description])
 
         # Process photo's taxon tags.
-        tags = self.flickr_info_get_tags(info, dict)
+        tags = self.flickr_info_get_tags(photo_info, dict)
         for key, val in tags.items():
             # Check if key is a known rank. If not, skip tag.
             rank_id = ranks.get(key)
@@ -311,7 +313,7 @@ class ImageHarvester(object):
         self.conn.commit()
 
         # Set the tags for this photo.
-        tags = self.flickr_info_get_tags(info, list)
+        tags = self.flickr_info_get_tags(photo_info, list)
         self.db_set_photo_tags(photo_id, tags)
 
     def db_insert_taxon(self, rank_id, taxon_name):
@@ -373,11 +375,11 @@ class ImageHarvester(object):
         Return the number of photos processed.
         """
         if not os.path.isdir(target):
-            raise ValueError("Cannot open %s (no such directory)" % target)
+            raise IOError("Cannot open %s (no such directory)" % target)
         if self.conn is None:
-            raise ValueError("Not connected to database")
+            raise RuntimeError("Not connected to a database")
         if self.cursor is None:
-            raise ValueError("No database cursor set")
+            raise RuntimeError("No database cursor set")
 
         photos = self.flickr.execute('photos.search', **kwargs)
         if photos is False:
@@ -389,7 +391,7 @@ class ImageHarvester(object):
         # Download each photo and set meta data in the database.
         n = 0
         for n, photo in enumerate(photos, start=1):
-            photo_id = photo.get('id')
+            photo_id = int(photo.get('id'))
             info = self.flickr.execute('photos.getInfo', photo_id=photo_id)
             if info is False:
                 raise RuntimeError("Failed to obtain photo info from Flickr")
@@ -403,25 +405,28 @@ class ImageHarvester(object):
                 tags.get('section', 'section_null'),
                 tags.get('species', 'species_null')
             )
+
             filename = "%s.%s" % (photo_id, ext)
             filename = self.re_filename_replace.sub('-', filename)
             photo_path = os.path.join(photo_dir, filename)
-            abs_path = os.path.join(target, photo_path)
+
+            real_photo_dir = os.path.join(target, photo_dir)
+            real_path = os.path.join(real_photo_dir, filename)
 
             # Check if the folder exists. If not, create it.
-            if not os.path.exists(abs_path):
-                logging.info("Creating directory %s" % abs_path)
-                os.makedirs(abs_path)
+            if not os.path.exists(real_photo_dir):
+                logging.info("Creating directory %s" % real_photo_dir)
+                os.makedirs(real_photo_dir)
 
             # Download the photo.
-            if not os.path.isfile(abs_path):
-                logging.info("Downloading photo %s to %s ..." % (photo_id, abs_path))
-                self.flickr.download_photo(photo_id, abs_path)
+            if not os.path.isfile(real_path):
+                logging.info("Downloading photo %s to %s ..." % (photo_id, real_path))
+                self.flickr.download_photo(photo_id, real_path)
             else:
                 logging.info("Photo %s already exists. Skipping download." % (photo_id))
 
             # Insert the photo into the database.
-            self.db_insert_photo(photo_id, photo_path, info, target)
+            self.db_insert_photo(info, photo_path, target)
 
         return n
 
@@ -496,15 +501,15 @@ class FlickrDownloader(object):
         added and can be omitted when calling this method.
         """
         if self.token is None:
-            raise ValueError("Token not set")
+            raise RuntimeError("Flickr token not set")
         if not isinstance(method, str):
-            raise TypeError("Argument `func` must be a string")
+            raise TypeError("Argument `method` must be a string")
         try:
             m = method.replace('.', '_')
             m = re.sub("^flickr_", "", m)
             m = getattr(self.api, m)
         except AttributeError:
-            raise ValueError("Flickr API method '%s' not found" % method)
+            raise AttributeError("Flickr API method '%s' not found" % method)
         rsp = m(api_key=self.key, user_id=self.uid, *args, **kwargs)
         if rsp.get('stat') != 'ok':
             logging.error("Method '%' failed" % method)
@@ -524,8 +529,7 @@ class FlickrDownloader(object):
         urls = {}
         sizes = self.execute('photos.getSizes', photo_id=photo_id)
         if sizes is False:
-            logging.error("Failed to get sizes for photo %s" % photo_id)
-            return None
+            raise AttributeError("Failed to get sizes for photo %s" % photo_id)
         for size in sizes:
             label = size.get('label')
             source = size.get('source')
@@ -544,7 +548,7 @@ class FlickrDownloader(object):
         if url is None:
             logging.error("No URL found for photo %s with size '%s'" % (photo_id, size))
             return None
-        tmpfile = "%s.TMP" % path
+        tmpfile = "%s.part" % path
         urllib.urlretrieve(url, tmpfile)
         os.rename(tmpfile, path)
 
