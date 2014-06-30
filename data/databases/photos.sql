@@ -7,7 +7,7 @@ CREATE TABLE photos
 (
     id INTEGER, -- Flickr photo ID
     md5sum VARCHAR NOT NULL, -- MD5 hash of the image file
-    path VARCHAR NOT NULL,
+    path VARCHAR,
     title VARCHAR,
     description VARCHAR,
 

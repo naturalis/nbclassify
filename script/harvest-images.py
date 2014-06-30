@@ -142,7 +142,7 @@ class ImageHarvester(object):
         (
             id INTEGER,
             md5sum VARCHAR NOT NULL,
-            path VARCHAR NOT NULL,
+            path VARCHAR,
             title VARCHAR,
             description VARCHAR,
 
