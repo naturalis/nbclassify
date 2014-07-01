@@ -53,9 +53,12 @@ def main():
         "defaults to a file photos.db in the output folder. The database "\
         "file will be created if it doesn't exist.")
     parser.add_argument("--tags", metavar="TAGS",
-        help="A comma-delimited list of tags. Photos with one or more of " \
+        help="A space-delimited list of tags. Photos with one or more of " \
         "the tags listed will be harvested. You can exclude results that " \
-        "match a term by prepending it with a - character.")
+        "match a term by prepending it with a - character (e.g. \"foo -bar\").")
+    parser.add_argument("--tag-mode", metavar="MODE", default='all',
+        help="Either 'any' for an OR combination of tags, or 'all' for an " \
+        "AND combination. Defaults to 'all' if not specified.")
     parser.add_argument("--page", metavar="N", default=1,
         help="The page of results to return. If this argument is omitted, " \
         "it defaults to 1.")
@@ -73,7 +76,8 @@ def main():
 
     # Flickr search options.
     search_options = {}
-    if args.tags is not None: search_options['tags'] = args.tags
+    if args.tag_mode is not None: search_options['tag_mode'] = args.tag_mode
+    if args.tags is not None: search_options['tags'] = ",".join(args.tags.split())
     if args.page is not None: search_options['page'] = args.page
     if args.per_page is not None: search_options['per_page'] = args.per_page
 
@@ -269,15 +273,20 @@ class ImageHarvester(object):
             buf = fh.read()
             hasher.update(buf)
 
-        # Check if the photo already exists.
+        # Check if the photo exists in the database.
         self.cursor.execute("SELECT md5sum FROM photos WHERE id=?;", [photo_id])
         md5sum = self.cursor.fetchone()
+
+        # If the photo exists, but the MD5 sums mismatch, delete the record
+        # from the database. Otherwise skip this photo.
         if md5sum:
             if md5sum[0] != hasher.hexdigest():
                 # Remove the photo record if the MD5 sums don't match.
-                warning.info("MD5 sum mismatch for photo %d; updating photo record..." % photo_id)
+                logging.warning("MD5 sum mismatch for photo %d; photo record will be updated..." % photo_id)
                 self.cursor.execute("DELETE FROM photos WHERE id=?;", [photo_id])
                 self.conn.commit()
+            else:
+                return
 
         # Get dict of all ranks {name: id, ...}.
         self.cursor.execute("SELECT name, id FROM ranks;")
@@ -291,7 +300,7 @@ class ImageHarvester(object):
         description = None if description.text == '' else description.text
 
         # Insert the photo into the database.
-        self.conn.execute("INSERT OR IGNORE INTO photos VALUES (?,?,?,?,?);",
+        self.conn.execute("INSERT INTO photos VALUES (?,?,?,?,?);",
             [photo_id, hasher.hexdigest(), path, title, description])
 
         # Process photo's taxon tags.
@@ -306,7 +315,7 @@ class ImageHarvester(object):
             taxon_id = self.db_insert_taxon(rank_id, val)
 
             # Connect the photo to this taxon.
-            self.conn.execute("INSERT OR IGNORE INTO photos_taxa (photo_id, taxon_id) VALUES (?,?);",
+            self.conn.execute("INSERT INTO photos_taxa (photo_id, taxon_id) VALUES (?,?);",
                 [photo_id, taxon_id])
 
         # Commit the transaction.
