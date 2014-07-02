@@ -15,7 +15,7 @@ import logging
 import os
 import re
 import sys
-from sqlite3 import dbapi2 as sqlite
+import sqlite3 as sqlite
 import urllib
 import xml.etree.ElementTree
 
@@ -300,8 +300,13 @@ class ImageHarvester(object):
         description = None if description.text == '' else description.text
 
         # Insert the photo into the database.
-        self.conn.execute("INSERT INTO photos VALUES (?,?,?,?,?);",
-            [photo_id, hasher.hexdigest(), path, title, description])
+        try:
+            self.conn.execute("INSERT INTO photos VALUES (?,?,?,?,?);",
+                [photo_id, hasher.hexdigest(), path, title, description])
+        except sqlite.IntegrityError as e:
+            logging.error("Failed to save photo meta data. Error returned was: %s" % e)
+            self.conn.rollback()
+            return
 
         # Process photo's taxon tags.
         tags = self.flickr_info_get_tags(photo_info, dict)
@@ -406,6 +411,11 @@ class ImageHarvester(object):
                 raise RuntimeError("Failed to obtain photo info from Flickr")
             tags = self.flickr_info_get_tags(info, dict)
             ext = info.get('originalformat')
+
+            # Skip if genus or species is not set.
+            if tags.get('genus') is None or tags.get('species') is None:
+                logging.warning("Skipping photo %s because genus or species is not set" % photo_id)
+                continue
 
             # Construct the save path for the photo.
             photo_dir = os.path.join(
