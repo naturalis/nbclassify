@@ -53,9 +53,9 @@ def main():
         "defaults to a file photos.db in the output folder. The database "\
         "file will be created if it doesn't exist.")
     parser.add_argument("--tags", metavar="TAGS",
-        help="A space-delimited list of tags. Photos with one or more of " \
-        "the tags listed will be harvested. You can exclude results that " \
-        "match a term by prepending it with a - character (e.g. \"foo -bar\").")
+        help="A comma-delimited list of tags. Photos with the tags listed " \
+        "will be harvested. You can exclude results that match a tag by " \
+        "prepending it with a _ character (e.g. \"foo,_bar\").")
     parser.add_argument("--tag-mode", metavar="MODE", default='all',
         help="Either 'any' for an OR combination of tags, or 'all' for an " \
         "AND combination. Defaults to 'all' if not specified.")
@@ -77,7 +77,11 @@ def main():
     # Flickr search options.
     search_options = {}
     if args.tag_mode is not None: search_options['tag_mode'] = args.tag_mode
-    if args.tags is not None: search_options['tags'] = ",".join(args.tags.split())
+    if args.tags is not None:
+        # We have to do this because the argparse module parses strings that
+        # start with a hyphen (-) as a command line option.
+        args.tags = args.tags.replace('_', '-')
+        search_options['tags'] = args.tags
     if args.page is not None: search_options['page'] = args.page
     if args.per_page is not None: search_options['per_page'] = args.per_page
 
@@ -296,9 +300,9 @@ class ImageHarvester(object):
 
         # Get meta data.
         title = photo_info.find('title')
-        title = None if title.text == '' else title.text
+        title = None if title is None else title.text
         description = photo_info.find('description')
-        description = None if description.text == '' else description.text
+        description = None if description is None else description.text
 
         # Insert the photo into the database.
         try:
@@ -410,12 +414,14 @@ class ImageHarvester(object):
             info = self.flickr.execute('photos.getInfo', photo_id=photo_id)
             if info is False:
                 raise RuntimeError("Failed to obtain photo info from Flickr")
+
+            title = '' if info.find('title') is None else info.find('title').text
             tags = self.flickr_info_get_tags(info, dict)
             ext = info.get('originalformat')
 
             # Skip if genus or species is not set.
             if tags.get('genus') is None or tags.get('species') is None:
-                logging.warning("Skipping photo %s because genus or species is not set" % photo_id)
+                logging.warning("Skipping photo %s ('%s') because genus or species is not set" % (photo_id, title))
                 continue
 
             # Construct the save path for the photo.
@@ -440,10 +446,10 @@ class ImageHarvester(object):
 
             # Download the photo.
             if not os.path.isfile(real_path):
-                logging.info("Downloading photo %s to %s ..." % (photo_id, real_path))
+                logging.info("Downloading photo %s ('%s') to %s ..." % (photo_id, title, real_path))
                 self.flickr.download_photo(photo_id, real_path)
             else:
-                logging.info("Photo %s already exists. Skipping download." % (photo_id))
+                logging.info("Photo %s ('%s') already exists. Skipping download." % (photo_id, title))
 
             # Insert the photo into the database.
             self.db_insert_photo(info, photo_path, target)
