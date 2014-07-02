@@ -108,37 +108,52 @@ class ImageHarvester(object):
             raise TypeError("Expected an instance of FlickrDownloader")
 
     def db_connect(self, db_file):
-        """Connect to the database, if one already exists.
+        """Connect to an SQLite database.
 
-        Otherwise, create a new database.
+        The database is loaded from database file `db_file`. If `db_file`
+        points to a non-existent file, the database is automatically created.
         """
-        if os.path.isfile(db_file):
-            self.conn = sqlite.connect(db_file)
-            self.cursor = self.conn.cursor()
-        else:
-            self.create_new_db(db_file)
+        make_new = False
+        if not os.path.isfile(db_file):
+            make_new = True
 
-    def create_new_db(self, db_file):
-        """Create a new database.
-
-        This deletes any existing database file.
-        """
         # Check if the folder exists. If not, create it.
         db_dir = os.path.dirname(db_file)
         if not os.path.exists(db_dir):
-            logging.info("Creating directory %s" % db_dir)
             os.makedirs(db_dir)
 
-        # Delete the current database file.
-        if os.path.isfile(db_file):
-            logging.info("Deleting existing database file...")
-            self.remove_db()
-
-        logging.info("Creating new database %s..." % db_file)
-
-        # Create a new database.
         self.conn = sqlite.connect(db_file)
         self.cursor = self.conn.cursor()
+        self.__enable_foreign_key_support()
+
+        if make_new:
+            self.create_new_db(db_file)
+
+    def __enable_foreign_key_support(self):
+        """Enable foreign key support for SQLite.
+
+        Support for SQL foreign key constraints were introduced in SQLite
+        version 3.6.19, but is disabled by default.
+        """
+        if self.conn is None or self.cursor is None:
+            raise RuntimeError("Not connected to a database")
+
+        self.cursor.execute("PRAGMA foreign_keys = ON;")
+        self.conn.commit()
+
+        # We have to separately execute this query to check if foreign keys
+        # are enabled.
+        self.cursor.execute("PRAGMA foreign_keys;")
+        foreign_keys = self.cursor.fetchone()
+        if foreign_keys is None or foreign_keys[0] != 1:
+            raise OSError("SQL foreign key support for SQLite could not be enabled. SQLite 3.6.19 or later is required.")
+
+    def create_new_db(self, db_file):
+        """Create a new database."""
+        if self.conn is None or self.cursor is None:
+            raise RuntimeError("Not connected to a database")
+
+        logging.info("Creating new database at %s ..." % db_file)
 
         # Create the tables.
         self.cursor.executescript("""
@@ -224,20 +239,6 @@ class ImageHarvester(object):
 
         # Commit the transaction.
         self.conn.commit()
-
-    def remove_db(self, db_file, tries=0):
-        """Remove existing database file.
-
-        Raises an IOError after three failed deletion attempts.
-        """
-        if tries > 2:
-            raise IOError("Failed to delete database file %s" % db_file)
-        try:
-            os.remove(db_file)
-        except:
-            tries += 1
-            time.sleep(2)
-            self.remove_db(db_file, tries)
 
     def db_insert_photo(self, photo_info, path, target='.'):
         """Set meta data for a photo in the database.
