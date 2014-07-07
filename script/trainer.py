@@ -333,13 +333,14 @@ def make_class_query(session, metadata, query):
             Taxa[rank] = orm.aliased(Base.classes.taxa)
             Ranks[rank] = orm.aliased(Base.classes.ranks)
 
-            q = q.join(PhotosTaxa[rank], Photos.photos_taxa_collection).\
+            q = q.join(PhotosTaxa[rank], PhotosTaxa[rank].photo_id == Photos.id).\
                 join(Taxa[rank]).join(Ranks[rank]).\
                 filter(Ranks[rank].name == rank, Taxa[rank].name == name)
 
-    q = q.join(PhotosTaxa['class'], Photos.photos_taxa_collection).\
-        join(Taxa['class']).join(Ranks['class']).\
-        filter(Ranks['class'].name == getattr(query, 'class'))
+    rank = 'class'
+    q = q.join(PhotosTaxa[rank], PhotosTaxa[rank].photo_id == Photos.id).\
+        join(Taxa[rank]).join(Ranks[rank]).\
+        filter(Ranks[rank].name == getattr(query, rank))
 
     return q
 
