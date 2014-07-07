@@ -1,0 +1,104 @@
+---
+# This is an example parameters file for train.py
+
+# Simplified query for obtaining paths with corresponding classification
+# from the database.
+class_query:
+    where:
+        genus: Phragmipedium
+        section: Micropetalum
+    class:
+        species
+
+# Describe training data format.
+data:
+    # Prefix of classification columns. When generating training data, this
+    # prefix is extended with a number.
+    dependent_prefix: "OUT:"
+
+# Preprocessing steps to perform on images before features are extracted.
+preprocess:
+    # Limit the maximum perimeter for input images (optional). The input
+    # image is scaled down if the perimeter (width * height) exeeds this value.
+    # The input images on disk stay unmodified.
+    maximum_perimeter: 1000
+
+    # Perform color enhancement on images.
+    color_enhancement:
+        # A hue preserving linear transformation with maximum possible contrast.
+        naik_murthy_linear: {}
+
+    # Perform segmentation on the image, where the background is removed.
+    segmentation:
+        # The number of segmentation iterations. Default is 5.
+        iterations: 5
+        # The margin of the region of interest from the edges of the image.
+        # Default is 1.
+        margin: 1
+        # Where masked images are saved (optional).
+        #output_folder: images/masked/
+
+# Features to be extracted from the images.
+features:
+    # Describes the color frequencies.
+    color_histograms:
+        # Specify which color spaces and the bin size of each color channel.
+        # Supported color spaces are BGR, HSV, and LUV.
+        BGR: [10,10,10]
+        HSV: [10,10,10]
+
+    # Describes the BGR color frequencies along horizontal and vertical axis.
+    color_bgr_means:
+        # Each axis is divided into equal size bins. The color frequencies for
+        # each bin are computed.
+        bins: 20
+
+    # Describes the shape outline.
+    shape_outline:
+        # The shape is measured on `k` points on both X and Y axis.
+        k: 15
+
+    # Shape of the object.
+    shape_360:
+        # Specify rotation if the objects are rotated (default is 0, no
+        # rotation). Set to FIT_ELLIPSE to automatically get the rotation for
+        # each image by ellipse fitting.
+        rotation: 0
+        # Step size for the 360 angles (default is 1).
+        step: 1
+        # Distance threshold in pixels for point clustering (default is 8).
+        t: 8
+        # The output functions control how the shape is returned. Multiple
+        # output functions can be specified.
+        output_functions:
+            # Returns the mean length + standard deviation of the vector from
+            # the object center to all outline intersections for each angle
+            # (default).
+            mean_sd: {}
+            # Returns the color histogram of the vector from the object center
+            # at each angle, ignoring the pixels outside the object.
+            color_histograms: {BGR: [10,10,10]}
+
+# Parameters for training the artificial neural network.
+ann:
+    # Number of hidden neuron layers. Default is 1
+    hidden_layers: 1
+    # Number of hidden neurons per hidden layer. Default is 8
+    hidden_neurons: 20
+    # Maximum number of epochs. Default is 100000
+    epochs: 100000
+    # Desired error. Default is 0.00001
+    error: 0.00001
+    # Learning rate. Default is 0.7
+    learning_rate: 0.7
+    # Connection rate. Default is 1, a fully connected network.
+    connection_rate: 1
+    # The training algorithm used for training. Default is FANN_TRAIN_RPROP.
+    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_train_enum
+    training_algorithm: FANN_TRAIN_RPROP
+    # The activation function for the hidden layers. Default is FANN_SIGMOID_STEPWISE.
+    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
+    activation_function_hidden: FANN_SIGMOID_SYMMETRIC
+    # The activation function for the output layer. Default is FANN_SIGMOID_STEPWISE.
+    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
+    activation_function_output: FANN_SIGMOID_SYMMETRIC
