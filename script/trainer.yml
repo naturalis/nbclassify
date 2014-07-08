@@ -40,44 +40,11 @@ preprocess:
 
 # Features to be extracted from the images.
 features:
-    # Describes the color frequencies.
-    color_histograms:
-        # Specify which color spaces and the bin size of each color channel.
-        # Supported color spaces are BGR, HSV, and LUV.
-        BGR: [10,10,10]
-        HSV: [10,10,10]
-
     # Describes the BGR color frequencies along horizontal and vertical axis.
     color_bgr_means:
         # Each axis is divided into equal size bins. The color frequencies for
         # each bin are computed.
-        bins: 20
-
-    # Describes the shape outline.
-    shape_outline:
-        # The shape is measured on `k` points on both X and Y axis.
-        k: 15
-
-    # Shape of the object.
-    shape_360:
-        # Specify rotation if the objects are rotated (default is 0, no
-        # rotation). Set to FIT_ELLIPSE to automatically get the rotation for
-        # each image by ellipse fitting.
-        rotation: 0
-        # Step size for the 360 angles (default is 1).
-        step: 1
-        # Distance threshold in pixels for point clustering (default is 8).
-        t: 8
-        # The output functions control how the shape is returned. Multiple
-        # output functions can be specified.
-        output_functions:
-            # Returns the mean length + standard deviation of the vector from
-            # the object center to all outline intersections for each angle
-            # (default).
-            mean_sd: {}
-            # Returns the color histogram of the vector from the object center
-            # at each angle, ignoring the pixels outside the object.
-            color_histograms: {BGR: [10,10,10]}
+        bins: 50
 
 # Parameters for training the artificial neural network.
 ann:
@@ -93,12 +60,12 @@ ann:
     learning_rate: 0.7
     # Connection rate. Default is 1, a fully connected network.
     connection_rate: 1
-    # The training algorithm used for training. Default is FANN_TRAIN_RPROP.
+    # The training algorithm used for training. Default is TRAIN_RPROP.
     # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_train_enum
-    training_algorithm: FANN_TRAIN_RPROP
-    # The activation function for the hidden layers. Default is FANN_SIGMOID_STEPWISE.
+    training_algorithm: TRAIN_RPROP
+    # The activation function for the hidden layers. Default is SIGMOID_STEPWISE.
     # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
-    activation_function_hidden: FANN_SIGMOID_SYMMETRIC
-    # The activation function for the output layer. Default is FANN_SIGMOID_STEPWISE.
+    activation_function_hidden: SIGMOID_SYMMETRIC
+    # The activation function for the output layer. Default is SIGMOID_STEPWISE.
     # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
-    activation_function_output: FANN_SIGMOID_SYMMETRIC
+    activation_function_output: SIGMOID_SYMMETRIC
