@@ -108,9 +108,9 @@ def main():
     parser_test_ann.add_argument("--conf", metavar="FILE",
         help="Path to a YAML file with class names.")
     parser_test_ann.add_argument("--error", metavar="N", type=float,
-        default=0.01,
+        default=0.00001,
         help="The maximum mean square error for classification. Default " \
-        "is 0.01")
+        "is 0.00001")
     parser_test_ann.add_argument("data", metavar="TEST_DATA",
         help="Path to tab separated file containing test data.")
 
@@ -127,8 +127,8 @@ def main():
     parser_classify.add_argument("--db", metavar="DB", required=True,
         help="Path to a database file with photo meta data.")
     parser_classify.add_argument("--error", metavar="N", type=float,
-        default=0.01,
-        help="The maximum error for classification. Default is 0.01")
+        default=0.00001,
+        help="The maximum error for classification. Default is 0.00001")
     parser_classify.add_argument("image", metavar="IMAGE",
         help="Path to image file to be classified.")
 
@@ -162,7 +162,7 @@ def main():
         tester.test(args.ann, args.data)
         if args.output:
             if not args.db:
-                sys.exit("Option --db must be used together with --output")
+                sys.exit("Option --output must be used together with --db")
             tester.export_results(args.output, args.db, args.error)
 
     elif sys.argv[1] == 'classify':
@@ -602,7 +602,7 @@ class TestAnn(Common):
             except:
                 raise RuntimeError("Classification query not set in the configuration file. Option 'class_query' is missing.")
 
-            q = self.__query_classes(session, metadata, class_query)
+            q = self.query_classes(session, metadata, class_query)
             classes = [x[1] for x in q]
 
         if len(classes) == 0:
