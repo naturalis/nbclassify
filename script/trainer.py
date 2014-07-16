@@ -217,13 +217,13 @@ class Common(object):
 
         self.config = config
 
-    def get_codewords(self, classes, neg=-1, pos=1):
+    def get_codewords(self, classes, on=1, off=-1):
         """Return codewords for a list of classes."""
         n =  len(classes)
         codewords = {}
         for i, class_ in enumerate(sorted(classes)):
-            cw = [neg] * n
-            cw[i] = pos
+            cw = [off] * n
+            cw[i] = on
             codewords[class_] = cw
         return codewords
 
@@ -232,10 +232,10 @@ class Common(object):
         if len(codewords) != len(codeword):
             raise ValueError("Lenth of `codewords` must be equal to `codeword`")
         classes = []
-        for cls, cw in codewords.items():
+        for class_, cw in codewords.items():
             for i, code in enumerate(cw):
-                if code == 1.0 and (code - codeword[i])**2 < error:
-                    classes.append((codeword[i], cls))
+                if code == 1.0 and (code - codeword[i])**2 <= error:
+                    classes.append((codeword[i], class_))
         classes = [x[1] for x in sorted(classes, reverse=True)]
         return classes
 
@@ -374,7 +374,7 @@ class MakeTrainData(Common):
         classes = set([x[1] for x in images])
 
         # Make codeword for each class.
-        codewords = self.get_codewords(classes, -1, 1)
+        codewords = self.get_codewords(classes)
 
         # Construct the header.
         header_data, header_out = self.__make_header(len(classes))
