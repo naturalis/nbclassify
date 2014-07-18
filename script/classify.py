@@ -103,7 +103,7 @@ class Common(object):
 
     def get_codewords(self, classes, on=1, off=-1):
         """Return codewords for a list of classes."""
-        n =  len(classes)
+        n = len(classes)
         codewords = {}
         for i, class_ in enumerate(sorted(classes)):
             cw = [off] * n
@@ -131,6 +131,7 @@ class ImageClassifier(Common):
 
         self.set_db_path(db_path)
         self.error = 0.0001
+        self.phenotypes = {}
 
         # Get the classification hierarchy from the database.
         with session_scope(db_path) as (session, metadata):
@@ -154,39 +155,33 @@ class ImageClassifier(Common):
 
         classification = {}
         for rank in classification_hierarchy:
-            logging.info("Classifying on rank '%s'" % rank.name)
-
-            # Replace any wildcards present in the ANN path.
+            # Replace any wildcards in the ANN path.
+            ann_file = rank.ann
             for key, val in classification.items():
                 if val is None:
-                    rank.ann = rank.ann.replace("__%s__" % key, '_')
+                    ann_file = ann_file.replace("__%s__" % key, '_')
                 else:
-                    rank.ann = rank.ann.replace("__%s__" % key, val)
+                    ann_file = ann_file.replace("__%s__" % key, val)
+
+            # Get the class names.
+            classes = self.get_classes_from_hierarchy(rank.name, **classification)
+
+            # Section may not be set and is optional.
+            if classes == None and rank.name == 'section':
+                logging.info("Rank '%s' not set" % rank.name)
+                classification['section'] = None
+                continue
+            else:
+                assert classes != None, "Classes for rank '%s' are not set" % rank.name
 
             # Get the codewords for the classes.
-            c = classification
-            if 'section' in c:
-                # Get the species categories.
-                classes = self.hierarchy[c['genus']][c['section']]
-            elif 'genus' in c:
-                # Get the section categories.
-                classes = self.hierarchy[c['genus']].keys()
-
-                # Section may not be set and is optional.
-                if classes == [None]:
-                    classification['section'] = None
-                    logging.info("Rank '%s' not set" % (rank.name,))
-                    continue
-            else:
-                # Get the genus categories.
-                classes = self.hierarchy.keys()
             codewords = self.get_codewords(classes)
 
-            # Get the classification codeword for this image.
-            ann_path = os.path.join(ann_base_path, rank.ann)
+            # Classify the image and obtain the codeword.
+            ann_path = os.path.join(ann_base_path, ann_file)
             codeword = self.run_ann(image_path, ann_path, rank)
 
-            # Get the name for this codeword.
+            # Get the associated class name for this codeword.
             class_ = self.get_classification(codewords, codeword, self.error)
 
             if len(class_) == 0:
@@ -198,6 +193,27 @@ class ImageClassifier(Common):
 
         return classification
 
+    def get_classes_from_hierarchy(self, rank, genus=None, section=None, species=None):
+        """Return a subset of classes from the classification hierarchy.
+
+        Classes for rank `rank` are returned. All the names for the ranks
+        up to rank `rank` must be set, for the order `genus`, `section`,
+        `species`. Returns None if there are no classes set for a rank.
+        """
+        if rank == 'species':
+            classes = self.hierarchy[genus][section]
+        elif rank == 'section':
+            classes = self.hierarchy[genus].keys()
+        elif rank == 'genus':
+            classes = self.hierarchy.keys()
+        else:
+            raise ValueError("Unknown value for rank")
+
+        if classes == [None]:
+            classes = None
+
+        return classes
+
     def run_ann(self, im_path, ann_path, config):
         if not os.path.isfile(im_path):
             raise IOError("Cannot open %s (no such file)" % im_path)
@@ -207,10 +223,19 @@ class ImageClassifier(Common):
         ann = libfann.neural_net()
         ann.create_from_file(str(ann_path))
 
-        phenotyper = nbc.Phenotyper()
-        phenotyper.set_image(im_path)
-        phenotyper.set_config(config)
-        phenotype = phenotyper.make()
+        # Create a hash of the feature extraction options.
+        config_hash = "%.8s-%.8s" % (hash(config.preprocess), hash(config.features))
+
+        if config_hash in self.phenotypes:
+            phenotype = self.phenotypes[config_hash]
+        else:
+            phenotyper = nbc.Phenotyper()
+            phenotyper.set_image(im_path)
+            phenotyper.set_config(config)
+            phenotype = phenotyper.make()
+
+            # Keep a record of the phenotypes, in case they are needed again.
+            self.phenotypes[config_hash] = phenotype
 
         codeword = ann.run(phenotype)
 

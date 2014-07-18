@@ -18,11 +18,17 @@ class Struct(argparse.Namespace):
     def __init__(self, d):
         for key, val in d.iteritems():
             if isinstance(val, (list, tuple)):
-                setattr(self, key, [self.__class__(x) if \
+                setattr(self, str(key), [self.__class__(x) if \
                     isinstance(x, dict) else x for x in val])
             else:
-                setattr(self, key, self.__class__(val) if \
+                setattr(self, str(key), self.__class__(val) if \
                     isinstance(val, dict) else val)
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        return str(self) == str(other)
 
 class Phenotyper(object):
     """Generate numerical features from an image."""
