@@ -1,14 +1,5 @@
 ---
-# This is an example parameters file for train.py
-
-# Simplified query for obtaining paths with corresponding classification
-# from the database.
-class_query:
-    where:
-        genus: Phragmipedium
-        section: Micropetalum
-    class:
-        species
+# This is an example configurations file for trainer.py and classify.py.
 
 # Describe training data format.
 data:
@@ -17,7 +8,7 @@ data:
     dependent_prefix: "OUT:"
 
 # Preprocessing steps to perform on images before features are extracted.
-preprocess:
+preprocess: &preprocess_std
     # Limit the maximum perimeter for input images (optional). The input
     # image is scaled down if the perimeter (width * height) exeeds this value.
     # The input images on disk stay unmodified.
@@ -30,16 +21,15 @@ preprocess:
 
     # Perform segmentation on the image, where the background is removed.
     segmentation:
-        # The number of segmentation iterations. Default is 5.
-        iterations: 5
-        # The margin of the region of interest from the edges of the image.
-        # Default is 1.
-        margin: 1
-        # Where masked images are saved (optional).
-        #output_folder: images/masked/
+        grabcut:
+            # The number of segmentation iterations. Default is 5.
+            iterations: 5
+            # The margin of the region of interest from the edges of the image.
+            # Default is 1.
+            margin: 1
 
 # Features to be extracted from the images.
-features:
+features: &features_std
     # Describes the BGR color frequencies along horizontal and vertical axis.
     color_bgr_means:
         # Each axis is divided into equal size bins. The color frequencies for
@@ -69,3 +59,30 @@ ann:
     # The activation function for the output layer. Default is SIGMOID_STEPWISE.
     # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
     activation_function_output: SIGMOID_SYMMETRIC
+
+# Configurations for classification.
+classification:
+    # Simplified query for obtaining photos with corresponding classification
+    # from the database.
+    photos_query:
+        where:
+            genus: Phragmipedium
+        class:
+            section
+
+    # Define the classification hierarchy from top to bottom.
+    hierarchy:
+        - name: genus
+          preprocess: *preprocess_std
+          features: *features_std
+          ann: genus.ann
+
+        - name: section
+          preprocess: *preprocess_std
+          features: *features_std
+          ann: __genus__.section.ann
+
+        - name: species
+          preprocess: *preprocess_std
+          features: *features_std
+          ann: __genus__.__section__.species.ann

@@ -43,8 +43,8 @@ def main():
     parser_classify.add_argument("--anns", metavar="PATH", default=".",
         help="Path to a directory containing the neural networks.")
     parser_classify.add_argument("--error", metavar="N", type=float,
-        default=0.00001,
-        help="The maximum error for classification. Default is 0.00001")
+        default=0.0001,
+        help="The maximum error for classification. Default is 0.0001")
     parser_classify.add_argument("path", metavar="PATH", nargs='?',
         help="Path to photo to be classified.")
 
@@ -54,6 +54,7 @@ def main():
     if sys.argv[1] == 'orchid':
         config = open_yaml(args.conf)
         classifier = ImageClassifier(config, args.db)
+        classifier.set_error(args.error)
         classification = classifier.classify(args.path, args.anns)
         logging.info("Image is classified as %s" % classification)
 
@@ -129,6 +130,7 @@ class ImageClassifier(Common):
         super(ImageClassifier, self).__init__(config)
 
         self.set_db_path(db_path)
+        self.error = 0.0001
 
         # Get the classification hierarchy from the database.
         with session_scope(db_path) as (session, metadata):
@@ -138,6 +140,11 @@ class ImageClassifier(Common):
         if not os.path.isfile(path):
             raise IOError("Cannot open %s (no such file)" % path)
         self.db_path = path
+
+    def set_error(self, error):
+        if not 0 < error < 1:
+            raise ValueError("Error must be a value between 0 and 1" % error)
+        self.error = error
 
     def classify(self, image_path, ann_base_path="."):
         try:
@@ -151,26 +158,36 @@ class ImageClassifier(Common):
 
             # Replace any wildcards present in the ANN path.
             for key, val in classification.items():
-                rank.ann = rank.ann.replace("__%s__" % key, val)
-
-            # Construct the path for the neural network.
-            ann_path = os.path.join(ann_base_path, rank.ann)
-
-            # Get the classification codeword for this image.
-            codeword = self.run_ann(image_path, ann_path, rank)
+                if val is None:
+                    rank.ann = rank.ann.replace("__%s__" % key, '_')
+                else:
+                    rank.ann = rank.ann.replace("__%s__" % key, val)
 
             # Get the codewords for the classes.
             c = classification
             if 'section' in c:
+                # Get the species categories.
                 classes = self.hierarchy[c['genus']][c['section']]
             elif 'genus' in c:
+                # Get the section categories.
                 classes = self.hierarchy[c['genus']].keys()
+
+                # Section may not be set and is optional.
+                if classes == [None]:
+                    classification['section'] = None
+                    logging.info("Rank '%s' not set" % (rank.name,))
+                    continue
             else:
+                # Get the genus categories.
                 classes = self.hierarchy.keys()
             codewords = self.get_codewords(classes)
 
+            # Get the classification codeword for this image.
+            ann_path = os.path.join(ann_base_path, rank.ann)
+            codeword = self.run_ann(image_path, ann_path, rank)
+
             # Get the name for this codeword.
-            class_ = self.get_classification(codewords, codeword)
+            class_ = self.get_classification(codewords, codeword, self.error)
 
             if len(class_) == 0:
                 logging.info("Failed to classify on rank '%s'" % rank.name)
@@ -198,11 +215,6 @@ class ImageClassifier(Common):
         codeword = ann.run(phenotype)
 
         return codeword
-
-    def get_class_from_codeword(self, codeword, classes):
-        codewords = self.get_codewords(classes)
-
-        return self.get_classification(codewords, codeword, error)
 
     def get_classification_hierarchy_names(self, session, metadata):
         """Return the taxanomic hierarchies for photos in the database.

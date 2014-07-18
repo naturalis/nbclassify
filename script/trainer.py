@@ -240,7 +240,7 @@ class Common(object):
         return classes
 
     def query_images_classes(self, session, metadata, query):
-        """Construct a query from the `class_query` parameter."""
+        """Construct a query from the `photos_query` parameter."""
         if 'class' not in query:
             raise ValueError("The query is missing the 'class' key")
         for key in vars(query):
@@ -282,7 +282,7 @@ class Common(object):
         return q
 
     def query_classes(self, session, metadata, query):
-        """Construct a query from the `class_query` parameter.
+        """Construct a query from the `photos_query` parameter.
 
         The query selects a unique list of classification names.
         """
@@ -357,15 +357,15 @@ class MakeTrainData(Common):
         # the meta data database.
         with session_scope(self.db_path) as (session, metadata):
             try:
-                class_query = self.config.class_query
+                photos_query = self.config.classification.photos_query
             except:
-                raise RuntimeError("Classification query not set in the configuration file. Option 'class_query' is missing.")
+                raise RuntimeError("The configuration file is missing object classification.photos_query")
 
-            q = self.query_images_classes(session, metadata, class_query)
+            q = self.query_images_classes(session, metadata, photos_query)
             images = list(q)
 
         if len(images) == 0:
-            logging.info("No images found for the query %s" % class_query)
+            logging.info("No images found for the query %s" % photos_query)
             return
 
         logging.info("Going to process %d photos..." % len(images))
@@ -594,15 +594,15 @@ class TestAnn(Common):
         # Get the classification categories from the database.
         with session_scope(db_path) as (session, metadata):
             try:
-                class_query = self.config.class_query
+                photos_query = self.config.classification.photos_query
             except:
-                raise RuntimeError("Classification query not set in the configuration file. Option 'class_query' is missing.")
+                raise RuntimeError("The configuration file is missing object classification.photos_query")
 
-            q = self.query_classes(session, metadata, class_query)
+            q = self.query_classes(session, metadata, photos_query)
             classes = [x[1] for x in q]
 
         if len(classes) == 0:
-            raise RuntimeError("No classes found for query %s" % class_query)
+            raise RuntimeError("No classes found for query %s" % photos_query)
 
         with open(filename, 'w') as fh:
             fh.write( "%s\n" % "\t".join(['ID','Class','Classification','Match']) )
@@ -661,11 +661,11 @@ class ImageClassifier(Common):
         # Get the classification categories from the database.
         with session_scope(db_file) as (session, metadata):
             try:
-                class_query = self.config.class_query
+                photos_query = self.config.classification.photos_query
             except:
-                raise RuntimeError("Classification query not set in the configuration file. Option 'class_query' is missing.")
+                raise RuntimeError("The configuration file is missing object classification.photos_query")
 
-            q = self.query_classes(session, metadata, class_query)
+            q = self.query_classes(session, metadata, photos_query)
             self.classes = [x[1] for x in q]
 
     def set_ann(self, path):

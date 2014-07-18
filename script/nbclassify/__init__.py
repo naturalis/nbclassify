@@ -52,6 +52,26 @@ class Phenotyper(object):
             raise TypeError("Configurations object must be of type Struct, not %s" % type(config))
         self.config = config
 
+    def grabcut_with_margin(self, img, iters=5, margin=5):
+        """Segment image into foreground and background pixels.
+
+        Runs the GrabCut algorithm for segmentation. Returns an 8-bit
+        single-channel mask. Its elements may have one of following values:
+            * ``cv2.GC_BGD`` defines an obvious background pixel.
+            * ``cv2.GC_FGD`` defines an obvious foreground pixel.
+            * ``cv2.GC_PR_BGD`` defines a possible background pixel.
+            * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
+
+        The GrabCut algorithm is executed with `iters` iterations. The ROI is set
+        to the entire image, with a margin of `margin` pixels from the edges.
+        """
+        mask = np.zeros(img.shape[:2], np.uint8)
+        bgdmodel = np.zeros((1,65), np.float64)
+        fgdmodel = np.zeros((1,65), np.float64)
+        rect = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
+        cv2.grabCut(img, mask, rect, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
+        return mask
+
     def __preprocess(self):
         if self.img is None:
             raise RuntimeError("No image is loaded")
@@ -78,7 +98,11 @@ class Phenotyper(object):
                     raise ValueError("Unknown color enhancement method '%s'" % method)
 
         # Perform segmentation.
-        segmentation = getattr(self.config.preprocess, 'segmentation', None)
+        try:
+            segmentation = self.config.preprocess.segmentation.grabcut
+        except:
+            segmentation = {}
+
         if segmentation:
             logging.info("Segmenting...")
             iterations = getattr(segmentation, 'iterations', 5)
@@ -86,7 +110,7 @@ class Phenotyper(object):
             output_folder = getattr(segmentation, 'output_folder', None)
 
             # Create a binary mask for the largest contour.
-            self.mask = ft.segment(self.img, iterations, margin)
+            self.mask = self.grabcut_with_margin(self.img, iterations, margin)
             self.bin_mask = np.where((self.mask==cv2.GC_FGD) + (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
             contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if contour == None:
