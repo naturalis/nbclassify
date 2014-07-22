@@ -47,8 +47,8 @@ def main():
 
     # Create an argument parser for sub-command 'data'.
     help_data = """Create a tab separated file with training data.
-    Preprocessing steps and features to extract must be set in a YAML file.
-    See trainer.yml for an example."""
+    Preprocessing steps and features to extract must be set in a
+    configurations file. See trainer.yml for an example."""
 
     parser_data = subparsers.add_parser('data',
         help=help_data, description=help_data)
@@ -64,10 +64,30 @@ def main():
         help="Base directory where to look for photo's. The database file" \
         "with photo meta data will be used to find photo's in this directory.")
 
+    # Create an argument parser for sub-command 'batch-data'.
+    help_batch_data = """Batch create tab separated files with training
+    data. Preprocessing steps and features to extract must be set in a
+    configurations file. See trainer.yml for an example."""
+
+    parser_batch_data = subparsers.add_parser('batch-data',
+        help=help_batch_data, description=help_batch_data)
+    parser_batch_data.add_argument("--conf", metavar="FILE", required=True,
+        help="Path to a YAML file with feature extraction parameters.")
+    parser_batch_data.add_argument("--db", metavar="DB",
+        help="Path to a database file with photo meta data. If omitted " \
+        "this defaults to a file photos.db in the photo's directory.")
+    parser_batch_data.add_argument("--output", "-o", metavar="PATH",
+        required=True,
+        help="Output directory where training data is stored. Any existing " \
+        "files will be overwritten.")
+    parser_batch_data.add_argument("basepath", metavar="PATH",
+        help="Base directory where to look for photo's. The database file" \
+        "with photo meta data will be used to find photo's in this directory.")
+
     # Create an argument parser for sub-command 'ann'.
     help_ann = """Train an artificial neural network. Optional training
-    parameters can be set in a separate YAML file. See orchids.yml
-    for an example file."""
+    parameters can be set in a separate configurations file. See
+    trainer.yml for an example file."""
 
     parser_ann = subparsers.add_parser('ann',
         help=help_ann, description=help_ann)
@@ -86,7 +106,7 @@ def main():
 
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann = """Test an artificial neural network. If `--output` is
-    set, then `--conf` must also be set. See orchids.yml for an example YAML
+    set, then `--conf` must also be set. See trainer.yml for an example YAML
     file with class names."""
 
     parser_test_ann = subparsers.add_parser('test-ann',
@@ -135,10 +155,30 @@ def main():
         if args.db is None:
             args.db = os.path.join(args.basepath, 'photos.db')
 
+        config = open_yaml(args.conf)
+
+        try:
+            filter_ = config.classification.filter
+        except:
+            logging.error("The configuration file is missing object classification.filter")
+            return
+
+        try:
+            train_data = MakeTrainData(config, args.basepath, args.db)
+            train_data.export(args.output, filter_, config)
+        except Exception as e:
+            logging.error(e)
+            raise
+
+    if sys.argv[1] == 'batch-data':
+        # Set the default database path if not set.
+        if args.db is None:
+            args.db = os.path.join(args.basepath, 'photos.db')
+
         try:
             config = open_yaml(args.conf)
-            train_data = MakeTrainData(config, args.basepath, args.db)
-            train_data.export(args.output)
+            train_data = BatchMakeTrainData(config, args.basepath, args.db)
+            train_data.batch_export(args.output)
         except Exception as e:
             logging.error(e)
             raise
@@ -239,58 +279,71 @@ class Common(object):
         classes = [x[1] for x in sorted(classes, reverse=True)]
         return classes
 
-    def query_images_classes(self, session, metadata, query):
-        """Construct a query from the `photos_query` parameter."""
-        if 'class' not in query:
-            raise ValueError("The query is missing the 'class' key")
-        for key in vars(query):
-            if key not in ('where', 'class'):
-                raise ValueError("Unknown key '%s' in query" % key)
+    def query_images(self, session, metadata, filter_):
+        """Return photos with corresponding class from the database.
 
-        # Poduce a set of mappings from the MetaData.
+        Photos obtained from the database are filtered by rules set in the
+        `filter_` parameter. Returned rows are (photo_path, class) tuples.
+        """
+        if 'class' not in filter_:
+            raise ValueError("The filter is missing the 'class' key")
+        if isinstance(filter_, dict):
+            filter_ = nbc.Struct(filter_)
+        for key in vars(filter_):
+            if key not in ('where', 'class'):
+                raise ValueError("Unknown key '%s' in filter" % key)
+
         Base = automap_base(metadata=metadata)
         Base.prepare()
 
         # Get the table classes.
         Photos = Base.classes.photos
-        PhotosTaxa = {'class': Base.classes.photos_taxa}
-        Taxa = {'class': Base.classes.taxa}
-        Ranks = {'class': Base.classes.ranks}
+        PhotosTaxa = Base.classes.photos_taxa
+        Taxa = Base.classes.taxa
+        Rank = Base.classes.ranks
 
-        # Construct the query, ORM style.
-        q = session.query(Photos.path, Taxa['class'].name)
+        # Construct the sub queries.
+        stmt1 = session.query(PhotosTaxa.photo_id, Taxa.name.label('genus')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'genus').subquery()
+        stmt2 = session.query(PhotosTaxa.photo_id, Taxa.name.label('section')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'section').subquery()
+        stmt3 = session.query(PhotosTaxa.photo_id, Taxa.name.label('species')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'species').subquery()
 
-        if 'where' in query:
-            for rank, name in vars(query.where).items():
-                PhotosTaxa[rank] = orm.aliased(Base.classes.photos_taxa)
-                Taxa[rank] = orm.aliased(Base.classes.taxa)
-                Ranks[rank] = orm.aliased(Base.classes.ranks)
+        # Construct the query.
+        q = session.query(Photos.path, getattr(filter_, 'class')).\
+            join(stmt1).\
+            outerjoin(stmt2).\
+            join(stmt3)
 
-                q = q.join(PhotosTaxa[rank], PhotosTaxa[rank].photo_id == Photos.id).\
-                    join(Taxa[rank]).join(Ranks[rank]).\
-                    filter(Ranks[rank].name == rank, Taxa[rank].name == name)
-
-        # The classification column.
-        rank = getattr(query, 'class')
-        q = q.join(PhotosTaxa['class'], PhotosTaxa['class'].photo_id == Photos.id).\
-            join(Taxa['class']).join(Ranks['class']).\
-            filter(Ranks['class'].name == rank)
-
-        # Order by classification.
-        q = q.order_by(Taxa['class'].name)
+        # Add the WHERE clauses to the query.
+        if 'where' in filter_:
+            for rank, taxon in vars(filter_.where).items():
+                if rank == 'genus':
+                    q = q.filter(stmt1.c.genus == taxon)
+                elif rank == 'section':
+                    q = q.filter(stmt2.c.section == taxon)
+                elif rank == 'species':
+                    q = q.filter(stmt3.c.species == taxon)
 
         return q
 
-    def query_classes(self, session, metadata, query):
-        """Construct a query from the `photos_query` parameter.
+    def query_classes(self, session, metadata, filter_):
+        """Return classes from the database.
 
-        The query selects a unique list of classification names.
+        Returned classes are filtered by rules set in the `filter_` parameter.
+        Returned rows are (photo_id, class) tuples.
         """
-        if 'class' not in query:
-            raise ValueError("The query is missing the 'class' key")
-        for key in vars(query):
+        if 'class' not in filter_:
+            raise ValueError("The filter is missing the 'class' key")
+        if isinstance(filter_, dict):
+            filter_ = nbc.Struct(filter_)
+        for key in vars(filter_):
             if key not in ('where', 'class'):
-                raise ValueError("Unknown key '%s' in query" % key)
+                raise ValueError("Unknown key '%s' in filter" % key)
 
         # Poduce a set of mappings from the MetaData.
         Base = automap_base(metadata=metadata)
@@ -326,6 +379,57 @@ class Common(object):
 
         return q
 
+    def get_taxon_hierarchy(self, session, metadata):
+        """Return the taxanomic hierarchy for photos in the database.
+
+        The hierarchy is returned as a dictionary in the format
+        ``{genus: {section: [species, ..], ..}, ..}``.
+        """
+        hierarchy = {}
+        q = self.get_taxa(session, metadata)
+
+        for _, genus, section, species in q:
+            if genus not in hierarchy:
+                hierarchy[genus] = {}
+            if section not in hierarchy[genus]:
+                hierarchy[genus][section] = []
+            hierarchy[genus][section].append(species)
+        return hierarchy
+
+    def get_taxa(self, session, metadata):
+        """Return the taxa from the database.
+
+        Taxa are returned as (genus, section, species) tuples.
+        """
+        Base = automap_base(metadata=metadata)
+        Base.prepare()
+
+        # Get the table classes.
+        Photos = Base.classes.photos
+        PhotosTaxa = Base.classes.photos_taxa
+        Taxa = Base.classes.taxa
+        Rank = Base.classes.ranks
+
+        # Construct the sub queries.
+        stmt1 = session.query(PhotosTaxa.photo_id, Taxa.name.label('genus')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'genus').subquery()
+        stmt2 = session.query(PhotosTaxa.photo_id, Taxa.name.label('section')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'section').subquery()
+        stmt3 = session.query(PhotosTaxa.photo_id, Taxa.name.label('species')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'species').subquery()
+
+        # Construct the query.
+        q = session.query(Photos.id, 'genus', 'section', 'species').\
+            join(stmt1).\
+            outerjoin(stmt2).\
+            join(stmt3).\
+            group_by('genus', 'section', 'species')
+
+        return q
+
 class MakeTrainData(Common):
     """Generate training data."""
 
@@ -350,22 +454,26 @@ class MakeTrainData(Common):
             raise IOError("Cannot open %s (no such file)" % path)
         self.db_path = path
 
-    def export(self, filename):
-        """Write the training data to `filename`."""
+    def export(self, filename, filter_, config):
+        """Write the training data to `filename`.
+
+        Images to be processed are obtained from the database. Which images
+        are obtained and with which classes is set by the filter
+        `filter_`. A configuration object `config` denotes which
+        preprocessing steps to take and what features are to be extracted.
+        """
+        if os.path.isfile(filename):
+            logging.error("Output file `%s` already exists. Please choose a different file name." % filename)
+            return
 
         # Get list of image paths and corresponding classifications from
         # the meta data database.
         with session_scope(self.db_path) as (session, metadata):
-            try:
-                photos_query = self.config.classification.photos_query
-            except:
-                raise RuntimeError("The configuration file is missing object classification.photos_query")
-
-            q = self.query_images_classes(session, metadata, photos_query)
+            q = self.query_images(session, metadata, filter_)
             images = list(q)
 
         if len(images) == 0:
-            logging.info("No images found for the query %s" % photos_query)
+            logging.info("No images found for the filter `%s`" % filter_)
             return
 
         logging.info("Going to process %d photos..." % len(images))
@@ -390,14 +498,14 @@ class MakeTrainData(Common):
             phenotyper = nbc.Phenotyper()
             failed = []
             for im_path, im_class in images:
-                logging.info("Processing %s of class %s..." % (im_path, im_class))
+                logging.info("Processing `%s` of class `%s`..." % (im_path, im_class))
                 im_path_real = os.path.join(self.base_path, im_path)
 
                 try:
                     phenotyper.set_image(im_path_real)
-                    phenotyper.set_config(self.config)
+                    phenotyper.set_config(config)
                 except:
-                    logging.warning("Failed to read %s. Skipping." % im_path_real)
+                    logging.warning("Failed to read `%s`. Skipping." % im_path_real)
                     failed.append(im_path_real)
                     continue
 
@@ -486,6 +594,78 @@ class MakeTrainData(Common):
 
         return (data, out)
 
+class BatchMakeTrainData(MakeTrainData):
+    """Generate training data."""
+
+    def __init__(self, config, base_path, db_path):
+        """Constructor for training data generator.
+
+        Expects a configurations object `config`, a path to the root
+        directory of the photos, and a path to the database file `db_path`
+        containing photo meta data.
+        """
+        super(BatchMakeTrainData, self).__init__(config, base_path, db_path)
+
+        # Get the taxonomic hierarchy from the database.
+        with session_scope(db_path) as (session, metadata):
+            self.taxon_hierarchy = self.get_taxon_hierarchy(session, metadata)
+
+    def batch_export(self, target):
+        """Batch export training data to directory `target`."""
+        try:
+            classify_hierarchy = self.config.classification.hierarchy
+        except:
+            raise ValueError("The configuration file is missing object classification.hierarchy")
+
+        # Classify on genus level.
+        data_file = os.path.join(target, classify_hierarchy[0].data)
+        if not os.path.isfile(data_file):
+            logging.info("Generating training data for the filter `%s` ..." % filter_)
+            self.export(data_file, {'class': 'genus'}, classify_hierarchy[0])
+        else:
+            logging.warning("File `%s` already exists. Skipping." % data_file)
+
+        for genus, sections in self.taxon_hierarchy.items():
+            if sections.keys() == [None]:
+                logging.info("No sections for genus `%s`" % genus)
+                pass
+            else:
+                filter_ = {
+                    'where': {
+                        'genus': genus
+                    },
+                    'class': 'section'
+                }
+
+                # Classify on section level.
+                data_file = os.path.join(target, classify_hierarchy[1].data)
+                data_file = data_file.replace("__genus__", genus)
+                if not os.path.isfile(data_file):
+                    logging.info("Generating training data for the filter `%s` ..." % filter_)
+                    self.export(data_file, filter_, classify_hierarchy[1])
+                else:
+                    logging.warning("File `%s` already exists. Skipping." % data_file)
+
+            for section, species in sections.items():
+                filter_ = {
+                    'where': {
+                        'genus': genus,
+                        'section': section
+                    },
+                    'class': 'species'
+                }
+
+                # Classify on species level.
+                if section is None: section = '_'
+                data_file = os.path.join(target, classify_hierarchy[2].data)
+                data_file = data_file.replace("__genus__", genus)
+                data_file = data_file.replace("__section__", section)
+                if not os.path.isfile(data_file):
+                    logging.info("Generating training data for the filter `%s` ..." % filter_)
+                    self.export(data_file, filter_, classify_hierarchy[2])
+                else:
+                    logging.warning("File `%s` already exists. Skipping." % data_file)
+
 class MakeAnn(Common):
     """Train an artificial neural network."""
 
@@ -502,6 +682,9 @@ class MakeAnn(Common):
         """Train an artificial neural network."""
         if not os.path.isfile(train_file):
             raise IOError("Cannot open %s (no such file)" % train_file)
+        if os.path.isfile(output_file):
+            logging.error("Output file %s already exists. Please choose a different file name." % output_file)
+            return
 
         # Instantiate the ANN trainer.
         trainer = nbc.TrainANN()
@@ -594,15 +777,15 @@ class TestAnn(Common):
         # Get the classification categories from the database.
         with session_scope(db_path) as (session, metadata):
             try:
-                photos_query = self.config.classification.photos_query
+                filter_ = self.config.classification.filter
             except:
-                raise RuntimeError("The configuration file is missing object classification.photos_query")
+                raise RuntimeError("The configuration file is missing object classification.filter")
 
-            q = self.query_classes(session, metadata, photos_query)
+            q = self.query_classes(session, metadata, filter_)
             classes = [x[1] for x in q]
 
         if len(classes) == 0:
-            raise RuntimeError("No classes found for query %s" % photos_query)
+            raise RuntimeError("No classes found for filter `%s`" % filter_)
 
         with open(filename, 'w') as fh:
             fh.write( "%s\n" % "\t".join(['ID','Class','Classification','Match']) )
@@ -661,11 +844,11 @@ class ImageClassifier(Common):
         # Get the classification categories from the database.
         with session_scope(db_file) as (session, metadata):
             try:
-                photos_query = self.config.classification.photos_query
+                filter_ = self.config.classification.filter
             except:
-                raise RuntimeError("The configuration file is missing object classification.photos_query")
+                raise RuntimeError("The configuration file is missing object classification.filter")
 
-            q = self.query_classes(session, metadata, photos_query)
+            q = self.query_classes(session, metadata, filter_)
             self.classes = [x[1] for x in q]
 
     def set_ann(self, path):

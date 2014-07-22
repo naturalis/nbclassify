@@ -62,27 +62,31 @@ ann:
 
 # Configurations for classification.
 classification:
-    # Simplified query for obtaining photos with corresponding classification
+    # Simplified query for filtering photos with corresponding classification
     # from the database.
-    photos_query:
+    filter:
         where:
-            genus: Phragmipedium
+            genus: Cypripedium
+            section: Arietinum
         class:
-            section
+            species
 
     # Define the classification hierarchy from top to bottom.
     hierarchy:
         - name: genus
           preprocess: *preprocess_std
           features: *features_std
+          data: genus.tsv
           ann: genus.ann
 
         - name: section
           preprocess: *preprocess_std
           features: *features_std
+          data: __genus__.section.tsv
           ann: __genus__.section.ann
 
         - name: species
           preprocess: *preprocess_std
           features: *features_std
+          data: __genus__.__section__.species.tsv
           ann: __genus__.__section__.species.ann

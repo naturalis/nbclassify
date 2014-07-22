@@ -131,11 +131,11 @@ class ImageClassifier(Common):
 
         self.set_db_path(db_path)
         self.error = 0.0001
-        self.phenotypes = {}
+        self.cache = {}
 
         # Get the classification hierarchy from the database.
         with session_scope(db_path) as (session, metadata):
-            self.hierarchy = self.get_classification_hierarchy_names(session, metadata)
+            self.hierarchy = self.get_taxon_hierarchy(session, metadata)
 
     def set_db_path(self, path):
         if not os.path.isfile(path):
@@ -154,9 +154,9 @@ class ImageClassifier(Common):
             raise ValueError("The configuration file is missing object classification.hierarchy")
 
         classification = {}
-        for rank in classification_hierarchy:
+        for level in classification_hierarchy:
             # Replace any wildcards in the ANN path.
-            ann_file = rank.ann
+            ann_file = level.ann
             for key, val in classification.items():
                 if val is None:
                     ann_file = ann_file.replace("__%s__" % key, '_')
@@ -164,32 +164,32 @@ class ImageClassifier(Common):
                     ann_file = ann_file.replace("__%s__" % key, val)
 
             # Get the class names.
-            classes = self.get_classes_from_hierarchy(rank.name, **classification)
+            classes = self.get_classes_from_hierarchy(level.name, **classification)
 
             # Section may not be set and is optional.
-            if classes == None and rank.name == 'section':
-                logging.info("Rank '%s' not set" % rank.name)
+            if classes == None and level.name == 'section':
+                logging.info("Rank '%s' not set" % level.name)
                 classification['section'] = None
                 continue
             else:
-                assert classes != None, "Classes for rank '%s' are not set" % rank.name
+                assert classes != None, "Classes for level '%s' are not set" % level.name
 
             # Get the codewords for the classes.
             codewords = self.get_codewords(classes)
 
             # Classify the image and obtain the codeword.
             ann_path = os.path.join(ann_base_path, ann_file)
-            codeword = self.run_ann(image_path, ann_path, rank)
+            codeword = self.run_ann(image_path, ann_path, level)
 
             # Get the associated class name for this codeword.
             class_ = self.get_classification(codewords, codeword, self.error)
 
             if len(class_) == 0:
-                logging.info("Failed to classify on rank '%s'" % rank.name)
+                logging.info("Failed to classify on level '%s'" % level.name)
                 break
             else:
-                classification[rank.name] = class_[0]
-                logging.info("Rank '%s' classified as '%s'" % (rank.name, class_[0]))
+                classification[level.name] = class_[0]
+                logging.info("Rank '%s' classified as '%s'" % (level.name, class_[0]))
 
         return classification
 
@@ -224,10 +224,10 @@ class ImageClassifier(Common):
         ann.create_from_file(str(ann_path))
 
         # Create a hash of the feature extraction options.
-        config_hash = "%.8s-%.8s" % (hash(config.preprocess), hash(config.features))
+        hash_ = "%.8s-%.8s" % (hash(config.preprocess), hash(config.features))
 
-        if config_hash in self.phenotypes:
-            phenotype = self.phenotypes[config_hash]
+        if hash_ in self.cache:
+            phenotype = self.cache[hash_]
         else:
             phenotyper = nbc.Phenotyper()
             phenotyper.set_image(im_path)
@@ -235,13 +235,13 @@ class ImageClassifier(Common):
             phenotype = phenotyper.make()
 
             # Keep a record of the phenotypes, in case they are needed again.
-            self.phenotypes[config_hash] = phenotype
+            self.cache[hash_] = phenotype
 
         codeword = ann.run(phenotype)
 
         return codeword
 
-    def get_classification_hierarchy_names(self, session, metadata):
+    def get_taxon_hierarchy(self, session, metadata):
         """Return the taxanomic hierarchies for photos in the database.
 
         The hierarchy is returned as a dictionary in the format
