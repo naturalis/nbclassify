@@ -55,8 +55,14 @@ def main():
         config = open_yaml(args.conf)
         classifier = ImageClassifier(config, args.db)
         classifier.set_error(args.error)
-        classification = classifier.classify(args.path, args.anns)
-        logging.info("Image is classified as %s" % classification)
+
+        class_ = classifier.classify(args.path, args.anns)
+        if len(class_) == 1:
+            logging.info("Image is classified as %s" % '/'.join(class_[0]))
+        elif len(class_) > 1:
+            logging.info("Multiple classifications were returned:")
+            for c in class_:
+                logging.info("- %s" % '/'.join(c))
 
     sys.exit()
 
@@ -133,9 +139,14 @@ class ImageClassifier(Common):
         self.error = 0.0001
         self.cache = {}
 
+        try:
+            self.class_hr = self.config.classification.hierarchy
+        except:
+            raise ValueError("The configuration file is missing object classification.hierarchy")
+
         # Get the classification hierarchy from the database.
         with session_scope(db_path) as (session, metadata):
-            self.hierarchy = self.get_taxon_hierarchy(session, metadata)
+            self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
     def set_db_path(self, path):
         if not os.path.isfile(path):
@@ -147,71 +158,113 @@ class ImageClassifier(Common):
             raise ValueError("Error must be a value between 0 and 1" % error)
         self.error = error
 
-    def classify(self, image_path, ann_base_path="."):
-        try:
-            classification_hierarchy = self.config.classification.hierarchy
-        except:
-            raise ValueError("The configuration file is missing object classification.hierarchy")
+    def classify(self, image_path, ann_base_path=".", path=[]):
+        levels = [l.name for l in self.class_hr]
+        paths = []
 
-        classification = {}
-        for level in classification_hierarchy:
-            # Replace any wildcards in the ANN path.
-            ann_file = level.ann
-            for key, val in classification.items():
-                if val is None:
-                    ann_file = ann_file.replace("__%s__" % key, '_')
-                else:
-                    ann_file = ann_file.replace("__%s__" % key, val)
+        if len(path) == len(levels):
+            return path
+        elif len(path) > len(levels):
+            raise ValueError("`path` length cannot exceed the classification hierarchy depth")
 
-            # Get the class names.
-            classes = self.get_classes_from_hierarchy(level.name, **classification)
+        # Get the level specific configurations.
+        level = conf = self.class_hr[len(path)]
 
-            # Section may not be set and is optional.
-            if classes == None and level.name == 'section':
-                logging.info("Rank '%s' not set" % level.name)
-                classification['section'] = None
-                continue
+        # Replace any placeholders in the ANN path.
+        ann_file = level.ann
+        for key, val in zip(levels, path):
+            val = val if val != None else '_'
+            ann_file = ann_file.replace("__%s__" % key, val)
+
+        # Get the class names for this node.
+        classes = self.get_childs_from_hierarchy(self.taxon_hr, path)
+
+        # Some levels are allowed to be absent.
+        if classes == None:
+            if level.name in ('section',):
+                pass
             else:
-                assert classes != None, "Classes for level '%s' are not set" % level.name
+                raise ValueError("Classes for level `%s` are not set" % level.name)
 
+        if classes != None:
             # Get the codewords for the classes.
             codewords = self.get_codewords(classes)
 
             # Classify the image and obtain the codeword.
             ann_path = os.path.join(ann_base_path, ann_file)
-            codeword = self.run_ann(image_path, ann_path, level)
+            logging.info("Loading ANN `%s` ..." % ann_path)
+            codeword = self.run_ann(image_path, ann_path, conf)
 
-            # Get the associated class name for this codeword.
-            class_ = self.get_classification(codewords, codeword, self.error)
+            try:
+                error = level.min_error
+            except:
+                error = self.error
 
-            if len(class_) == 0:
-                logging.info("Failed to classify on level '%s'" % level.name)
-                break
-            else:
-                classification[level.name] = class_[0]
-                logging.info("Rank '%s' classified as '%s'" % (level.name, class_[0]))
+            # Get the class name associated with this codeword.
+            class_ = self.get_classification(codewords, codeword, error)
 
-        return classification
-
-    def get_classes_from_hierarchy(self, rank, genus=None, section=None, species=None):
-        """Return a subset of classes from the classification hierarchy.
-
-        Classes for rank `rank` are returned. All the names for the ranks
-        up to rank `rank` must be set, for the order `genus`, `section`,
-        `species`. Returns None if there are no classes set for a rank.
-        """
-        if rank == 'species':
-            classes = self.hierarchy[genus][section]
-        elif rank == 'section':
-            classes = self.hierarchy[genus].keys()
-        elif rank == 'genus':
-            classes = self.hierarchy.keys()
+            #if level.name == 'section':
+            #    class_ += ['Pardalopetalum']
+            #if level.name == 'species' and path[-1] == 'Paphiopedilum':
+            #    class_ += ['druryi']
         else:
-            raise ValueError("Unknown value for rank")
+            class_ = [None]
+
+        path_s = [str(p) for p in path]
+        if len(class_) == 0:
+            logging.info("Failed to classify on level `%s` at node `%s`" % (
+                level.name,
+                '/'.join(path_s))
+            )
+            return path
+        elif len(class_) > 1:
+            logging.info("Branching in level `%s` at node '%s' into `%s`" % (
+                level.name,
+                '/'.join(path_s),
+                ', '.join(class_))
+            )
+        elif class_ == [None]:
+            logging.info("No level `%s` at node `%s`" % (
+                level.name,
+                '/'.join(path_s))
+            )
+        else:
+            logging.info("Level `%s` at node `%s` classified as `%s`" % (
+                level.name,
+                '/'.join(path_s),
+                class_[0])
+            )
+
+        for c in class_:
+            paths_ = self.classify(image_path, ann_base_path, path+[c])
+            if isinstance(paths_[0], list):
+                paths.extend(paths_)
+            else:
+                paths.append(paths_)
+
+        return paths
+
+    def get_childs_from_hierarchy(self, hr, path=[]):
+        """Return the child node names for a path in a hierarchy.
+
+        Returns a list of child nodes of the hierarchy `hr` for a node
+        specified by `path`. An empty list for `path` means the nodes of
+        the top level are returned. Returns None if there are no child
+        nodes for the specified node.
+        """
+        classes = hr.copy()
+        for node in path:
+            classes = classes[node]
+
+        if isinstance(classes, dict):
+            classes = classes.keys()
+        elif isinstance(classes, list):
+            pass
+        else:
+            raise ValueError("No such path `%s` in the hierarchy" % '.'.join(path))
 
         if classes == [None]:
-            classes = None
-
+            return None
         return classes
 
     def run_ann(self, im_path, ann_path, config):

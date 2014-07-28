@@ -78,15 +78,18 @@ classification:
           features: *features_std
           data: genus.tsv
           ann: genus.ann
+          min_error: 0.00001
 
         - name: section
           preprocess: *preprocess_std
           features: *features_std
           data: __genus__.section.tsv
           ann: __genus__.section.ann
+          min_error: 0.0001
 
         - name: species
           preprocess: *preprocess_std
           features: *features_std
           data: __genus__.__section__.species.tsv
           ann: __genus__.__section__.species.ann
+          min_error: 0.001
