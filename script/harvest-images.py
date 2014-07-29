@@ -289,7 +289,6 @@ class ImageHarvester(object):
                 # Remove the photo record if the MD5 sums don't match.
                 logging.warning("MD5 sum mismatch for photo %d; photo record will be updated..." % photo_id)
                 self.cursor.execute("DELETE FROM photos WHERE id=?;", [photo_id])
-                self.conn.commit()
             else:
                 return
 
@@ -328,9 +327,6 @@ class ImageHarvester(object):
             self.conn.execute("INSERT INTO photos_taxa (photo_id, taxon_id) VALUES (?,?);",
                 [photo_id, taxon_id])
 
-        # Commit the transaction.
-        self.conn.commit()
-
         # Set the tags for this photo.
         tags = self.flickr_info_get_tags(photo_info, list)
         self.db_set_photo_tags(photo_id, tags)
@@ -342,7 +338,6 @@ class ImageHarvester(object):
         """
         self.cursor.execute("INSERT OR IGNORE INTO taxa (rank_id, name) VALUES (?,?);",
             [rank_id, taxon_name])
-        self.conn.commit()
 
         self.cursor.execute("SELECT id FROM taxa WHERE rank_id=? AND name=?;",
             [rank_id, taxon_name])
@@ -359,7 +354,6 @@ class ImageHarvester(object):
             [photo_id])
         self.cursor.executemany("INSERT INTO photos_tags (photo_id, tag_id) SELECT ?,id FROM tags WHERE name=?;",
             [(photo_id, t) for t in tags])
-        self.conn.commit()
 
     def db_set_tags(self):
         """Sets all Flickr user tags in the database.
@@ -421,7 +415,7 @@ class ImageHarvester(object):
 
             # Skip if genus or species is not set.
             if tags.get('genus') is None or tags.get('species') is None:
-                logging.warning("Skipping photo %s ('%s') because genus or species is not set" % (photo_id, title))
+                logging.warning("Skipping photo %s `%s` because genus or species is not set" % (photo_id, title))
                 continue
 
             # Construct the save path for the photo.
@@ -446,13 +440,16 @@ class ImageHarvester(object):
 
             # Download the photo.
             if not os.path.isfile(real_path):
-                logging.info("Downloading photo %s ('%s') to %s ..." % (photo_id, title, real_path))
+                logging.info("Downloading photo %s `%s` to %s ..." % (photo_id, title, real_path))
                 self.flickr.download_photo(photo_id, real_path)
             else:
-                logging.info("Photo %s ('%s') already exists. Skipping download." % (photo_id, title))
+                logging.info("Photo %s `%s` already exists. Skipping download." % (photo_id, title))
 
             # Insert the photo into the database.
             self.db_insert_photo(info, photo_path, target)
+
+        # Commit the transaction.
+        self.conn.commit()
 
         return n
 
