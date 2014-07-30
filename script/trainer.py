@@ -648,10 +648,11 @@ class BatchMakeTrainData(MakeTrainData):
 
         # Classify on genus level.
         level = 0
+        filter_ = {'class': 'genus'}
         data_file = os.path.join(target, classify_hierarchy[level].data)
         if not os.path.isfile(data_file):
             logging.info("Generating training data for the filter `%s` ..." % filter_)
-            self.export(data_file, {'class': 'genus'}, classify_hierarchy[level])
+            self.export(data_file, filter_, classify_hierarchy[level])
         else:
             logging.warning("File `%s` already exists. Skipping." % data_file)
 
