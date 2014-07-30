@@ -56,13 +56,18 @@ def main():
         classifier = ImageClassifier(config, args.db)
         classifier.set_error(args.error)
 
-        class_ = classifier.classify(args.path, args.anns)
-        if len(class_) == 1:
-            logging.info("Image is classified as %s" % '/'.join(class_[0]))
-        elif len(class_) > 1:
+        classes, errors = classifier.classify_with_hierarchy(args.path, args.anns)
+        classes = np.array(classes, dtype=str)
+
+        if len(classes) == 1:
+            logging.info("Image is classified as %s (errors: %s)" % (
+                '/'.join(classes[0]),
+                errors[0])
+            )
+        elif len(classes) > 1:
             logging.info("Multiple classifications were returned:")
-            for c in class_:
-                logging.info("- %s" % '/'.join(c))
+            for c, e in zip(classes, errors):
+                logging.info("- %s (errors: %s)" % ('/'.join(c), e))
 
     sys.exit()
 
@@ -108,7 +113,11 @@ class Common(object):
         self.config = config
 
     def get_codewords(self, classes, on=1, off=-1):
-        """Return codewords for a list of classes."""
+        """Return codewords for a list of classes.
+
+        The codewords are returned as a dictionary in the format ``{class:
+        codeword, ..}``, where each class is assigned a codeword.
+        """
         n = len(classes)
         codewords = {}
         for i, class_ in enumerate(sorted(classes)):
@@ -117,17 +126,32 @@ class Common(object):
             codewords[class_] = cw
         return codewords
 
-    def get_classification(self, codewords, codeword, error=0.01):
-        """Return a human-readable classification from a codeword."""
+    def get_classification(self, codewords, codeword, error=0.01, on=1.0):
+        """Return the human-readable classification for a codeword.
+
+        Each bit in the codeword `codeword` is compared to the `on` bit in
+        each of the codewords in `codewords`, which is a dictionary of the
+        format ``{class: codeword, ..}``. If the mean square error for a bit
+        is less than or equal to `error`, then the corresponding class is
+        assigned to the codeword. So it is possible that a codeword is
+        assigned to multiple classes.
+
+        The result is returned as a sorted 2-list ``[(mse, ..), (class,
+        ..)]``. Returns a pair of empty tuples if no classes were found.
+        """
         if len(codewords) != len(codeword):
-            raise ValueError("Lenth of `codewords` must be equal to `codeword`")
+            raise ValueError("Lenth of `codewords` must be equal to `codeword` length")
         classes = []
-        for cls, cw in codewords.items():
-            for i, code in enumerate(cw):
-                if code == 1.0 and (code - codeword[i])**2 < error:
-                    classes.append((codeword[i], cls))
-        classes = [x[1] for x in sorted(classes, reverse=True)]
-        return classes
+        for class_, word in codewords.items():
+            for i, bit in enumerate(word):
+                if bit == on:
+                    mse = (float(bit) - codeword[i]) ** 2
+                    if mse <= error:
+                        classes.append((mse, class_))
+                    break
+        if len(classes) == 0:
+            return [(),()]
+        return zip(*sorted(classes))
 
 class ImageClassifier(Common):
     """Classify an image."""
@@ -149,130 +173,34 @@ class ImageClassifier(Common):
             self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
     def set_db_path(self, path):
+        """Set the path to the database file."""
         if not os.path.isfile(path):
             raise IOError("Cannot open %s (no such file)" % path)
         self.db_path = path
 
     def set_error(self, error):
+        """Set the default maximum error for classification."""
         if not 0 < error < 1:
             raise ValueError("Error must be a value between 0 and 1" % error)
         self.error = error
 
-    def classify(self, image_path, ann_base_path=".", path=[]):
-        levels = [l.name for l in self.class_hr]
-        paths = []
+    def classify_image(self, im_path, ann_path, config):
+        """Classify an image file and return the codeword.
 
-        if len(path) == len(levels):
-            return path
-        elif len(path) > len(levels):
-            raise ValueError("`path` length cannot exceed the classification hierarchy depth")
-
-        # Get the level specific configurations.
-        level = conf = self.class_hr[len(path)]
-
-        # Replace any placeholders in the ANN path.
-        ann_file = level.ann
-        for key, val in zip(levels, path):
-            val = val if val != None else '_'
-            ann_file = ann_file.replace("__%s__" % key, val)
-
-        # Get the class names for this node.
-        classes = self.get_childs_from_hierarchy(self.taxon_hr, path)
-
-        # Some levels are allowed to be absent.
-        if classes == None:
-            if level.name in ('section',):
-                pass
-            else:
-                raise ValueError("Classes for level `%s` are not set" % level.name)
-
-        if classes != None:
-            # Get the codewords for the classes.
-            codewords = self.get_codewords(classes)
-
-            # Classify the image and obtain the codeword.
-            ann_path = os.path.join(ann_base_path, ann_file)
-            logging.info("Loading ANN `%s` ..." % ann_path)
-            codeword = self.run_ann(image_path, ann_path, conf)
-
-            try:
-                error = level.min_error
-            except:
-                error = self.error
-
-            # Get the class name associated with this codeword.
-            class_ = self.get_classification(codewords, codeword, error)
-
-            #if level.name == 'section':
-            #    class_ += ['Pardalopetalum']
-            #if level.name == 'species' and path[-1] == 'Paphiopedilum':
-            #    class_ += ['druryi']
-        else:
-            class_ = [None]
-
-        path_s = [str(p) for p in path]
-        if len(class_) == 0:
-            logging.info("Failed to classify on level `%s` at node `%s`" % (
-                level.name,
-                '/'.join(path_s))
-            )
-            return path
-        elif len(class_) > 1:
-            logging.info("Branching in level `%s` at node '%s' into `%s`" % (
-                level.name,
-                '/'.join(path_s),
-                ', '.join(class_))
-            )
-        elif class_ == [None]:
-            logging.info("No level `%s` at node `%s`" % (
-                level.name,
-                '/'.join(path_s))
-            )
-        else:
-            logging.info("Level `%s` at node `%s` classified as `%s`" % (
-                level.name,
-                '/'.join(path_s),
-                class_[0])
-            )
-
-        for c in class_:
-            paths_ = self.classify(image_path, ann_base_path, path+[c])
-            if isinstance(paths_[0], list):
-                paths.extend(paths_)
-            else:
-                paths.append(paths_)
-
-        return paths
-
-    def get_childs_from_hierarchy(self, hr, path=[]):
-        """Return the child node names for a path in a hierarchy.
-
-        Returns a list of child nodes of the hierarchy `hr` for a node
-        specified by `path`. An empty list for `path` means the nodes of
-        the top level are returned. Returns None if there are no child
-        nodes for the specified node.
+        Preprocess and extract features from the image `im_path` as defined
+        in the configuration object `config`, and use the features as input
+        for the neural network `ann_path` to obtain a codeword.
         """
-        classes = hr.copy()
-        for node in path:
-            classes = classes[node]
-
-        if isinstance(classes, dict):
-            classes = classes.keys()
-        elif isinstance(classes, list):
-            pass
-        else:
-            raise ValueError("No such path `%s` in the hierarchy" % '.'.join(path))
-
-        if classes == [None]:
-            return None
-        return classes
-
-    def run_ann(self, im_path, ann_path, config):
         if not os.path.isfile(im_path):
             raise IOError("Cannot open %s (no such file)" % im_path)
         if not os.path.isfile(ann_path):
             raise IOError("Cannot open %s (no such file)" % ann_path)
+        if 'preprocess' not in config:
+            raise ValueError("Attribute `preprocess` not set in the configuration object")
+        if 'features' not in config:
+            raise ValueError("Attribute `features` not set in the configuration object")
 
+        logging.info("Using ANN `%s`" % ann_path)
         ann = libfann.neural_net()
         ann.create_from_file(str(ann_path))
 
@@ -287,12 +215,155 @@ class ImageClassifier(Common):
             phenotyper.set_config(config)
             phenotype = phenotyper.make()
 
-            # Keep a record of the phenotypes, in case they are needed again.
+            # Cache the phenotypes, in case they are needed again.
             self.cache[hash_] = phenotype
 
         codeword = ann.run(phenotype)
 
         return codeword
+
+    def classify_with_hierarchy(self, image_path, ann_base_path=".", path=[], path_error=[]):
+        """Start recursive classification.
+
+        Classify the image `image_path` with neural networks from the
+        directory `ann_base_path`. The image is classified for each level
+        in the classification hierarchy ``classification.hierarchy`` set in
+        the configurations file. Each level can use a different neural
+        network for classification; the file names for the neural networks
+        are set in ``classification.hierarchy[n].ann``. Multiple
+        classifications are returned if the classification of a level in
+        the hierarchy returns multiple classifications, in which case the
+        classification path is split into multiple classifications paths.
+
+        Returns a pair of tuples ``(classifications, errors)``, the list
+        of classifications, and the list of errors for each classification.
+        Each classification is a list of the classes for each level in the
+        hierarchy, top to bottom. The list of errors has the same dimension
+        of the list of classifications, where each value corresponds to the
+        mean square error of each classification.
+        """
+        levels = [l.name for l in self.class_hr]
+        paths = []
+        paths_errors = []
+
+        if len(path) == len(levels):
+            return ([path], [path_error])
+        elif len(path) > len(levels):
+            raise ValueError("`path` length cannot exceed the classification hierarchy depth")
+
+        # Get the level specific configurations.
+        level = conf = self.class_hr[len(path)]
+
+        # Replace any placeholders in the ANN path.
+        ann_file = level.ann
+        for key, val in zip(levels, path):
+            val = val if val != None else '_'
+            ann_file = ann_file.replace("__%s__" % key, val)
+
+        # Get the class names for this node in the taxonomic hierarchy.
+        level_classes = self.get_childs_from_hierarchy(self.taxon_hr, path)
+
+        # Some levels are allowed to have no classes set.
+        if level_classes == [None]:
+            if level.name in ('section',):
+                pass
+            else:
+                raise ValueError("Classes for level `%s` are not set" % level.name)
+
+        if len(level_classes) == 1:
+            # No need to classify if there is only one class to choose from.
+            classes = level_classes
+            class_errors = (0.0,)
+        else:
+            # Get the codewords for the classes.
+            class_codewords = self.get_codewords(level_classes)
+
+            # Classify the image and obtain the codeword.
+            ann_path = os.path.join(ann_base_path, ann_file)
+            codeword = self.classify_image(image_path, ann_path, conf)
+
+            # Set the maximum classification error for this level.
+            try:
+                max_error = level.max_error
+            except:
+                max_error = self.error
+
+            # Get the class name associated with this codeword.
+            class_errors, classes = self.get_classification(class_codewords,
+                codeword, max_error)
+
+            # Test branching.
+            #if level.name == 'section':
+                #classes += ('Pardalopetalum','Brachypetalum')
+                #class_errors += (0.0001,0.0002)
+            #if level.name == 'species' and path[-1] == 'Paphiopedilum':
+                #classes += ('druryi',)
+                #class_errors += (0.0003,)
+            #if level.name == 'species' and path[-1] == 'Pardalopetalum':
+                #classes = ()
+                #class_errors = ()
+
+        # Print some info messages.
+        path_s = [str(p) for p in path]
+        path_s = '/'.join(path_s)
+
+        if len(classes) == 0:
+            logging.info("Failed to classify on level `%s` at node `%s`" % (
+                level.name,
+                path_s)
+            )
+            return ([path], [path_error])
+        elif len(classes) > 1:
+            logging.info("Branching in level `%s` at node '%s' into `%s`" % (
+                level.name,
+                path_s,
+                ', '.join(classes))
+            )
+        else:
+            logging.info("Level `%s` at node `%s` classified as `%s`" % (
+                level.name,
+                path_s,
+                classes[0])
+            )
+
+        for class_, mse in zip(classes, class_errors):
+            # Recurse into lower hierarchy levels.
+            paths_, paths_errors_ = self.classify_with_hierarchy(image_path,
+                ann_base_path, path+[class_], path_error+[mse])
+
+            # Keep a list of each classification path and their
+            # corresponding errors.
+            paths.extend(paths_)
+            paths_errors.extend(paths_errors_)
+
+        assert len(paths) == len(paths_errors), \
+            "Number of paths must be equal to the number of path errors"
+
+        return paths, paths_errors
+
+    def get_childs_from_hierarchy(self, hr, path=[]):
+        """Return the child node names for a node in a hierarchy.
+
+        Returns a list of child node names of the hierarchy `hr` at node
+        with the path `path`. The hierarchy `hr` is a nested dictionary,
+        where bottom level nodes are lists. Which node to get the childs
+        from is specified by `path`, which is a list of the node names up
+        to that node. An empty list for `path` means the names of the nodes
+        of the top level are returned. Returns None if there are no childs
+        for the specified node.
+        """
+        nodes = hr.copy()
+        for name in path:
+            nodes = nodes[name]
+
+        if isinstance(nodes, dict):
+            names = nodes.keys()
+        elif isinstance(nodes, list):
+            names = nodes
+        else:
+            raise ValueError("No such path `%s` in the hierarchy" % '/'.join(path))
+
+        return names
 
     def get_taxon_hierarchy(self, session, metadata):
         """Return the taxanomic hierarchies for photos in the database.
