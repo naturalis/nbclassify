@@ -208,7 +208,6 @@ class ImageClassifier(Common):
         if 'features' not in config:
             raise ValueError("Attribute `features` not set in the configuration object")
 
-        logging.info("Using ANN `%s`" % ann_path)
         ann = libfann.neural_net()
         ann.create_from_file(str(ann_path))
 
@@ -226,6 +225,7 @@ class ImageClassifier(Common):
             # Cache the phenotypes, in case they are needed again.
             self.cache[hash_] = phenotype
 
+        logging.info("Using ANN `%s`" % ann_path)
         codeword = ann.run(phenotype)
 
         return codeword
@@ -316,19 +316,19 @@ class ImageClassifier(Common):
         path_s = '/'.join(path_s)
 
         if len(classes) == 0:
-            logging.info("Failed to classify on level `%s` at node `%s`" % (
+            logging.info("Failed to classify on level `%s` at node `/%s`" % (
                 level.name,
                 path_s)
             )
             return ([path], [path_error])
         elif len(classes) > 1:
-            logging.info("Branching in level `%s` at node '%s' into `%s`" % (
+            logging.info("Branching in level `%s` at node '/%s' into `%s`" % (
                 level.name,
                 path_s,
                 ', '.join(classes))
             )
         else:
-            logging.info("Level `%s` at node `%s` classified as `%s`" % (
+            logging.info("Level `%s` at node `/%s` classified as `%s`" % (
                 level.name,
                 path_s,
                 classes[0])
