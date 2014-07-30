@@ -20,6 +20,14 @@ import nbclassify as nbc
 # https://github.com/naturalis/feature-extraction
 import features as ft
 
+ANSI_COLOR = {
+    'green': '\033[32m',
+    'green_bold': '\033[1;32m',
+    'red': '\033[31m',
+    'red_bold': '\033[1;31m',
+    'reset': '\033[0m',
+}
+
 def main():
     # Print debug messages if the -d flag is set for the Python interpreter.
     # Otherwise just show log messages of type INFO.
@@ -63,19 +71,30 @@ def main():
             classes[i] = np.array(path, dtype=str)
 
         if len(classes) == 1:
-            logging.info("Image is classified as %s (mse: %s)" % (
-                '/'.join(classes[0]),
-                sum(errors[0])/len(errors[0]))
-            )
+            table = {
+                'color': ANSI_COLOR['green_bold'],
+                'reset': ANSI_COLOR['reset'],
+                'class': '/'.join(classes[0]),
+                'error': sum(errors[0]) / len(errors[0])
+            }
+            print "Image is classified as {color}{class}{reset} (mse: {error:.6f})".format(**table)
+
         elif len(classes) > 1:
-            logging.info("Multiple classifications were returned:")
+            print "Multiple classifications were returned:"
 
             # Calculate the mean square error for each classification path.
             errors_classes = [(sum(e)/len(e),c) for e,c in zip(errors, classes)]
 
             # Print results sorted by error.
-            for error, class_ in sorted(errors_classes):
-                logging.info("- %s (mse: %s)" % ('/'.join(class_), error))
+            for i, (error, class_) in enumerate(sorted(errors_classes), start=1):
+                table = {
+                    'n': i,
+                    'color': ANSI_COLOR['green_bold'],
+                    'reset': ANSI_COLOR['reset'],
+                    'class': '/'.join(class_),
+                    'error': error
+                }
+                print "{n}. {color}{class}{reset} (mse: {error:.6f})".format(**table)
 
     sys.exit()
 
@@ -225,7 +244,7 @@ class ImageClassifier(Common):
             # Cache the phenotypes, in case they are needed again.
             self.cache[hash_] = phenotype
 
-        logging.info("Using ANN `%s`" % ann_path)
+        logging.debug("Using ANN `%s`" % ann_path)
         codeword = ann.run(phenotype)
 
         return codeword
@@ -316,19 +335,19 @@ class ImageClassifier(Common):
         path_s = '/'.join(path_s)
 
         if len(classes) == 0:
-            logging.info("Failed to classify on level `%s` at node `/%s`" % (
+            logging.debug("Failed to classify on level `%s` at node `/%s`" % (
                 level.name,
                 path_s)
             )
             return ([path], [path_error])
         elif len(classes) > 1:
-            logging.info("Branching in level `%s` at node '/%s' into `%s`" % (
+            logging.debug("Branching in level `%s` at node '/%s' into `%s`" % (
                 level.name,
                 path_s,
                 ', '.join(classes))
             )
         else:
-            logging.info("Level `%s` at node `/%s` classified as `%s`" % (
+            logging.debug("Level `%s` at node `/%s` classified as `%s`" % (
                 level.name,
                 path_s,
                 classes[0])
