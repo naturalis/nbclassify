@@ -57,17 +57,25 @@ def main():
         classifier.set_error(args.error)
 
         classes, errors = classifier.classify_with_hierarchy(args.path, args.anns)
-        classes = np.array(classes, dtype=str)
+
+        # Convert all values to string.
+        for i, path in enumerate(classes):
+            classes[i] = np.array(path, dtype=str)
 
         if len(classes) == 1:
-            logging.info("Image is classified as %s (errors: %s)" % (
+            logging.info("Image is classified as %s (mse: %s)" % (
                 '/'.join(classes[0]),
-                errors[0])
+                sum(errors[0])/len(errors[0]))
             )
         elif len(classes) > 1:
             logging.info("Multiple classifications were returned:")
-            for c, e in zip(classes, errors):
-                logging.info("- %s (errors: %s)" % ('/'.join(c), e))
+
+            # Calculate the mean square error for each classification path.
+            errors_classes = [(sum(e)/len(e),c) for e,c in zip(errors, classes)]
+
+            # Print results sorted by error.
+            for error, class_ in sorted(errors_classes):
+                logging.info("- %s (mse: %s)" % ('/'.join(class_), error))
 
     sys.exit()
 
@@ -294,12 +302,12 @@ class ImageClassifier(Common):
 
             # Test branching.
             #if level.name == 'section':
-                #classes += ('Pardalopetalum','Brachypetalum')
+                #classes += ('Coryopedilum','Brachypetalum')
                 #class_errors += (0.0001,0.0002)
             #if level.name == 'species' and path[-1] == 'Paphiopedilum':
                 #classes += ('druryi',)
                 #class_errors += (0.0003,)
-            #if level.name == 'species' and path[-1] == 'Pardalopetalum':
+            #if level.name == 'species' and path[-1] == 'Coryopedilum':
                 #classes = ()
                 #class_errors = ()
 
