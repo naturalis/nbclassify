@@ -380,15 +380,18 @@ class ImageClassifier(Common):
         for the specified node.
         """
         nodes = hr.copy()
-        for name in path:
-            nodes = nodes[name]
+        try:
+            for name in path:
+                nodes = nodes[name]
+        except:
+            raise ValueError("No such path `%s` in the hierarchy" % '/'.join(path))
 
         if isinstance(nodes, dict):
             names = nodes.keys()
         elif isinstance(nodes, list):
             names = nodes
         else:
-            raise ValueError("No such path `%s` in the hierarchy" % '/'.join(path))
+            raise ValueError("Incorrect hierarchy format")
 
         return names
 
@@ -399,9 +402,9 @@ class ImageClassifier(Common):
         ``{genus: {section: [species, ..], ..}, ..}``.
         """
         hierarchy = {}
-        q = self.get_taxa(session, metadata)
+        taxa = self.get_taxa(session, metadata)
 
-        for _, genus, section, species in q:
+        for genus, section, species in taxa:
             if genus not in hierarchy:
                 hierarchy[genus] = {}
             if section not in hierarchy[genus]:
@@ -441,7 +444,8 @@ class ImageClassifier(Common):
             join(stmt3).\
             group_by('genus', 'section', 'species')
 
-        return q
+        for _, genus, section, species in q:
+            yield (genus,section,species)
 
 if __name__ == "__main__":
     main()
