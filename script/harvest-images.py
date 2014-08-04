@@ -471,6 +471,7 @@ class ImageHarvester(object):
         else:
             raise ValueError("Unkown format '%s'" % format)
 
+        seen_keys = []
         tags = info.find('tags')
         for tag in tags:
             raw = tag.get('raw').strip()
@@ -479,7 +480,13 @@ class ImageHarvester(object):
             else:
                 e = raw.split(':')
                 if len(e) == 2:
-                    out[e[0]] = e[1]
+                    k,v = e
+                    if k not in seen_keys:
+                        seen_keys.append(k)
+                    else:
+                        photo_id = info.get('id')
+                        logging.warning("Photo %s has multiple tags with key `%s`" % (photo_id, k))
+                    out[k] = v
                 else:
                     out[raw] = None
         return out
