@@ -52,10 +52,10 @@ def main():
     parser.add_argument("--tag-mode", metavar="MODE", default='all',
         help="Either 'any' for an OR combination of tags, or 'all' for an " \
         "AND combination. Defaults to 'all' if not specified.")
-    parser.add_argument("--page", metavar="N", default=1,
+    parser.add_argument("--page", metavar="N", default=1, type=int,
         help="The page of results to return. If this argument is omitted, " \
         "it defaults to 1.")
-    parser.add_argument("--per-page", metavar="N", default=100,
+    parser.add_argument("--per-page", metavar="N", default=100, type=int,
         help="Number of photos to return per page. If this argument is " \
         "omitted, it defaults to 100. The maximum allowed value is 500.")
     parser.add_argument("--verbose", "-v", action='store_const', const=True,
@@ -65,6 +65,9 @@ def main():
     args = parser.parse_args()
     if args.db is None:
         args.db = os.path.join(args.output, "photos.db")
+    if not (0 < args.per_page <= 500):
+        sys.stderr.write("Incorrect value for option --per-page\n")
+        return
 
     # Print debug messages if the -d flag is set for the Python interpreter.
     if sys.flags.debug:
