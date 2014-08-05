@@ -35,13 +35,6 @@ FLICKR_API_KEY = '1391fcd0a9780b247cd6a101272acf71'
 FLICKR_API_SECRET = 'fd221d0336de3b6d'
 
 def main():
-    # Print debug messages if the -d flag is set for the Python interpreter.
-    # Otherwise just show INFO messages.
-    if sys.flags.debug:
-        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s')
-    else:
-        logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
-
     # Create argument parser.
     parser = argparse.ArgumentParser(description='Flickr image harvester')
     parser.add_argument("flickr_uid", metavar="FLICKR_UID",
@@ -65,11 +58,23 @@ def main():
     parser.add_argument("--per-page", metavar="N", default=100,
         help="Number of photos to return per page. If this argument is " \
         "omitted, it defaults to 100. The maximum allowed value is 500.")
+    parser.add_argument("--verbose", "-v", action='store_const', const=True,
+        help="Explain what is being done.")
 
     # Parse arguments.
     args = parser.parse_args()
     if args.db is None:
         args.db = os.path.join(args.output, "photos.db")
+
+    # Print debug messages if the -d flag is set for the Python interpreter.
+    if sys.flags.debug:
+        log_level = logging.DEBUG
+    elif args.verbose:
+        log_level = logging.INFO
+    else:
+        log_level = logging.WARNING
+
+    logging.basicConfig(level=log_level, format='%(levelname)s %(message)s')
 
     # Initialize Flickr downloader.
     flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
@@ -89,9 +94,9 @@ def main():
     harvester = ImageHarvester(flickr, args.db)
     n = harvester.archive_taxon_photos(args.output, **search_options)
     if n > 0:
-        logging.info("Finished processing %d photos" % n)
+        sys.stderr.write("Finished processing %d photos\n" % n)
     else:
-        logging.info("No photos were found matching your search criteria")
+        sys.stderr.write("No photos were found matching your search criteria\n")
 
 class ImageHarvester(object):
     """Harvest images from a Flickr account."""
@@ -308,7 +313,7 @@ class ImageHarvester(object):
             self.conn.execute("INSERT INTO photos VALUES (?,?,?,?,?);",
                 [photo_id, hasher.hexdigest(), path, title, description])
         except sqlite.IntegrityError as e:
-            logging.error("Failed to save photo meta data. Error returned was: %s" % e)
+            logging.error("Failed to save meta data for photo %s `%s`. Error returned was: %s" % (photo_id, title, e))
             self.conn.rollback()
             return
 
@@ -400,6 +405,10 @@ class ImageHarvester(object):
 
         # Make sure that all tags are set in the database.
         self.db_set_tags()
+
+        n_photos = len(photos)
+        if n_photos > 0:
+            sys.stderr.write("Going to process %s photos...\n" % n_photos)
 
         # Download each photo and set meta data in the database.
         n = 0
@@ -507,7 +516,7 @@ class FlickrDownloader(object):
 
         if self.token:
             # We have a token, but it might not be valid.
-            logging.info("Flickr token found")
+            sys.stderr.write("Flickr token found\n")
             try:
                 self.api.auth_checkToken()
             except flickrapi.FlickrError:
@@ -515,11 +524,11 @@ class FlickrDownloader(object):
 
         if not self.token:
             # No valid token, so redirect to Flickr.
-            logging.info("Please authorize this program via Flickr. Redirecting to Flickr...")
+            sys.stderr.write("Please authorize this program via Flickr. Redirecting to Flickr...\n")
             raw_input("Press ENTER after you authorized this program")
 
         self.api.get_token_part_two((self.token, self.frob))
-        logging.info("Flickr authorization success")
+        sys.stderr.write("Flickr authorization success\n")
 
     def execute(self, method, *args, **kwargs):
         """Execute a method of the Flickr API.
