@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Trainer for the artificial neural networks.
+"""This script can be used to extract numerical phenotypes from digital
+photos, export training data, and train and test artificial neural networks.
 
-Tasks:
+The following subcommands are available:
 
 * data: Create a tab separated file with training data.
+* batch-data: Batch create tab separated files with training data.
 * ann: Train an artificial neural network.
+* batch-ann: Batch train artificial neural networks.
 * test-ann: Test the performance of an artificial neural network.
 * classify: Classify an image using an artificial neural network.
 """
@@ -43,7 +46,8 @@ def main():
     # Setup the argument parser.
     parser = argparse.ArgumentParser(description="Generate training data " \
         "and train artificial neural networks.")
-    subparsers = parser.add_subparsers(help="Specify which task to start.")
+    subparsers = parser.add_subparsers(help="Specify which task to start.",
+        dest='task')
 
     # Create an argument parser for sub-command 'data'.
     help_data = """Create a tab separated file with training data.
@@ -170,7 +174,7 @@ def main():
     # Parse arguments.
     args = parser.parse_args()
 
-    if sys.argv[1] == 'data':
+    if args.task == 'data':
         # Set the default database path if not set.
         if args.db is None:
             args.db = os.path.join(args.basepath, 'photos.db')
@@ -190,7 +194,7 @@ def main():
             logging.error(e)
             raise
 
-    if sys.argv[1] == 'batch-data':
+    if args.task == 'batch-data':
         # Set the default database path if not set.
         if args.db is None:
             args.db = os.path.join(args.basepath, 'photos.db')
@@ -203,7 +207,7 @@ def main():
             logging.error(e)
             raise
 
-    elif sys.argv[1] == 'ann':
+    elif args.task == 'ann':
         try:
             config = open_yaml(args.conf)
             ann_maker = MakeAnn(config, args)
@@ -211,7 +215,7 @@ def main():
         except Exception as e:
             logging.error(e)
 
-    elif sys.argv[1] == 'batch-ann':
+    elif args.task == 'batch-ann':
         try:
             config = open_yaml(args.conf)
             ann_maker = BatchMakeAnn(config, args.db, args)
@@ -220,7 +224,7 @@ def main():
             logging.error(e)
             raise
 
-    elif sys.argv[1] == 'test-ann':
+    elif args.task == 'test-ann':
         config = open_yaml(args.conf)
         tester = TestAnn(config)
         tester.test(args.ann, args.data)
@@ -229,7 +233,7 @@ def main():
                 sys.exit("Option --output must be used together with --db")
             tester.export_results(args.output, args.db, args.error)
 
-    elif sys.argv[1] == 'classify':
+    elif args.task == 'classify':
         config = open_yaml(args.conf)
         classifier = ImageClassifier(config, args.ann, args.db)
         class_ = classifier.classify(args.image, args.error)
@@ -649,7 +653,7 @@ class BatchMakeTrainData(MakeTrainData):
         # Classify on genus level.
         level = 0
         filter_ = {'class': 'genus'}
-        data_file = os.path.join(target, classify_hierarchy[level].data)
+        data_file = os.path.join(target, classify_hierarchy[level].data_file)
         if not os.path.isfile(data_file):
             logging.info("Generating training data for the filter `%s` ..." % filter_)
             self.export(data_file, filter_, classify_hierarchy[level])
@@ -669,7 +673,7 @@ class BatchMakeTrainData(MakeTrainData):
 
                 # Classify on section level.
                 level = 1
-                data_file = os.path.join(target, classify_hierarchy[level].data)
+                data_file = os.path.join(target, classify_hierarchy[level].data_file)
                 data_file = data_file.replace("__genus__", genus)
                 if not os.path.isfile(data_file):
                     logging.info("Generating training data for the filter `%s` ..." % filter_)
@@ -689,7 +693,7 @@ class BatchMakeTrainData(MakeTrainData):
                 # Classify on species level.
                 level = 2
                 if section is None: section = '_'
-                data_file = os.path.join(target, classify_hierarchy[level].data)
+                data_file = os.path.join(target, classify_hierarchy[level].data_file)
                 data_file = data_file.replace("__genus__", genus)
                 data_file = data_file.replace("__section__", section)
                 if not os.path.isfile(data_file):
@@ -786,8 +790,8 @@ class BatchMakeAnn(MakeAnn):
 
         # Train on genus level.
         level = 0
-        data_file = os.path.join(data_dir, classify_hierarchy[level].data)
-        ann_file = os.path.join(target, classify_hierarchy[level].ann)
+        data_file = os.path.join(data_dir, classify_hierarchy[level].data_file)
+        ann_file = os.path.join(target, classify_hierarchy[level].ann_file)
         if not os.path.isfile(ann_file):
             logging.info("Training network with training data from `%s` ..." % data_file)
             try:
@@ -803,9 +807,9 @@ class BatchMakeAnn(MakeAnn):
             else:
                 # Train on section level.
                 level = 1
-                data_file = os.path.join(data_dir, classify_hierarchy[level].data)
+                data_file = os.path.join(data_dir, classify_hierarchy[level].data_file)
                 data_file = data_file.replace("__genus__", genus)
-                ann_file = os.path.join(target, classify_hierarchy[level].ann)
+                ann_file = os.path.join(target, classify_hierarchy[level].ann_file)
                 ann_file = ann_file.replace("__genus__", genus)
                 if not os.path.isfile(ann_file):
                     logging.info("Training network with training data from `%s` ..." % data_file)
@@ -820,10 +824,10 @@ class BatchMakeAnn(MakeAnn):
                 # Train on species level.
                 level = 2
                 if section is None: section = '_'
-                data_file = os.path.join(data_dir, classify_hierarchy[level].data)
+                data_file = os.path.join(data_dir, classify_hierarchy[level].data_file)
                 data_file = data_file.replace("__genus__", genus)
                 data_file = data_file.replace("__section__", section)
-                ann_file = os.path.join(target, classify_hierarchy[level].ann)
+                ann_file = os.path.join(target, classify_hierarchy[level].ann_file)
                 ann_file = ann_file.replace("__genus__", genus)
                 ann_file = ann_file.replace("__section__", section)
                 if not os.path.isfile(ann_file):
