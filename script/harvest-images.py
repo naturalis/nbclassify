@@ -17,7 +17,9 @@ import os
 import re
 import sys
 import sqlite3 as sqlite
+import time
 import urllib
+import urllib2
 import xml.etree.ElementTree
 
 import flickrapi
@@ -626,7 +628,18 @@ class FlickrDownloader(object):
             meth = getattr(self.api, meth)
         except AttributeError:
             raise AttributeError("Flickr API method `%s` not found" % method)
-        rsp = meth(api_key=self.key, user_id=self.uid, *args, **kwargs)
+
+        for tries in range(4):
+            try:
+                rsp = meth(api_key=self.key, user_id=self.uid, *args, **kwargs)
+                break
+            except urllib2.HTTPError:
+                # The Flickr server sometimes gives HTTP Error 502: Bad
+                # Gateway. Try at most 3 times if this error occurs.
+                if tries > 2:
+                    raise
+                time.sleep(3)
+
         if rsp.get('stat') != 'ok':
             logging.error("Flickr API method `%` failed" % method)
             return False
