@@ -12,6 +12,7 @@ The following classes are defined:
 import argparse
 import hashlib
 import logging
+import mimetypes
 import os
 import re
 import sys
@@ -37,37 +38,54 @@ FLICKR_API_SECRET = 'fd221d0336de3b6d'
 def main():
     # Create argument parser.
     parser = argparse.ArgumentParser(description='Flickr image harvester')
+
     parser.add_argument("flickr_uid", metavar="FLICKR_UID",
         help="The Flickr user ID to harvest photos from (e.g. 123456789@A12)")
-    parser.add_argument("--output", "-o", metavar="PATH", default=".",
+    parser.add_argument("--verbose", "-v", action='store_const',
+        const=True, help="Explain what is being done.")
+
+    subparsers = parser.add_subparsers(help="Specify which task to start.",
+        dest='task')
+
+    help_harvest = "Harvest images from a Flickr account."
+    parser_harvest = subparsers.add_parser('harvest',
+        help=help_harvest, description=help_harvest)
+
+    parser_harvest.add_argument("--output", "-o", metavar="PATH", default=".",
         help="Folder to put harvested photos in. Default is current folder.")
-    parser.add_argument("--db", metavar="DB",
-        help="Path to photos database file with meta data. If omitted, this "\
-        "defaults to a file photos.db in the output folder. The database "\
-        "file will be created if it doesn't exist.")
-    parser.add_argument("--tags", metavar="TAGS",
+    parser_harvest.add_argument("--db", metavar="DB",
+        help="Path to photos database file with meta data. If omitted, " \
+        "this defaults to a file photos.db in the output folder. The "\
+        "database file will be created if it doesn't exist.")
+    parser_harvest.add_argument("--tags", metavar="TAGS",
         help="A comma-delimited list of tags. Photos with the tags listed " \
         "will be harvested. You can exclude results that match a tag by " \
         "prepending it with a _ character (e.g. \"foo,_bar\").")
-    parser.add_argument("--tag-mode", metavar="MODE", default='all',
+    parser_harvest.add_argument("--tag-mode", metavar="MODE", default='all',
         help="Either 'any' for an OR combination of tags, or 'all' for an " \
         "AND combination. Defaults to 'all' if not specified.")
-    parser.add_argument("--page", metavar="N", default=1, type=int,
+    parser_harvest.add_argument("--page", metavar="N", default=1, type=int,
         help="The page of results to return. If this argument is omitted, " \
         "it defaults to 1.")
-    parser.add_argument("--per-page", metavar="N", default=100, type=int,
-        help="Number of photos to return per page. If this argument is " \
-        "omitted, it defaults to 100. The maximum allowed value is 500.")
-    parser.add_argument("--verbose", "-v", action='store_const', const=True,
-        help="Explain what is being done.")
+    parser_harvest.add_argument("--per-page", metavar="N", default=100,
+        type=int, help="Number of photos to return per page. If this " \
+        "argument is omitted, it defaults to 100. The maximum allowed value " \
+        "is 500.")
+
+    help_cleanup = """Remove image files from a local directory and its
+    subdirectories for which the filename is a Flickr photo ID and the
+    photo ID does not exist on the Flickr account."""
+    parser_cleanup = subparsers.add_parser('cleanup',
+        help=help_cleanup, description=help_cleanup)
+
+    parser_cleanup.add_argument("--path", metavar="PATH", required=True,
+        help="Path to a directory containing Flickr photos.")
+    parser_cleanup.add_argument("--db", metavar="DB",
+        help="Path to photos database file with meta data. If omitted, " \
+        "this defaults to a file photos.db in the directory --path.")
 
     # Parse arguments.
     args = parser.parse_args()
-    if args.db is None:
-        args.db = os.path.join(args.output, "photos.db")
-    if not (0 < args.per_page <= 500):
-        sys.stderr.write("Incorrect value for option --per-page\n")
-        return
 
     # Print debug messages if the -d flag is set for the Python interpreter.
     if sys.flags.debug:
@@ -79,27 +97,44 @@ def main():
 
     logging.basicConfig(level=log_level, format='%(levelname)s %(message)s')
 
-    # Initialize Flickr downloader.
-    flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
+    if args.task == 'harvest':
+        if args.db is None:
+            args.db = os.path.join(args.output, "photos.db")
+        if not (0 < args.per_page <= 500):
+            sys.stderr.write("Incorrect value for option --per-page\n")
+            return
 
-    # Flickr search options.
-    search_options = {}
-    if args.tag_mode is not None: search_options['tag_mode'] = args.tag_mode
-    if args.tags is not None:
-        # We have to do this because the argparse module parses strings that
-        # start with a hyphen (-) as a command line option.
-        args.tags = args.tags.replace('_', '-')
-        search_options['tags'] = args.tags
-    if args.page is not None: search_options['page'] = args.page
-    if args.per_page is not None: search_options['per_page'] = args.per_page
+        # Initialize Flickr downloader.
+        flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
 
-    # Download and organize photos.
-    harvester = ImageHarvester(flickr, args.db)
-    n = harvester.archive_taxon_photos(args.output, **search_options)
-    if n > 0:
-        sys.stderr.write("Finished processing %d photos\n" % n)
-    else:
-        sys.stderr.write("No photos were found matching your search criteria\n")
+        # Flickr search options.
+        search_options = {}
+        if args.tag_mode is not None: search_options['tag_mode'] = args.tag_mode
+        if args.tags is not None:
+            # We have to do this because the argparse module parses strings that
+            # start with a hyphen (-) as a command line option.
+            args.tags = args.tags.replace('_', '-')
+            search_options['tags'] = args.tags
+        if args.page is not None: search_options['page'] = args.page
+        if args.per_page is not None: search_options['per_page'] = args.per_page
+
+        # Download and organize photos.
+        harvester = ImageHarvester(flickr, args.db)
+        n = harvester.archive_taxon_photos(args.output, **search_options)
+        if n > 0:
+            sys.stderr.write("Finished processing %d photos\n" % n)
+        else:
+            sys.stderr.write("No photos were found matching your search criteria\n")
+
+    elif args.task == 'cleanup':
+        if args.db is None:
+            args.db = os.path.join(args.path, "photos.db")
+
+        flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
+        harvester = ImageHarvester(flickr, args.db)
+        sys.stderr.write("Now checking for unknown Flickr photos in `%s` " % args.path)
+        n = harvester.remove_unknown_photos(args.path)
+        sys.stderr.write("A total of %d photos were deleted\n" % n)
 
 class ImageHarvester(object):
     """Harvest images from a Flickr account."""
@@ -109,6 +144,7 @@ class ImageHarvester(object):
         self.cursor = None
         self.re_filename_replace = re.compile(r'[\s]+')
         self.re_tags_ignore = re.compile(r'vision:')
+        self.re_photo_id = re.compile(r'^[0-9]+$')
         self.set_flickr_downloader(flickr)
         self.db_connect(db_file)
 
@@ -503,6 +539,44 @@ class ImageHarvester(object):
                     out[raw] = None
         return out
 
+    def remove_unknown_photos(self, path):
+        """Remove any photos that do not exist on the Flickr account.
+
+        Removes image files from `path` and its subdirectories for which the
+        filename is a Flickr photo ID and the photo ID does not exist on
+        the Flickr account.
+
+        Returns the number of photos that were removed.
+        """
+        n = 0
+        for root, dirs, files in os.walk(path, topdown=False):
+            for name in files:
+                im_path = os.path.join(root, name)
+                mime = mimetypes.guess_type(im_path)[0]
+                photo_id, ext = os.path.splitext(name)
+
+                if not mime or not mime.startswith('image'):
+                    continue
+                if not self.re_photo_id.match(photo_id):
+                    continue
+
+                try:
+                    perms = self.flickr.execute('photos.getPerms', photo_id=photo_id)
+                    sys.stderr.write('.')
+                except flickrapi.exceptions.FlickrError as e:
+                    if "Photo not found" in str(e):
+                        try:
+                            os.remove(im_path)
+                            sys.stderr.write("\nRemoved photo `%s`\n" % im_path)
+                            n += 1
+                        except:
+                            sys.stderr.write("\nERROR: Failed to remove photo `%s`\n" % im_path)
+                    else:
+                        raise
+
+        sys.stderr.write('\n')
+        return n
+
 class FlickrDownloader(object):
     """Download photos with metadata from Flickr."""
 
@@ -547,14 +621,14 @@ class FlickrDownloader(object):
         if not isinstance(method, str):
             raise TypeError("Argument `method` must be a string")
         try:
-            m = method.replace('.', '_')
-            m = re.sub("^flickr_", "", m)
-            m = getattr(self.api, m)
+            meth = method.replace('.', '_')
+            meth = re.sub("^flickr_", "", meth)
+            meth = getattr(self.api, meth)
         except AttributeError:
-            raise AttributeError("Flickr API method '%s' not found" % method)
-        rsp = m(api_key=self.key, user_id=self.uid, *args, **kwargs)
+            raise AttributeError("Flickr API method `%s` not found" % method)
+        rsp = meth(api_key=self.key, user_id=self.uid, *args, **kwargs)
         if rsp.get('stat') != 'ok':
-            logging.error("Method '%' failed" % method)
+            logging.error("Flickr API method `%` failed" % method)
             return False
         if len(rsp) > 0:
             return rsp[0]
