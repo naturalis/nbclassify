@@ -1,8 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""This script can be used to extract numerical phenotypes from digital
-photos, export training data, and train and test artificial neural networks.
+"""This script can be used to extract digital phenotypes from digital
+photographs, export these to training data files, and train and test
+artificial neural networks.
+
+This script depends on configurations from a configuration file. See
+trainer.yml for an example configuration file.
+
+The script also depends on an SQLite database file with meta data for a
+collection of digital photographs. This database is created by
+harvest-images.py, which is also responsible for compiling the collection of
+digital photographs.
 
 The following subcommands are available:
 
@@ -12,6 +21,8 @@ The following subcommands are available:
 * batch-ann: Batch train artificial neural networks.
 * test-ann: Test the performance of an artificial neural network.
 * classify: Classify an image using an artificial neural network.
+
+See the --help option for any of these subcommands for more information.
 """
 
 import argparse
@@ -51,13 +62,13 @@ def main():
 
     # Create an argument parser for sub-command 'data'.
     help_data = """Create a tab separated file with training data.
-    Preprocessing steps and features to extract must be set in a
-    configurations file. See trainer.yml for an example."""
+    Preprocessing steps, features to extract, and a classification filter
+    must be set in a configurations file. See trainer.yml for an example."""
 
     parser_data = subparsers.add_parser('data',
         help=help_data, description=help_data)
     parser_data.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a YAML file with feature extraction parameters.")
+        help="Path to a configurations file with feature extraction parameters.")
     parser_data.add_argument("--db", metavar="DB",
         help="Path to a database file with photo meta data. If omitted " \
         "this defaults to a file photos.db in the photo's directory.")
@@ -70,13 +81,14 @@ def main():
 
     # Create an argument parser for sub-command 'batch-data'.
     help_batch_data = """Batch create tab separated files with training
-    data. Preprocessing steps and features to extract must be set in a
-    configurations file. See trainer.yml for an example."""
+    data. Preprocessing steps, features to extract, and the classification
+    hierarchy must be set in a configurations file, See trainer.yml for an
+    example."""
 
     parser_batch_data = subparsers.add_parser('batch-data',
         help=help_batch_data, description=help_batch_data)
     parser_batch_data.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a YAML file with feature extraction parameters.")
+        help="Path to a configurations file with feature extraction parameters.")
     parser_batch_data.add_argument("--db", metavar="DB",
         help="Path to a database file with photo meta data. If omitted " \
         "this defaults to a file photos.db in the photo's directory.")
@@ -89,13 +101,13 @@ def main():
 
     # Create an argument parser for sub-command 'ann'.
     help_ann = """Train an artificial neural network. Optional training
-    parameters can be set in a separate configurations file. See
-    trainer.yml for an example file."""
+    parameters `ann` can be set in a separate configurations file. See
+    trainer.yml for an example."""
 
     parser_ann = subparsers.add_parser('ann',
         help=help_ann, description=help_ann)
-    parser_ann.add_argument("--conf", metavar="FILE",
-        help="Path to a YAML file with ANN training parameters.")
+    parser_ann.add_argument("--conf", metavar="FILE", required=True,
+        help="Path to a configurations file with ANN training parameters.")
     parser_ann.add_argument("--epochs", metavar="N", type=float,
         help="Maximum number of epochs. Overwrites value in --conf.")
     parser_ann.add_argument("--error", metavar="N", type=float,
@@ -108,14 +120,15 @@ def main():
         help="Path to tab separated file with training data.")
 
     # Create an argument parser for sub-command 'batch-ann'.
-    help_batch_ann = """Batch train artificial neural networks. Optional training
-    parameters can be set in a separate configurations file. See
-    trainer.yml for an example file."""
+    help_batch_ann = """Batch train a committee of artificial neural
+    networks. The classification hierarchy with optionally neural network
+    training parameters for each level must be set in a configurations
+    file. See trainer.yml for an example."""
 
     parser_batch_ann = subparsers.add_parser('batch-ann',
         help=help_batch_ann, description=help_batch_ann)
     parser_batch_ann.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a YAML file with ANN training parameters.")
+        help="Path to a configurations file with ANN training parameters.")
     parser_batch_ann.add_argument("--db", metavar="DB", required=True,
         help="Path to a database file with photo meta data.")
     parser_batch_ann.add_argument("--data", metavar="PATH", required=True,
@@ -130,8 +143,8 @@ def main():
 
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann = """Test an artificial neural network. If `--output` is
-    set, then `--conf` must also be set. See trainer.yml for an example YAML
-    file with class names."""
+    set, then the classification filter must be set in the configurations
+    file. See trainer.yml for an example."""
 
     parser_test_ann = subparsers.add_parser('test-ann',
         help=help_test_ann, description=help_test_ann)
@@ -143,9 +156,9 @@ def main():
     parser_test_ann.add_argument("--output", "-o", metavar="FILE",
         help="Output file name for the test results. Specifying this " \
         "option will output a table with the classification result for " \
-        "each sample.")
-    parser_test_ann.add_argument("--conf", metavar="FILE",
-        help="Path to a YAML file with class names.")
+        "each sample in TEST_DATA.")
+    parser_test_ann.add_argument("--conf", metavar="FILE", required=True,
+        help="Path to a configurations file with a classification filter.")
     parser_test_ann.add_argument("--error", metavar="N", type=float,
         default=0.00001,
         help="The maximum mean square error for classification. Default " \
@@ -154,15 +167,15 @@ def main():
         help="Path to tab separated file containing test data.")
 
     # Create an argument parser for sub-command 'classify'.
-    help_classify = """Classify an image. See orchids.yml for an example YAML
-    file with class names."""
+    help_classify = """Classify a digital photo. The classification filter
+    must be set in the configurations file. See trainer.yml for an example."""
 
     parser_classify = subparsers.add_parser('classify',
         help=help_classify, description=help_classify)
     parser_classify.add_argument("--ann", metavar="FILE", required=True,
         help="Path to a trained artificial neural network file.")
     parser_classify.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a YAML file with class names.")
+        help="Path to a configurations file with a classification filter set.")
     parser_classify.add_argument("--db", metavar="DB", required=True,
         help="Path to a database file with photo meta data.")
     parser_classify.add_argument("--error", metavar="N", type=float,

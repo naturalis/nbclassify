@@ -1,6 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Classify a digital photo using a committee of artificial neural networks.
+
+The photo is classified on different levels in a classification hierarchy,
+for example a taxanomic hierarchy. A different neural network may be used to
+classify at each level in the hierarchy. The classification hierarchy is
+set in a configuration file. See trainer.yml for an example configuration
+file with the classification hierarchy set.
+
+The neural networks on which this script depends are created by a separate
+script, trainer.py. See `trainer.py batch-data --help` and
+`trainer.py batch-ann --help` for more information.
+
+The script also depends on an SQLite database file with meta data for a
+collection of digital photographs. This database is created by
+harvest-images.py, which is also responsible for compiling the collection of
+digital photographs.
+
+See the --help option for more information.
+"""
+
 import argparse
 from contextlib import contextmanager
 import logging
@@ -30,28 +50,21 @@ ANSI_COLOR = {
 
 def main():
     # Setup the argument parser.
-    parser = argparse.ArgumentParser(description="Classify orchid photos.")
+    parser = argparse.ArgumentParser(description="Classify a digital photo " \
+        "using a committee of artificial neural networks.")
+
+    parser.add_argument("--conf", metavar="FILE", required=True,
+        help="Path to a YAML file with classification configurations.")
+    parser.add_argument("--db", metavar="DB", required=True,
+        help="Path to a database file with photo meta data.")
+    parser.add_argument("--anns", metavar="PATH", default=".",
+        help="Path to a directory containing the neural networks.")
+    parser.add_argument("--error", metavar="N", type=float, default=0.0001,
+        help="The maximum error for classification. Default is 0.0001")
+    parser.add_argument("path", metavar="PATH", nargs='?',
+        help="Path to photo to be classified.")
     parser.add_argument("--verbose", "-v", action='store_const',
         const=True, help="Increase verbosity.")
-
-    subparsers = parser.add_subparsers(help="Specify which task to start.",
-        dest='task')
-
-    # Create an argument parser for sub-command 'classify'.
-    parser_classify = subparsers.add_parser('orchid',
-        help="Classify the orchid species on a photo.",
-        description="Classify an image.")
-    parser_classify.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a YAML file with classification configurations.")
-    parser_classify.add_argument("--db", metavar="DB", required=True,
-        help="Path to a database file with photo meta data.")
-    parser_classify.add_argument("--anns", metavar="PATH", default=".",
-        help="Path to a directory containing the neural networks.")
-    parser_classify.add_argument("--error", metavar="N", type=float,
-        default=0.0001,
-        help="The maximum error for classification. Default is 0.0001")
-    parser_classify.add_argument("path", metavar="PATH", nargs='?',
-        help="Path to photo to be classified.")
 
     # Parse arguments.
     args = parser.parse_args()
@@ -66,50 +79,49 @@ def main():
 
     logging.basicConfig(level=log_level, format='%(levelname)s %(message)s')
 
-    if args.task == 'orchid':
-        config = open_yaml(args.conf)
-        classifier = ImageClassifier(config, args.db)
-        classifier.set_error(args.error)
+    config = open_yaml(args.conf)
+    classifier = ImageClassifier(config, args.db)
+    classifier.set_error(args.error)
 
-        try:
-            classes, errors = classifier.classify_with_hierarchy(args.path, args.anns)
-        except Exception as e:
-            logging.error(e)
+    try:
+        classes, errors = classifier.classify_with_hierarchy(args.path, args.anns)
+    except Exception as e:
+        logging.error(e)
+        return
+
+    # Convert all values to string.
+    for i, path in enumerate(classes):
+        classes[i] = np.array(path, dtype=str)
+
+    if len(classes) == 1:
+        if len(classes[0]) == 0:
+            print "Failed to classify the photo."
             return
 
-        # Convert all values to string.
-        for i, path in enumerate(classes):
-            classes[i] = np.array(path, dtype=str)
+        table = {
+            'color': ANSI_COLOR['green_bold'],
+            'reset': ANSI_COLOR['reset'],
+            'class': '/'.join(classes[0]),
+            'error': sum(errors[0]) / len(errors[0])
+        }
+        print "Image is classified as {color}{class}{reset} (mse: {error})".format(**table)
 
-        if len(classes) == 1:
-            if len(classes[0]) == 0:
-                print "Failed to classify the photo."
-                return
+    elif len(classes) > 1:
+        print "Multiple classifications were returned:"
 
+        # Calculate the mean square error for each classification path.
+        errors_classes = [(sum(e)/len(e),c) for e,c in zip(errors, classes)]
+
+        # Print results sorted by error.
+        for i, (error, class_) in enumerate(sorted(errors_classes), start=1):
             table = {
+                'n': i,
                 'color': ANSI_COLOR['green_bold'],
                 'reset': ANSI_COLOR['reset'],
-                'class': '/'.join(classes[0]),
-                'error': sum(errors[0]) / len(errors[0])
+                'class': '/'.join(class_),
+                'error': error
             }
-            print "Image is classified as {color}{class}{reset} (mse: {error})".format(**table)
-
-        elif len(classes) > 1:
-            print "Multiple classifications were returned:"
-
-            # Calculate the mean square error for each classification path.
-            errors_classes = [(sum(e)/len(e),c) for e,c in zip(errors, classes)]
-
-            # Print results sorted by error.
-            for i, (error, class_) in enumerate(sorted(errors_classes), start=1):
-                table = {
-                    'n': i,
-                    'color': ANSI_COLOR['green_bold'],
-                    'reset': ANSI_COLOR['reset'],
-                    'class': '/'.join(class_),
-                    'error': error
-                }
-                print "{n}. {color}{class}{reset} (mse: {error})".format(**table)
+            print "{n}. {color}{class}{reset} (mse: {error})".format(**table)
 
 @contextmanager
 def session_scope(db_path):

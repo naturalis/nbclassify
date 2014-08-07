@@ -3,10 +3,14 @@
 
 """Image harvester for downloading photos with meta data from Flickr.
 
-The following classes are defined:
+The following subcommands are available:
 
-* FlickrDownloader: Download photos and meta data from Flickr.
-* ImageHarvester: Organize photos and store meta data in a database.
+* harvest: Harvest images from a Flickr account.
+* cleanup: Remove image files from a local directory and its subdirectories
+  for which the filename is a Flickr photo ID and the photo ID does not exist
+  on the Flickr account.
+
+See the --help option for any of these subcommands for more information.
 """
 
 import argparse
