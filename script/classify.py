@@ -58,7 +58,7 @@ def main():
         "hierarchy set.")
     parser.add_argument("--db", metavar="DB", required=True,
         help="Path to a database file with photo meta data.")
-    parser.add_argument("--anns", metavar="PATH", default=".",
+    parser.add_argument("--anns", metavar="PATH", required=True,
         help="Path to a directory containing the neural networks.")
     parser.add_argument("--error", metavar="N", type=float, default=0.0001,
         help="The maximum error for classification at each level. Default " \
@@ -67,7 +67,7 @@ def main():
     parser.add_argument("path", metavar="PATH", nargs='?',
         help="Path to the digital photograph to be classified.")
     parser.add_argument("--verbose", "-v", action='store_const',
-        const=True, help="Increase verbosity.")
+        const=True, help="Explain what is being done.")
 
     # Parse arguments.
     args = parser.parse_args()
