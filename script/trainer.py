@@ -463,6 +463,74 @@ class Common(object):
 
         return q
 
+    def classification_hierarchy_filters(self, levels, hr, path=[]):
+        """Return the classification filter for each path in a hierarchy.
+
+        Returns the classification filter for each possible path in the
+        hierarchy `hr`. The name of each level in the hierarchy must be set
+        in the sequence `levels`. The sequence `path` holds the position in
+        the hierarchy.
+        """
+        filter_ = {}
+
+        # The level number that is being classfied (0 based).
+        level_no = len(path)
+
+        if level_no > len(levels) - 1:
+            raise ValueError("Maximum classification hierarchy depth exceeded")
+
+        # Set the level to classify on.
+        filter_['class'] = levels[level_no]
+
+        # Set the where fields.
+        filter_['where'] = {}
+        for i, class_ in enumerate(path):
+            name = levels[i]
+            filter_['where'][name] = class_
+
+        # Get the classes for the current hierarchy path.
+        classes = self.get_childs_from_hierarchy(hr, path)
+
+        # Only return the filter if the classes are set.
+        if classes != [None]:
+            yield filter_
+
+        # Stop iteration if the last level was classified.
+        if level_no == len(levels) - 1:
+            raise StopIteration()
+
+        # Recurse into lower hierarchy levels.
+        for c in classes:
+            for f in self.classification_hierarchy_filters(levels, hr,
+                    path+[c]):
+                yield f
+
+    def get_childs_from_hierarchy(self, hr, path=[]):
+        """Return the child node names for a node in a hierarchy.
+
+        Returns a list of child node names of the hierarchy `hr` at node
+        with the path `path`. The hierarchy `hr` is a nested dictionary,
+        where bottom level nodes are lists. Which node to get the childs
+        from is specified by `path`, which is a list of the node names up
+        to that node. An empty list for `path` means the names of the nodes
+        of the top level are returned.
+        """
+        nodes = hr.copy()
+        try:
+            for name in path:
+                nodes = nodes[name]
+        except:
+            raise ValueError("No such path `%s` in the hierarchy" % '/'.join(path))
+
+        if isinstance(nodes, dict):
+            names = nodes.keys()
+        elif isinstance(nodes, list):
+            names = nodes
+        else:
+            raise ValueError("Incorrect hierarchy format")
+
+        return names
+
 class MakeTrainData(Common):
     """Generate training data."""
 
@@ -487,7 +555,7 @@ class MakeTrainData(Common):
             raise IOError("Cannot open %s (no such file)" % path)
         self.db_path = path
 
-    def export(self, filename, filter_, config):
+    def export(self, filename, filter_, config, overwrite=False):
         """Write the training data to `filename`.
 
         Images to be processed are obtained from the database. Which images
@@ -495,9 +563,8 @@ class MakeTrainData(Common):
         `filter_`. A configuration object `config` denotes which
         preprocessing steps to take and what features are to be extracted.
         """
-        if os.path.isfile(filename):
-            logging.error("Output file `%s` already exists. Please choose a different file name." % filename)
-            return
+        if not overwrite and os.path.isfile(filename):
+            raise IOError("Output file %s already exists." % filename)
 
         # Get list of image paths and corresponding classifications from
         # the meta data database.
@@ -651,57 +718,27 @@ class BatchMakeTrainData(MakeTrainData):
 
     def batch_export(self, target):
         """Batch export training data to directory `target`."""
-        # Classify on genus level.
-        level = 0
-        filter_ = {'class': 'genus'}
-        data_file = os.path.join(target, self.class_hr[level].data_file)
-        if not os.path.isfile(data_file):
+        # Get the name of each level in the classification hierarchy.
+        levels = [l.name for l in self.class_hr]
+
+        # Train an ANN for each path in the classification hierarchy.
+        for filter_ in self.classification_hierarchy_filters(levels, self.taxon_hr):
+            level = levels.index(filter_['class'])
+            data_file = os.path.join(target, self.class_hr[level].data_file)
+            config = self.class_hr[level]
+
+            # Replace any placeholders in the paths.
+            for key, val in filter_['where'].items():
+                val = val if val is not None else '_'
+                data_file = data_file.replace("__%s__" % key, val)
+
+            # Generate and export the training data.
             logging.info("Generating training data for the filter `%s` ..." % filter_)
-            self.export(data_file, filter_, self.class_hr[level])
-        else:
-            logging.warning("File `%s` already exists. Skipping." % data_file)
-
-        for genus, sections in self.taxon_hr.items():
-            if sections.keys() == [None]:
-                logging.info("No sections for genus `%s`" % genus)
-            else:
-                filter_ = {
-                    'where': {
-                        'genus': genus
-                    },
-                    'class': 'section'
-                }
-
-                # Classify on section level.
-                level = 1
-                data_file = os.path.join(target, self.class_hr[level].data_file)
-                data_file = data_file.replace("__genus__", genus)
-                if not os.path.isfile(data_file):
-                    logging.info("Generating training data for the filter `%s` ..." % filter_)
-                    self.export(data_file, filter_, self.class_hr[level])
-                else:
-                    logging.warning("File `%s` already exists. Skipping." % data_file)
-
-            for section, species in sections.items():
-                filter_ = {
-                    'where': {
-                        'genus': genus,
-                        'section': section
-                    },
-                    'class': 'species'
-                }
-
-                # Classify on species level.
-                level = 2
-                if section is None: section = '_'
-                data_file = os.path.join(target, self.class_hr[level].data_file)
-                data_file = data_file.replace("__genus__", genus)
-                data_file = data_file.replace("__section__", section)
-                if not os.path.isfile(data_file):
-                    logging.info("Generating training data for the filter `%s` ..." % filter_)
-                    self.export(data_file, filter_, self.class_hr[level])
-                else:
-                    logging.warning("File `%s` already exists. Skipping." % data_file)
+            try:
+                self.export(data_file, filter_, config)
+            except Exception as e:
+                # Expect an error if the file already exists.
+                logging.error("Failed to generate training data: %s" % e)
 
 class MakeAnn(Common):
     """Train an artificial neural network."""
@@ -715,7 +752,7 @@ class MakeAnn(Common):
         super(MakeAnn, self).__init__(config)
         self.args = args
 
-    def train(self, train_file, output_file, config=None):
+    def train(self, train_file, output_file, config=None, overwrite=False):
         """Train an artificial neural network.
 
         Loads training data from a CSV file `train_file`, trains a neural
@@ -724,9 +761,8 @@ class MakeAnn(Common):
         """
         if not os.path.isfile(train_file):
             raise IOError("Cannot open %s (no such file)" % train_file)
-        if os.path.isfile(output_file):
-            logging.error("Output file %s already exists. Please choose a different file name." % output_file)
-            return
+        if not overwrite and os.path.isfile(output_file):
+            raise IOError("Output file %s already exists." % output_file)
         if config and not isinstance(config, nbc.Struct):
             raise ValueError("Attribute `config` must either be None or an nbclassify.Struct instance")
 
@@ -802,59 +838,29 @@ class BatchMakeAnn(MakeAnn):
         data to train on is set in the classification hierarchy of the
         configurations.
         """
-        # Train on genus level.
-        level = 0
-        data_file = os.path.join(data_dir, self.class_hr[level].data_file)
-        ann_file = os.path.join(target, self.class_hr[level].ann_file)
-        config = None if 'ann' not in self.class_hr[level] else self.class_hr[level].ann
-        if not os.path.isfile(ann_file):
-            logging.info("Training network with training data from `%s` ..." % data_file)
+        # Get the name of each level in the classification hierarchy.
+        levels = [l.name for l in self.class_hr]
+
+        # Train an ANN for each path in the classification hierarchy.
+        for filter_ in self.classification_hierarchy_filters(levels, self.taxon_hr):
+            level = levels.index(filter_['class'])
+            data_file = os.path.join(data_dir, self.class_hr[level].data_file)
+            ann_file = os.path.join(target, self.class_hr[level].ann_file)
+            config = None if 'ann' not in self.class_hr[level] else self.class_hr[level].ann
+
+            # Replace any placeholders in the paths.
+            for key, val in filter_['where'].items():
+                val = val if val is not None else '_'
+                data_file = data_file.replace("__%s__" % key, val)
+                ann_file = ann_file.replace("__%s__" % key, val)
+
+            # Train the ANN.
+            logging.info("Training network `%s` with training data from `%s` ..." % (ann_file, data_file))
             try:
-                self.train(data_file, ann_file, config)
+                self.train(data_file, ann_file, config, overwrite=False)
             except Exception as e:
+                # Expect an error if the file already exists.
                 logging.error("Failed to train network: %s" % e)
-        else:
-            logging.warning("File `%s` already exists. Skipping." % ann_file)
-
-        for genus, sections in self.taxon_hr.items():
-            if sections.keys() == [None]:
-                logging.info("No sections for genus `%s`" % genus)
-            else:
-                # Train on section level.
-                level = 1
-                data_file = os.path.join(data_dir, self.class_hr[level].data_file)
-                data_file = data_file.replace("__genus__", genus)
-                ann_file = os.path.join(target, self.class_hr[level].ann_file)
-                ann_file = ann_file.replace("__genus__", genus)
-                config = None if 'ann' not in self.class_hr[level] else self.class_hr[level].ann
-                if not os.path.isfile(ann_file):
-                    logging.info("Training network with training data from `%s` ..." % data_file)
-                    try:
-                        self.train(data_file, ann_file, config)
-                    except Exception as e:
-                        logging.error("Failed to train network: %s" % e)
-                else:
-                    logging.warning("File `%s` already exists. Skipping." % ann_file)
-
-            for section, species in sections.items():
-                # Train on species level.
-                level = 2
-                if section is None: section = '_'
-                data_file = os.path.join(data_dir, self.class_hr[level].data_file)
-                data_file = data_file.replace("__genus__", genus)
-                data_file = data_file.replace("__section__", section)
-                ann_file = os.path.join(target, self.class_hr[level].ann_file)
-                ann_file = ann_file.replace("__genus__", genus)
-                ann_file = ann_file.replace("__section__", section)
-                config = None if 'ann' not in self.class_hr[level] else self.class_hr[level].ann
-                if not os.path.isfile(ann_file):
-                    logging.info("Training network with training data from `%s` ..." % data_file)
-                    try:
-                        self.train(data_file, ann_file, config)
-                    except Exception as e:
-                        logging.error("Failed to train network: %s" % e)
-                else:
-                    logging.warning("File `%s` already exists. Skipping." % ann_file)
 
 class TestAnn(Common):
     """Test an artificial neural network."""
