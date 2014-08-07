@@ -284,7 +284,7 @@ class ImageClassifier(Common):
         # Replace any placeholders in the ANN path.
         ann_file = level.ann
         for key, val in zip(levels, path):
-            val = val if val != None else '_'
+            val = val if val is not None else '_'
             ann_file = ann_file.replace("__%s__" % key, val)
 
         # Get the class names for this node in the taxonomic hierarchy.

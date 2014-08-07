@@ -36,12 +36,35 @@ features: &features_std
         # each bin are computed.
         bins: 50
 
-# Parameters for training the artificial neural network.
-ann:
+# Parameters for training artificial neural networks.
+ann: &ann_std
     # Number of hidden neuron layers. Default is 1
     hidden_layers: 1
     # Number of hidden neurons per hidden layer. Default is 8
     hidden_neurons: 20
+    # Maximum number of epochs. Default is 100000
+    epochs: 100000
+    # Desired error. Default is 0.00001
+    error: 0.00001
+    # Learning rate. Default is 0.7
+    learning_rate: 0.7
+    # Connection rate. Default is 1, a fully connected network.
+    connection_rate: 1
+    # The training algorithm used for training. Default is TRAIN_RPROP.
+    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_train_enum
+    training_algorithm: TRAIN_RPROP
+    # The activation function for the hidden layers. Default is SIGMOID_STEPWISE.
+    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
+    activation_function_hidden: SIGMOID_SYMMETRIC
+    # The activation function for the output layer. Default is SIGMOID_STEPWISE.
+    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
+    activation_function_output: SIGMOID_SYMMETRIC
+
+ann_genus: &ann_genus
+    # Number of hidden neuron layers. Default is 1
+    hidden_layers: 1
+    # Number of hidden neurons per hidden layer. Default is 8
+    hidden_neurons: 50
     # Maximum number of epochs. Default is 100000
     epochs: 100000
     # Desired error. Default is 0.00001
@@ -76,6 +99,7 @@ classification:
         - name: genus
           preprocess: *preprocess_std
           features: *features_std
+          ann: *ann_genus
           data_file: genus.tsv
           ann_file: genus.ann
           max_error: 0.00001
@@ -83,6 +107,7 @@ classification:
         - name: section
           preprocess: *preprocess_std
           features: *features_std
+          ann: *ann_std
           data_file: __genus__.section.tsv
           ann_file: __genus__.section.ann
           max_error: 0.0001
@@ -90,6 +115,7 @@ classification:
         - name: species
           preprocess: *preprocess_std
           features: *features_std
+          ann: *ann_std
           data_file: __genus__.__section__.species.tsv
           ann_file: __genus__.__section__.species.ann
           max_error: 0.001

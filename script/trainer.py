@@ -210,7 +210,7 @@ def main():
     elif args.task == 'ann':
         try:
             config = open_yaml(args.conf)
-            ann_maker = MakeAnn(config, args)
+            ann_maker = MakeAnn(config, args, config.ann)
             ann_maker.train(args.data, args.output)
         except Exception as e:
             logging.error(e)
@@ -641,26 +641,27 @@ class BatchMakeTrainData(MakeTrainData):
 
         # Get the taxonomic hierarchy from the database.
         with session_scope(db_path) as (session, metadata):
-            self.taxon_hierarchy = self.get_taxon_hierarchy(session, metadata)
+            self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
-    def batch_export(self, target):
-        """Batch export training data to directory `target`."""
+        # Get the taxonomic hierarchy from the configurations.
         try:
-            classify_hierarchy = self.config.classification.hierarchy
+            self.class_hr = self.config.classification.hierarchy
         except:
             raise ValueError("The configuration file is missing object classification.hierarchy")
 
+    def batch_export(self, target):
+        """Batch export training data to directory `target`."""
         # Classify on genus level.
         level = 0
         filter_ = {'class': 'genus'}
-        data_file = os.path.join(target, classify_hierarchy[level].data_file)
+        data_file = os.path.join(target, self.class_hr[level].data_file)
         if not os.path.isfile(data_file):
             logging.info("Generating training data for the filter `%s` ..." % filter_)
-            self.export(data_file, filter_, classify_hierarchy[level])
+            self.export(data_file, filter_, self.class_hr[level])
         else:
             logging.warning("File `%s` already exists. Skipping." % data_file)
 
-        for genus, sections in self.taxon_hierarchy.items():
+        for genus, sections in self.taxon_hr.items():
             if sections.keys() == [None]:
                 logging.info("No sections for genus `%s`" % genus)
             else:
@@ -673,11 +674,11 @@ class BatchMakeTrainData(MakeTrainData):
 
                 # Classify on section level.
                 level = 1
-                data_file = os.path.join(target, classify_hierarchy[level].data_file)
+                data_file = os.path.join(target, self.class_hr[level].data_file)
                 data_file = data_file.replace("__genus__", genus)
                 if not os.path.isfile(data_file):
                     logging.info("Generating training data for the filter `%s` ..." % filter_)
-                    self.export(data_file, filter_, classify_hierarchy[level])
+                    self.export(data_file, filter_, self.class_hr[level])
                 else:
                     logging.warning("File `%s` already exists. Skipping." % data_file)
 
@@ -693,12 +694,12 @@ class BatchMakeTrainData(MakeTrainData):
                 # Classify on species level.
                 level = 2
                 if section is None: section = '_'
-                data_file = os.path.join(target, classify_hierarchy[level].data_file)
+                data_file = os.path.join(target, self.class_hr[level].data_file)
                 data_file = data_file.replace("__genus__", genus)
                 data_file = data_file.replace("__section__", section)
                 if not os.path.isfile(data_file):
                     logging.info("Generating training data for the filter `%s` ..." % filter_)
-                    self.export(data_file, filter_, classify_hierarchy[level])
+                    self.export(data_file, filter_, self.class_hr[level])
                 else:
                     logging.warning("File `%s` already exists. Skipping." % data_file)
 
@@ -714,33 +715,39 @@ class MakeAnn(Common):
         super(MakeAnn, self).__init__(config)
         self.args = args
 
-    def train(self, train_file, output_file):
-        """Train an artificial neural network."""
+    def train(self, train_file, output_file, config=None):
+        """Train an artificial neural network.
+
+        Loads training data from a CSV file `train_file`, trains a neural
+        network `output_file` with training settings from the `config`
+        object.
+        """
         if not os.path.isfile(train_file):
             raise IOError("Cannot open %s (no such file)" % train_file)
         if os.path.isfile(output_file):
             logging.error("Output file %s already exists. Please choose a different file name." % output_file)
             return
+        if config and not isinstance(config, nbc.Struct):
+            raise ValueError("Attribute `config` must either be None or an nbclassify.Struct instance")
 
         # Instantiate the ANN trainer.
         trainer = nbc.TrainANN()
-
-        if 'ann' in self.config:
-            trainer.connection_rate = getattr(self.config.ann, 'connection_rate', 1)
-            trainer.hidden_layers = getattr(self.config.ann, 'hidden_layers', 1)
-            trainer.hidden_neurons = getattr(self.config.ann, 'hidden_neurons', 8)
-            trainer.learning_rate = getattr(self.config.ann, 'learning_rate', 0.7)
-            trainer.epochs = getattr(self.config.ann, 'epochs', 100000)
-            trainer.desired_error = getattr(self.config.ann, 'error', 0.00001)
-            trainer.training_algorithm = getattr(self.config.ann, 'training_algorithm', 'TRAIN_RPROP')
-            trainer.activation_function_hidden = getattr(self.config.ann, 'activation_function_hidden', 'SIGMOID_STEPWISE')
-            trainer.activation_function_output = getattr(self.config.ann, 'activation_function_output', 'SIGMOID_STEPWISE')
+        if config is not None:
+            trainer.connection_rate = getattr(config, 'connection_rate', 1)
+            trainer.hidden_layers = getattr(config, 'hidden_layers', 1)
+            trainer.hidden_neurons = getattr(config, 'hidden_neurons', 8)
+            trainer.learning_rate = getattr(config, 'learning_rate', 0.7)
+            trainer.epochs = getattr(config, 'epochs', 100000)
+            trainer.desired_error = getattr(config, 'error', 0.00001)
+            trainer.training_algorithm = getattr(config, 'training_algorithm', 'TRAIN_RPROP')
+            trainer.activation_function_hidden = getattr(config, 'activation_function_hidden', 'SIGMOID_STEPWISE')
+            trainer.activation_function_output = getattr(config, 'activation_function_output', 'SIGMOID_STEPWISE')
 
         # These arguments overwrite parameters in the configurations file.
         if self.args:
-            if self.args.epochs != None:
+            if self.args.epochs is not None:
                 trainer.epochs = self.args.epochs
-            if self.args.error != None:
+            if self.args.error is not None:
                 trainer.desired_error = self.args.error
 
         trainer.iterations_between_reports = trainer.epochs / 100
@@ -779,42 +786,51 @@ class BatchMakeAnn(MakeAnn):
 
         # Get the taxonomic hierarchy from the database.
         with session_scope(db_path) as (session, metadata):
-            self.taxon_hierarchy = self.get_taxon_hierarchy(session, metadata)
+            self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
-    def batch_train(self, data_dir, target):
-        """Batch train neural networks into directory `target`."""
+        # Get the taxonomic hierarchy from the configurations.
         try:
-            classify_hierarchy = self.config.classification.hierarchy
+            self.class_hr = self.config.classification.hierarchy
         except:
             raise ValueError("The configuration file is missing object classification.hierarchy")
 
+    def batch_train(self, data_dir, target):
+        """Batch train neural networks.
+
+        Training data is obtained from the directory `data_dir` and the
+        neural networks are saved to the directory `target`. Which training
+        data to train on is set in the classification hierarchy of the
+        configurations.
+        """
         # Train on genus level.
         level = 0
-        data_file = os.path.join(data_dir, classify_hierarchy[level].data_file)
-        ann_file = os.path.join(target, classify_hierarchy[level].ann_file)
+        data_file = os.path.join(data_dir, self.class_hr[level].data_file)
+        ann_file = os.path.join(target, self.class_hr[level].ann_file)
+        config = None if 'ann' not in self.class_hr[level] else self.class_hr[level].ann
         if not os.path.isfile(ann_file):
             logging.info("Training network with training data from `%s` ..." % data_file)
             try:
-                self.train(data_file, ann_file)
+                self.train(data_file, ann_file, config)
             except Exception as e:
                 logging.error("Failed to train network: %s" % e)
         else:
             logging.warning("File `%s` already exists. Skipping." % ann_file)
 
-        for genus, sections in self.taxon_hierarchy.items():
+        for genus, sections in self.taxon_hr.items():
             if sections.keys() == [None]:
                 logging.info("No sections for genus `%s`" % genus)
             else:
                 # Train on section level.
                 level = 1
-                data_file = os.path.join(data_dir, classify_hierarchy[level].data_file)
+                data_file = os.path.join(data_dir, self.class_hr[level].data_file)
                 data_file = data_file.replace("__genus__", genus)
-                ann_file = os.path.join(target, classify_hierarchy[level].ann_file)
+                ann_file = os.path.join(target, self.class_hr[level].ann_file)
                 ann_file = ann_file.replace("__genus__", genus)
+                config = None if 'ann' not in self.class_hr[level] else self.class_hr[level].ann
                 if not os.path.isfile(ann_file):
                     logging.info("Training network with training data from `%s` ..." % data_file)
                     try:
-                        self.train(data_file, ann_file)
+                        self.train(data_file, ann_file, config)
                     except Exception as e:
                         logging.error("Failed to train network: %s" % e)
                 else:
@@ -824,16 +840,17 @@ class BatchMakeAnn(MakeAnn):
                 # Train on species level.
                 level = 2
                 if section is None: section = '_'
-                data_file = os.path.join(data_dir, classify_hierarchy[level].data_file)
+                data_file = os.path.join(data_dir, self.class_hr[level].data_file)
                 data_file = data_file.replace("__genus__", genus)
                 data_file = data_file.replace("__section__", section)
-                ann_file = os.path.join(target, classify_hierarchy[level].ann_file)
+                ann_file = os.path.join(target, self.class_hr[level].ann_file)
                 ann_file = ann_file.replace("__genus__", genus)
                 ann_file = ann_file.replace("__section__", section)
+                config = None if 'ann' not in self.class_hr[level] else self.class_hr[level].ann
                 if not os.path.isfile(ann_file):
                     logging.info("Training network with training data from `%s` ..." % data_file)
                     try:
-                        self.train(data_file, ann_file)
+                        self.train(data_file, ann_file, config)
                     except Exception as e:
                         logging.error("Failed to train network: %s" % e)
                 else:
