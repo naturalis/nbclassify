@@ -50,19 +50,22 @@ ANSI_COLOR = {
 
 def main():
     # Setup the argument parser.
-    parser = argparse.ArgumentParser(description="Classify a digital photo " \
-        "using a committee of artificial neural networks.")
+    parser = argparse.ArgumentParser(description="Classify a digital " \
+        "photograph using a committee of artificial neural networks.")
 
     parser.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a YAML file with classification configurations.")
+        help="Path to a configurations file with the classification " \
+        "hierarchy set.")
     parser.add_argument("--db", metavar="DB", required=True,
         help="Path to a database file with photo meta data.")
     parser.add_argument("--anns", metavar="PATH", default=".",
         help="Path to a directory containing the neural networks.")
     parser.add_argument("--error", metavar="N", type=float, default=0.0001,
-        help="The maximum error for classification. Default is 0.0001")
+        help="The maximum error for classification at each level. Default " \
+        "is 0.0001. If the maximum error for a level is set in the " \
+        "classification hierarchy, then that value is used instead.")
     parser.add_argument("path", metavar="PATH", nargs='?',
-        help="Path to photo to be classified.")
+        help="Path to the digital photograph to be classified.")
     parser.add_argument("--verbose", "-v", action='store_const',
         const=True, help="Increase verbosity.")
 
