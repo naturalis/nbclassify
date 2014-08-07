@@ -29,16 +29,13 @@ ANSI_COLOR = {
 }
 
 def main():
-    # Print debug messages if the -d flag is set for the Python interpreter.
-    # Otherwise just show log messages of type INFO.
-    if sys.flags.debug:
-        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s')
-    else:
-        logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
-
     # Setup the argument parser.
     parser = argparse.ArgumentParser(description="Classify orchid photos.")
-    subparsers = parser.add_subparsers(help="Specify which task to start.")
+    parser.add_argument("--verbose", "-v", action='store_const',
+        const=True, help="Increase verbosity.")
+
+    subparsers = parser.add_subparsers(help="Specify which task to start.",
+        dest='task')
 
     # Create an argument parser for sub-command 'classify'.
     parser_classify = subparsers.add_parser('orchid',
@@ -59,25 +56,43 @@ def main():
     # Parse arguments.
     args = parser.parse_args()
 
-    if sys.argv[1] == 'orchid':
+    # Print debug messages if the -d flag is set for the Python interpreter.
+    if sys.flags.debug:
+        log_level = logging.DEBUG
+    elif args.verbose:
+        log_level = logging.INFO
+    else:
+        log_level = logging.WARNING
+
+    logging.basicConfig(level=log_level, format='%(levelname)s %(message)s')
+
+    if args.task == 'orchid':
         config = open_yaml(args.conf)
         classifier = ImageClassifier(config, args.db)
         classifier.set_error(args.error)
 
-        classes, errors = classifier.classify_with_hierarchy(args.path, args.anns)
+        try:
+            classes, errors = classifier.classify_with_hierarchy(args.path, args.anns)
+        except Exception as e:
+            logging.error(e)
+            return
 
         # Convert all values to string.
         for i, path in enumerate(classes):
             classes[i] = np.array(path, dtype=str)
 
         if len(classes) == 1:
+            if len(classes[0]) == 0:
+                print "Failed to classify the photo."
+                return
+
             table = {
                 'color': ANSI_COLOR['green_bold'],
                 'reset': ANSI_COLOR['reset'],
                 'class': '/'.join(classes[0]),
                 'error': sum(errors[0]) / len(errors[0])
             }
-            print "Image is classified as {color}{class}{reset} (mse: {error:.6f})".format(**table)
+            print "Image is classified as {color}{class}{reset} (mse: {error})".format(**table)
 
         elif len(classes) > 1:
             print "Multiple classifications were returned:"
@@ -94,9 +109,7 @@ def main():
                     'class': '/'.join(class_),
                     'error': error
                 }
-                print "{n}. {color}{class}{reset} (mse: {error:.6f})".format(**table)
-
-    sys.exit()
+                print "{n}. {color}{class}{reset} (mse: {error})".format(**table)
 
 @contextmanager
 def session_scope(db_path):
@@ -180,6 +193,84 @@ class Common(object):
             return [(),()]
         return zip(*sorted(classes))
 
+    def get_taxon_hierarchy(self, session, metadata):
+        """Return the taxanomic hierarchies for photos in the database.
+
+        The hierarchy is returned as a dictionary in the format
+        ``{genus: {section: [species, ..], ..}, ..}``.
+        """
+        hierarchy = {}
+        taxa = self.get_taxa(session, metadata)
+
+        for genus, section, species in taxa:
+            if genus not in hierarchy:
+                hierarchy[genus] = {}
+            if section not in hierarchy[genus]:
+                hierarchy[genus][section] = []
+            hierarchy[genus][section].append(species)
+        return hierarchy
+
+    def get_taxa(self, session, metadata):
+        """Return the taxa from the database.
+
+        Taxa are returned as (genus, section, species) tuples.
+        """
+        Base = automap_base(metadata=metadata)
+        Base.prepare()
+
+        # Get the table classes.
+        Photos = Base.classes.photos
+        PhotosTaxa = Base.classes.photos_taxa
+        Taxa = Base.classes.taxa
+        Rank = Base.classes.ranks
+
+        # Construct the sub queries.
+        stmt1 = session.query(PhotosTaxa.photo_id, Taxa.name.label('genus')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'genus').subquery()
+        stmt2 = session.query(PhotosTaxa.photo_id, Taxa.name.label('section')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'section').subquery()
+        stmt3 = session.query(PhotosTaxa.photo_id, Taxa.name.label('species')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'species').subquery()
+
+        # Construct the query.
+        q = session.query(Photos.id, 'genus', 'section', 'species').\
+            join(stmt1).\
+            outerjoin(stmt2).\
+            join(stmt3).\
+            group_by('genus', 'section', 'species')
+
+        for _, genus, section, species in q:
+            yield (genus,section,species)
+
+    def get_childs_from_hierarchy(self, hr, path=[]):
+        """Return the child node names for a node in a hierarchy.
+
+        Returns a list of child node names of the hierarchy `hr` at node
+        with the path `path`. The hierarchy `hr` is a nested dictionary,
+        where bottom level nodes are lists. Which node to get the childs
+        from is specified by `path`, which is a list of the node names up
+        to that node. An empty list for `path` means the names of the nodes
+        of the top level are returned.
+        """
+        nodes = hr.copy()
+        try:
+            for name in path:
+                nodes = nodes[name]
+        except:
+            raise ValueError("No such path `%s` in the hierarchy" % '/'.join(path))
+
+        if isinstance(nodes, dict):
+            names = nodes.keys()
+        elif isinstance(nodes, list):
+            names = nodes
+        else:
+            raise ValueError("Incorrect hierarchy format")
+
+        return names
+
 class ImageClassifier(Common):
     """Classify an image."""
 
@@ -244,7 +335,7 @@ class ImageClassifier(Common):
             # Cache the phenotypes, in case they are needed again.
             self.cache[hash_] = phenotype
 
-        logging.debug("Using ANN `%s`" % ann_path)
+        logging.info("Using ANN `%s`" % ann_path)
         codeword = ann.run(phenotype)
 
         return codeword
@@ -276,13 +367,13 @@ class ImageClassifier(Common):
         if len(path) == len(levels):
             return ([path], [path_error])
         elif len(path) > len(levels):
-            raise ValueError("`path` length cannot exceed the classification hierarchy depth")
+            raise ValueError("Classification hierarchy depth exceeded")
 
         # Get the level specific configurations.
         level = conf = self.class_hr[len(path)]
 
         # Replace any placeholders in the ANN path.
-        ann_file = level.ann
+        ann_file = level.ann_file
         for key, val in zip(levels, path):
             val = val if val is not None else '_'
             ann_file = ann_file.replace("__%s__" % key, val)
@@ -290,15 +381,12 @@ class ImageClassifier(Common):
         # Get the class names for this node in the taxonomic hierarchy.
         level_classes = self.get_childs_from_hierarchy(self.taxon_hr, path)
 
-        # Some levels are allowed to have no classes set.
-        if level_classes == [None]:
-            if level.name in ('section',):
-                pass
-            else:
-                raise ValueError("Classes for level `%s` are not set" % level.name)
+        # Some levels must have classes set.
+        if level_classes == [None] and level.name in ('genus','species'):
+            raise ValueError("Classes for level `%s` are not set" % level.name)
 
-        if len(level_classes) == 1:
-            # No need to classify if there is only one class to choose from.
+        if level_classes == [None]:
+            # No need to classify if there are no classes set.
             classes = level_classes
             class_errors = (0.0,)
         else:
@@ -335,19 +423,19 @@ class ImageClassifier(Common):
         path_s = '/'.join(path_s)
 
         if len(classes) == 0:
-            logging.debug("Failed to classify on level `%s` at node `/%s`" % (
+            logging.info("Failed to classify on level `%s` at node `/%s`" % (
                 level.name,
                 path_s)
             )
             return ([path], [path_error])
         elif len(classes) > 1:
-            logging.debug("Branching in level `%s` at node '/%s' into `%s`" % (
+            logging.info("Branching in level `%s` at node '/%s' into `%s`" % (
                 level.name,
                 path_s,
                 ', '.join(classes))
             )
         else:
-            logging.debug("Level `%s` at node `/%s` classified as `%s`" % (
+            logging.info("Level `%s` at node `/%s` classified as `%s`" % (
                 level.name,
                 path_s,
                 classes[0])
@@ -367,85 +455,6 @@ class ImageClassifier(Common):
             "Number of paths must be equal to the number of path errors"
 
         return paths, paths_errors
-
-    def get_childs_from_hierarchy(self, hr, path=[]):
-        """Return the child node names for a node in a hierarchy.
-
-        Returns a list of child node names of the hierarchy `hr` at node
-        with the path `path`. The hierarchy `hr` is a nested dictionary,
-        where bottom level nodes are lists. Which node to get the childs
-        from is specified by `path`, which is a list of the node names up
-        to that node. An empty list for `path` means the names of the nodes
-        of the top level are returned. Returns None if there are no childs
-        for the specified node.
-        """
-        nodes = hr.copy()
-        try:
-            for name in path:
-                nodes = nodes[name]
-        except:
-            raise ValueError("No such path `%s` in the hierarchy" % '/'.join(path))
-
-        if isinstance(nodes, dict):
-            names = nodes.keys()
-        elif isinstance(nodes, list):
-            names = nodes
-        else:
-            raise ValueError("Incorrect hierarchy format")
-
-        return names
-
-    def get_taxon_hierarchy(self, session, metadata):
-        """Return the taxanomic hierarchies for photos in the database.
-
-        The hierarchy is returned as a dictionary in the format
-        ``{genus: {section: [species, ..], ..}, ..}``.
-        """
-        hierarchy = {}
-        taxa = self.get_taxa(session, metadata)
-
-        for genus, section, species in taxa:
-            if genus not in hierarchy:
-                hierarchy[genus] = {}
-            if section not in hierarchy[genus]:
-                hierarchy[genus][section] = []
-            hierarchy[genus][section].append(species)
-        return hierarchy
-
-    def get_taxa(self, session, metadata):
-        """Return the taxa from the database.
-
-        Taxa are returned as (genus, section, species) tuples.
-        """
-        Base = automap_base(metadata=metadata)
-        Base.prepare()
-
-        # Get the table classes.
-        Photos = Base.classes.photos
-        PhotosTaxa = Base.classes.photos_taxa
-        Taxa = Base.classes.taxa
-        Rank = Base.classes.ranks
-
-        # Construct the sub queries.
-        stmt1 = session.query(PhotosTaxa.photo_id, Taxa.name.label('genus')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'genus').subquery()
-        stmt2 = session.query(PhotosTaxa.photo_id, Taxa.name.label('section')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'section').subquery()
-        stmt3 = session.query(PhotosTaxa.photo_id, Taxa.name.label('species')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'species').subquery()
-
-        # Construct the query.
-        q = session.query(Photos.id, 'genus', 'section', 'species').\
-            join(stmt1).\
-            outerjoin(stmt2).\
-            join(stmt3).\
-            group_by('genus', 'section', 'species')
-
-        for _, genus, section, species in q:
-            yield (genus,section,species)
 
 if __name__ == "__main__":
     main()
