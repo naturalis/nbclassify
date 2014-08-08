@@ -41,13 +41,10 @@ import nbclassify as nbc
 # https://github.com/naturalis/feature-extraction
 import features as ft
 
-ANSI_COLOR = {
-    'green': '\033[32m',
-    'green_bold': '\033[1;32m',
-    'red': '\033[31m',
-    'red_bold': '\033[1;31m',
-    'reset': '\033[0m',
-}
+GREEN = '\033[32m'
+GREEN_BOLD = '\033[1;32m'
+RED = '\033[31m'
+RED_BOLD = '\033[1;31m'
 
 def main():
     # Setup the argument parser.
@@ -102,30 +99,46 @@ def classify_image(classifier, image_path, anns_dir, use_color=False):
         logging.error(e)
         return
 
-    # Convert all values to string.
-    for i, path in enumerate(classes):
-        classes[i] = np.array(path, dtype=str)
-
-    if len(classes) == 1 and len(classes[0]) == 0:
-        class_output = {
-            'color': ANSI_COLOR['red_bold'] if use_color else '',
-            'reset': ANSI_COLOR['reset'] if use_color else ''
-        }
-        print "  Classification: {color}Failed{reset}".format(**class_output)
+    # Check for failed classification.
+    if not classes[0]:
+        print "  Classification:"
+        print "    %s" % ansi_colored("Failed", RED_BOLD, not use_color)
         return
 
     # Calculate the mean square error for each classification path.
     errors_classes = [(sum(e)/len(e),c) for e,c in zip(errors, classes)]
 
+    # Get the level names.
+    levels = classifier.get_classification_hierarchy_levels()
+
     # Print the classification results, sorted by error.
-    for i, (error, class_) in enumerate(sorted(errors_classes), start=1):
-        class_output = {
-            'color': ANSI_COLOR['green_bold'] if use_color else '',
-            'reset': ANSI_COLOR['reset'] if use_color else '',
-            'class': '/'.join(class_)
-        }
-        print "  Classification: {color}{class}{reset}".format(**class_output)
+    for error, classes_ in sorted(errors_classes):
+        print "  Classification:"
+        for i, (level, class_) in enumerate(zip(levels, classes_)):
+            # Make class an empty string if it is None.
+            class_ = class_ if class_ is not None else ''
+
+            print "    %s%s: %s" % (
+                '  ' * i,
+                level,
+                ansi_colored(class_, GREEN_BOLD, not use_color)
+            )
         print "    Mean square error: %s" % error
+
+def ansi_colored(s, color, raw=False):
+    """Return an ANSI colored version of string `s`.
+
+    The string is formatted with ANSI escape character `color`. Returns the
+    raw string if `raw` is True.
+    """
+    if raw:
+        return s
+    replace = {
+        'color': color,
+        'reset': '\033[0m',
+        's': s
+    }
+    return "{color}{s}{reset}".format(**replace)
 
 @contextmanager
 def session_scope(db_path):
@@ -318,6 +331,9 @@ class ImageClassifier(Common):
             raise ValueError("Error must be a value between 0 and 1" % error)
         self.error = error
 
+    def get_classification_hierarchy_levels(self):
+        return [l.name for l in self.class_hr]
+
     def classify_image(self, im_path, ann_path, config):
         """Classify an image file and return the codeword.
 
@@ -362,7 +378,8 @@ class ImageClassifier(Common):
 
         return codeword
 
-    def classify_with_hierarchy(self, image_path, ann_base_path=".", path=[], path_error=[]):
+    def classify_with_hierarchy(self, image_path, ann_base_path=".",
+                                path=[], path_error=[]):
         """Start recursive classification.
 
         Classify the image `image_path` with neural networks from the
@@ -382,7 +399,7 @@ class ImageClassifier(Common):
         of the list of classifications, where each value corresponds to the
         mean square error of each classification.
         """
-        levels = [l.name for l in self.class_hr]
+        levels = self.get_classification_hierarchy_levels()
         paths = []
         paths_errors = []
 
