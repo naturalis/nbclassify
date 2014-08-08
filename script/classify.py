@@ -32,8 +32,6 @@ import cv2
 import numpy as np
 from pyfann import libfann
 import sqlalchemy
-import sqlalchemy.orm as orm
-from sqlalchemy.ext.automap import automap_base
 import yaml
 
 import nbclassify as nbc
@@ -129,9 +127,9 @@ def ansi_colored(s, color, raw=False):
     """Return an ANSI colored version of string `s`.
 
     The string is formatted with ANSI escape character `color`. Returns the
-    raw string if `raw` is True.
+    raw string if `raw` is True or if the string evaluates to False.
     """
-    if raw:
+    if raw or not s:
         return s
     replace = {
         'color': color,
@@ -145,7 +143,7 @@ def session_scope(db_path):
     """Provide a transactional scope around a series of operations."""
     engine = sqlalchemy.create_engine('sqlite:///%s' % os.path.abspath(db_path),
         echo=sys.flags.debug)
-    Session = orm.sessionmaker(bind=engine)
+    Session = sqlalchemy.orm.sessionmaker(bind=engine)
     session = Session()
     metadata = sqlalchemy.MetaData()
     metadata.reflect(bind=engine)
@@ -170,137 +168,7 @@ def open_yaml(path):
         config = yaml.load(f)
     return get_object(config)
 
-class Common(object):
-    def __init__(self, config):
-        self.set_config(config)
-
-    def set_config(self, config):
-        """Set the YAML configurations object."""
-        if not isinstance(config, nbc.Struct):
-            raise TypeError("Configurations object must be of type Struct, not %s" % type(config))
-
-        self.config = config
-
-    def get_codewords(self, classes, on=1, off=-1):
-        """Return codewords for a list of classes.
-
-        The codewords are returned as a dictionary in the format ``{class:
-        codeword, ..}``, where each class is assigned a codeword.
-        """
-        n = len(classes)
-        codewords = {}
-        for i, class_ in enumerate(sorted(classes)):
-            cw = [off] * n
-            cw[i] = on
-            codewords[class_] = cw
-        return codewords
-
-    def get_classification(self, codewords, codeword, error=0.01, on=1.0):
-        """Return the human-readable classification for a codeword.
-
-        Each bit in the codeword `codeword` is compared to the `on` bit in
-        each of the codewords in `codewords`, which is a dictionary of the
-        format ``{class: codeword, ..}``. If the mean square error for a bit
-        is less than or equal to `error`, then the corresponding class is
-        assigned to the codeword. So it is possible that a codeword is
-        assigned to multiple classes.
-
-        The result is returned as a sorted 2-list ``[(mse, ..), (class,
-        ..)]``. Returns a pair of empty tuples if no classes were found.
-        """
-        if len(codewords) != len(codeword):
-            raise ValueError("Lenth of `codewords` must be equal to `codeword` length")
-        classes = []
-        for class_, word in codewords.items():
-            for i, bit in enumerate(word):
-                if bit == on:
-                    mse = (float(bit) - codeword[i]) ** 2
-                    if mse <= error:
-                        classes.append((mse, class_))
-                    break
-        if len(classes) == 0:
-            return [(),()]
-        return zip(*sorted(classes))
-
-    def get_taxon_hierarchy(self, session, metadata):
-        """Return the taxanomic hierarchies for photos in the database.
-
-        The hierarchy is returned as a dictionary in the format
-        ``{genus: {section: [species, ..], ..}, ..}``.
-        """
-        hierarchy = {}
-        taxa = self.get_taxa(session, metadata)
-
-        for genus, section, species in taxa:
-            if genus not in hierarchy:
-                hierarchy[genus] = {}
-            if section not in hierarchy[genus]:
-                hierarchy[genus][section] = []
-            hierarchy[genus][section].append(species)
-        return hierarchy
-
-    def get_taxa(self, session, metadata):
-        """Return the taxa from the database.
-
-        Taxa are returned as (genus, section, species) tuples.
-        """
-        Base = automap_base(metadata=metadata)
-        Base.prepare()
-
-        # Get the table classes.
-        Photos = Base.classes.photos
-        PhotosTaxa = Base.classes.photos_taxa
-        Taxa = Base.classes.taxa
-        Rank = Base.classes.ranks
-
-        # Construct the sub queries.
-        stmt1 = session.query(PhotosTaxa.photo_id, Taxa.name.label('genus')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'genus').subquery()
-        stmt2 = session.query(PhotosTaxa.photo_id, Taxa.name.label('section')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'section').subquery()
-        stmt3 = session.query(PhotosTaxa.photo_id, Taxa.name.label('species')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'species').subquery()
-
-        # Construct the query.
-        q = session.query(Photos.id, 'genus', 'section', 'species').\
-            join(stmt1).\
-            outerjoin(stmt2).\
-            join(stmt3).\
-            group_by('genus', 'section', 'species')
-
-        for _, genus, section, species in q:
-            yield (genus,section,species)
-
-    def get_childs_from_hierarchy(self, hr, path=[]):
-        """Return the child node names for a node in a hierarchy.
-
-        Returns a list of child node names of the hierarchy `hr` at node
-        with the path `path`. The hierarchy `hr` is a nested dictionary,
-        where bottom level nodes are lists. Which node to get the childs
-        from is specified by `path`, which is a list of the node names up
-        to that node. An empty list for `path` means the names of the nodes
-        of the top level are returned.
-        """
-        nodes = hr.copy()
-        try:
-            for name in path:
-                nodes = nodes[name]
-        except:
-            raise ValueError("No such path `%s` in the hierarchy" % '/'.join(path))
-
-        if isinstance(nodes, dict):
-            names = nodes.keys()
-        elif isinstance(nodes, list):
-            names = nodes
-        else:
-            raise ValueError("Incorrect hierarchy format")
-
-        return names
-
-class ImageClassifier(Common):
+class ImageClassifier(nbc.Common):
     """Classify an image."""
 
     def __init__(self, config, db_path):

@@ -11,6 +11,10 @@ import cv2
 import features as ft
 import numpy as np
 from pyfann import libfann
+import sqlalchemy.orm as orm
+from sqlalchemy.ext.automap import automap_base
+
+from exceptions import *
 
 class Struct(argparse.Namespace):
     """Return a dictionary as an object."""
@@ -29,6 +33,281 @@ class Struct(argparse.Namespace):
 
     def __eq__(self, other):
         return str(self) == str(other)
+
+class Common(object):
+    def __init__(self, config):
+        self.set_config(config)
+
+    def set_config(self, config):
+        """Set the YAML configurations object."""
+        if not isinstance(config, Struct):
+            raise TypeError("Configurations object must be of type Struct, not %s" % type(config))
+
+        try:
+            path = config.preprocess.segmentation.output_folder
+        except:
+            path = None
+        if path and not os.path.isdir(path):
+            logging.error("Found a configuration error")
+            raise IOError("Cannot open %s (no such directory)" % path)
+
+        self.config = config
+
+    def get_codewords(self, classes, on=1, off=-1):
+        """Return codewords for a list of classes."""
+        n =  len(classes)
+        codewords = {}
+        for i, class_ in enumerate(sorted(classes)):
+            cw = [off] * n
+            cw[i] = on
+            codewords[class_] = cw
+        return codewords
+
+    def get_classification(self, codewords, codeword, error=0.01, on=1.0):
+        """Return the human-readable classification for a codeword.
+
+        Each bit in the codeword `codeword` is compared to the `on` bit in
+        each of the codewords in `codewords`, which is a dictionary of the
+        format ``{class: codeword, ..}``. If the mean square error for a bit
+        is less than or equal to `error`, then the corresponding class is
+        assigned to the codeword. So it is possible that a codeword is
+        assigned to multiple classes.
+
+        The result is returned as a sorted 2-list ``[(mse, ..), (class,
+        ..)]``. Returns a pair of empty tuples if no classes were found.
+        """
+        if len(codewords) != len(codeword):
+            raise ValueError("Lenth of `codewords` must be equal to `codeword` length")
+        classes = []
+        for class_, word in codewords.items():
+            for i, bit in enumerate(word):
+                if bit == on:
+                    mse = (float(bit) - codeword[i]) ** 2
+                    if mse <= error:
+                        classes.append((mse, class_))
+                    break
+        if len(classes) == 0:
+            return [(),()]
+        return zip(*sorted(classes))
+
+    def query_images(self, session, metadata, filter_):
+        """Return photos with corresponding class from the database.
+
+        Photos obtained from the database are filtered by rules set in the
+        `filter_` parameter. Returned rows are (photo_path, class) tuples.
+        """
+        if 'class' not in filter_:
+            raise ValueError("The filter is missing the 'class' key")
+        if isinstance(filter_, dict):
+            filter_ = Struct(filter_)
+        for key in vars(filter_):
+            if key not in ('where', 'class'):
+                raise ValueError("Unknown key '%s' in filter" % key)
+
+        Base = automap_base(metadata=metadata)
+        Base.prepare()
+
+        # Get the table classes.
+        Photos = Base.classes.photos
+        PhotosTaxa = Base.classes.photos_taxa
+        Taxa = Base.classes.taxa
+        Rank = Base.classes.ranks
+
+        # Construct the sub queries.
+        stmt1 = session.query(PhotosTaxa.photo_id, Taxa.name.label('genus')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'genus').subquery()
+        stmt2 = session.query(PhotosTaxa.photo_id, Taxa.name.label('section')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'section').subquery()
+        stmt3 = session.query(PhotosTaxa.photo_id, Taxa.name.label('species')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'species').subquery()
+
+        # Construct the query.
+        q = session.query(Photos.path, getattr(filter_, 'class')).\
+            join(stmt1).\
+            outerjoin(stmt2).\
+            join(stmt3)
+
+        # Add the WHERE clauses to the query.
+        if 'where' in filter_:
+            for rank, taxon in vars(filter_.where).items():
+                if rank == 'genus':
+                    q = q.filter(stmt1.c.genus == taxon)
+                elif rank == 'section':
+                    q = q.filter(stmt2.c.section == taxon)
+                elif rank == 'species':
+                    q = q.filter(stmt3.c.species == taxon)
+
+        return q
+
+    def query_classes(self, session, metadata, filter_):
+        """Return classes from the database.
+
+        Returned classes are filtered by rules set in the `filter_` parameter.
+        Returned rows are (photo_id, class) tuples.
+        """
+        if 'class' not in filter_:
+            raise ValueError("The filter is missing the 'class' key")
+        if isinstance(filter_, dict):
+            filter_ = Struct(filter_)
+        for key in vars(filter_):
+            if key not in ('where', 'class'):
+                raise ValueError("Unknown key '%s' in filter" % key)
+
+        # Poduce a set of mappings from the MetaData.
+        Base = automap_base(metadata=metadata)
+        Base.prepare()
+
+        # Get the table classes.
+        Photos = Base.classes.photos
+        PhotosTaxa = {'class': Base.classes.photos_taxa}
+        Taxa = {'class': Base.classes.taxa}
+        Ranks = {'class': Base.classes.ranks}
+
+        # Construct the query, ORM style.
+        q = session.query(Photos.id, Taxa['class'].name)
+
+        if 'where' in query:
+            for rank, name in vars(query.where).items():
+                PhotosTaxa[rank] = orm.aliased(Base.classes.photos_taxa)
+                Taxa[rank] = orm.aliased(Base.classes.taxa)
+                Ranks[rank] = orm.aliased(Base.classes.ranks)
+
+                q = q.join(PhotosTaxa[rank], PhotosTaxa[rank].photo_id == Photos.id).\
+                    join(Taxa[rank]).join(Ranks[rank]).\
+                    filter(Ranks[rank].name == rank, Taxa[rank].name == name)
+
+        # The classification column.
+        rank = getattr(query, 'class')
+        q = q.join(PhotosTaxa['class'], PhotosTaxa['class'].photo_id == Photos.id).\
+            join(Taxa['class']).join(Ranks['class']).\
+            filter(Ranks['class'].name == rank)
+
+        # Order by classification.
+        q = q.group_by(Taxa['class'].name)
+
+        return q
+
+    def get_taxon_hierarchy(self, session, metadata):
+        """Return the taxanomic hierarchy for photos in the database.
+
+        The hierarchy is returned as a dictionary in the format
+        ``{genus: {section: [species, ..], ..}, ..}``.
+        """
+        hierarchy = {}
+
+        for genus, section, species in  self.get_taxa(session, metadata):
+            if genus not in hierarchy:
+                hierarchy[genus] = {}
+            if section not in hierarchy[genus]:
+                hierarchy[genus][section] = []
+            hierarchy[genus][section].append(species)
+        return hierarchy
+
+    def get_taxa(self, session, metadata):
+        """Return the taxa from the database.
+
+        Taxa are returned as (genus, section, species) tuples.
+        """
+        Base = automap_base(metadata=metadata)
+        Base.prepare()
+
+        # Get the table classes.
+        Photos = Base.classes.photos
+        PhotosTaxa = Base.classes.photos_taxa
+        Taxa = Base.classes.taxa
+        Rank = Base.classes.ranks
+
+        # Construct the sub queries.
+        stmt1 = session.query(PhotosTaxa.photo_id, Taxa.name.label('genus')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'genus').subquery()
+        stmt2 = session.query(PhotosTaxa.photo_id, Taxa.name.label('section')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'section').subquery()
+        stmt3 = session.query(PhotosTaxa.photo_id, Taxa.name.label('species')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'species').subquery()
+
+        # Construct the query.
+        q = session.query(Photos.id, 'genus', 'section', 'species').\
+            join(stmt1).\
+            outerjoin(stmt2).\
+            join(stmt3).\
+            group_by('genus', 'section', 'species')
+
+        for _, genus, section, species in q:
+            yield (genus,section,species)
+
+    def classification_hierarchy_filters(self, levels, hr, path=[]):
+        """Return the classification filter for each path in a hierarchy.
+
+        Returns the classification filter for each possible path in the
+        hierarchy `hr`. The name of each level in the hierarchy must be set
+        in the sequence `levels`. The sequence `path` holds the position in
+        the hierarchy.
+        """
+        filter_ = {}
+
+        # The level number that is being classfied (0 based).
+        level_no = len(path)
+
+        if level_no > len(levels) - 1:
+            raise ValueError("Maximum classification hierarchy depth exceeded")
+
+        # Set the level to classify on.
+        filter_['class'] = levels[level_no]
+
+        # Set the where fields.
+        filter_['where'] = {}
+        for i, class_ in enumerate(path):
+            name = levels[i]
+            filter_['where'][name] = class_
+
+        # Get the classes for the current hierarchy path.
+        classes = self.get_childs_from_hierarchy(hr, path)
+
+        # Only return the filter if the classes are set.
+        if classes != [None]:
+            yield filter_
+
+        # Stop iteration if the last level was classified.
+        if level_no == len(levels) - 1:
+            raise StopIteration()
+
+        # Recurse into lower hierarchy levels.
+        for c in classes:
+            for f in self.classification_hierarchy_filters(levels, hr,
+                    path+[c]):
+                yield f
+
+    def get_childs_from_hierarchy(self, hr, path=[]):
+        """Return the child node names for a node in a hierarchy.
+
+        Returns a list of child node names of the hierarchy `hr` at node
+        with the path `path`. The hierarchy `hr` is a nested dictionary,
+        where bottom level nodes are lists. Which node to get the childs
+        from is specified by `path`, which is a list of the node names up
+        to that node. An empty list for `path` means the names of the nodes
+        of the top level are returned.
+        """
+        nodes = hr.copy()
+        try:
+            for name in path:
+                nodes = nodes[name]
+        except:
+            raise ValueError("No such path `%s` in the hierarchy" % '/'.join(path))
+
+        if isinstance(nodes, dict):
+            names = nodes.keys()
+        elif isinstance(nodes, list):
+            names = nodes
+        else:
+            raise ValueError("Incorrect hierarchy format")
+
+        return names
 
 class Phenotyper(object):
     """Generate numerical features from an image."""
