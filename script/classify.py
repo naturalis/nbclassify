@@ -23,6 +23,7 @@ See the --help option for more information.
 
 import argparse
 from contextlib import contextmanager
+import hashlib
 import logging
 import os
 import sys
@@ -50,8 +51,8 @@ ANSI_COLOR = {
 
 def main():
     # Setup the argument parser.
-    parser = argparse.ArgumentParser(description="Classify a digital " \
-        "photograph using a committee of artificial neural networks.")
+    parser = argparse.ArgumentParser(description="Classify digital " \
+        "photographs using a committee of artificial neural networks.")
 
     parser.add_argument("--conf", metavar="FILE", required=True,
         help="Path to a configurations file with the classification " \
@@ -64,10 +65,13 @@ def main():
         help="The maximum error for classification at each level. Default " \
         "is 0.0001. If the maximum error for a level is set in the " \
         "classification hierarchy, then that value is used instead.")
-    parser.add_argument("path", metavar="PATH", nargs='?',
-        help="Path to the digital photograph to be classified.")
     parser.add_argument("--verbose", "-v", action='store_const',
         const=True, help="Explain what is being done.")
+    parser.add_argument("--color", action='store_const',
+        const=True, help="Show colored results. Only works on terminals " \
+        "that support ANSI escape sequences.")
+    parser.add_argument("images", metavar="PATH", nargs='+',
+        help="Path to a digital photograph to be classified.")
 
     # Parse arguments.
     args = parser.parse_args()
@@ -86,8 +90,14 @@ def main():
     classifier = ImageClassifier(config, args.db)
     classifier.set_error(args.error)
 
+    for image_path in args.images:
+        classify_image(classifier, image_path, args.anns, args.color)
+
+def classify_image(classifier, image_path, anns_dir, use_color=False):
+    print "Image: %s" % image_path
+
     try:
-        classes, errors = classifier.classify_with_hierarchy(args.path, args.anns)
+        classes, errors = classifier.classify_with_hierarchy(image_path, anns_dir)
     except Exception as e:
         logging.error(e)
         return
@@ -96,35 +106,26 @@ def main():
     for i, path in enumerate(classes):
         classes[i] = np.array(path, dtype=str)
 
-    if len(classes) == 1:
-        if len(classes[0]) == 0:
-            print "Failed to classify the photo."
-            return
-
-        table = {
-            'color': ANSI_COLOR['green_bold'],
-            'reset': ANSI_COLOR['reset'],
-            'class': '/'.join(classes[0]),
-            'error': sum(errors[0]) / len(errors[0])
+    if len(classes) == 1 and len(classes[0]) == 0:
+        class_output = {
+            'color': ANSI_COLOR['red_bold'] if use_color else '',
+            'reset': ANSI_COLOR['reset'] if use_color else ''
         }
-        print "Image is classified as {color}{class}{reset} (mse: {error})".format(**table)
+        print "  Classification: {color}Failed{reset}".format(**class_output)
+        return
 
-    elif len(classes) > 1:
-        print "Multiple classifications were returned:"
+    # Calculate the mean square error for each classification path.
+    errors_classes = [(sum(e)/len(e),c) for e,c in zip(errors, classes)]
 
-        # Calculate the mean square error for each classification path.
-        errors_classes = [(sum(e)/len(e),c) for e,c in zip(errors, classes)]
-
-        # Print results sorted by error.
-        for i, (error, class_) in enumerate(sorted(errors_classes), start=1):
-            table = {
-                'n': i,
-                'color': ANSI_COLOR['green_bold'],
-                'reset': ANSI_COLOR['reset'],
-                'class': '/'.join(class_),
-                'error': error
-            }
-            print "{n}. {color}{class}{reset} (mse: {error})".format(**table)
+    # Print the classification results, sorted by error.
+    for i, (error, class_) in enumerate(sorted(errors_classes), start=1):
+        class_output = {
+            'color': ANSI_COLOR['green_bold'] if use_color else '',
+            'reset': ANSI_COLOR['reset'] if use_color else '',
+            'class': '/'.join(class_)
+        }
+        print "  Classification: {color}{class}{reset}".format(**class_output)
+        print "    Mean square error: %s" % error
 
 @contextmanager
 def session_scope(db_path):
@@ -336,8 +337,14 @@ class ImageClassifier(Common):
         ann = libfann.neural_net()
         ann.create_from_file(str(ann_path))
 
+        # Get the MD5 hash.
+        hasher = hashlib.md5()
+        with open(im_path, 'rb') as fh:
+            buf = fh.read()
+            hasher.update(buf)
+
         # Create a hash of the feature extraction options.
-        hash_ = "%.8s-%.8s" % (hash(config.preprocess), hash(config.features))
+        hash_ = "%s.%s.%s" % (hasher.hexdigest(), hash(config.preprocess), hash(config.features))
 
         if hash_ in self.cache:
             phenotype = self.cache[hash_]
