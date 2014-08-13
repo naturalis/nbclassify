@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Classify a digital photo using a committee of artificial neural networks.
+"""Classify digital photos using artificial neural networks.
 
 The photo is classified on different levels in a classification hierarchy,
 for example a taxanomic hierarchy. A different neural network may be used to

@@ -1,21 +1,47 @@
-img-classify
-============
+# img-classify
 
-This repository contains code and examples that demonstrate the ability for artificial
-neural networks to classify images of insect specimens. The layout is as follows:
+This repository contains code and examples that demonstrate the ability for
+artificial neural networks to classify images of plant species. The layout
+is as follows:
 
-* lib: contains a utility class that does image pre-processing
-* data/img: contains training and testing data with pictures of beetles and butterflies 
-* data/traindata: contains tab-separated tables of "fingerprints" of training images
-* data/ai: contains a stored AI
-* script/splitter.pl: a naive implementation of an image segmentation algorithm
-* script/traindata.pl: generates "fingerprints" of images as tab-separated tables
-* script/trainai.pl: feeds training data into the ANN
-* script/classify.pl: classifies a directory of out-of-sample images
+* `data/databases/`: Contains schemas of databases used by any of the scripts.
+* `doc/`: Contains documentation.
+* `html/`: Contains a web application for image classification.
+* `script/`: Contains the scripts.
+* `script/nbclassify/`: A Python package with common code used by the scripts.
+* `script/harvest-images.py`: Image harvester for downloading photos with meta
+  data from Flickr.
+* `script/trainer.py`: This script can be used to extract digital phenotypes
+  from photos, export these to training data files, and train and test
+  artificial neural networks.
+* `script/classify.py`: Classify digital photos using artificial neural
+  networks.
+* `script/trainer.yml`: An example configuration file as used by `trainer.py`
+  and `classify.py`.
 
-dependencies
-============
-* ImageMagick (c library) and Image::Magick (perl bindings)
-* FANN (c library) and AI::FANN (perl bindings)
-* Bio::Phylo (for logging)
+## Dependencies
 
+* FANN (>=2.1.0)
+  * Python bindings
+* Numpy
+* OpenCV (2.4.x)
+  * Python bindings
+* Python (>=2.7 && <2.8)
+* PyYAML
+* Python package for [image feature extraction][1]
+* SQLAlchemy
+* SQLite (>=3.6.19)
+
+On Debian (based) systems, most dependencies can be installed from the
+software repository:
+
+    sudo apt-get install libfann2 opencv python python-pyfann python-opencv python-numpy sqlite3
+
+It's best to install some Python packages via the Python Package Index in
+order to get the latest versions:
+
+    sudo apt-get install python-pip
+
+    sudo pip install yaml sqlalchemy
+
+[1]: https://github.com/naturalis/feature-extraction "Python package for image feature extraction"
