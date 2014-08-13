@@ -29,6 +29,7 @@ import argparse
 from contextlib import contextmanager
 import logging
 import os
+import re
 import sys
 
 import cv2
@@ -141,15 +142,15 @@ def main():
 
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann = """Test an artificial neural network. If `--output` is
-    set, then the classification filter must be set in the configurations
-    file. See trainer.yml for an example."""
+    used, then --db must be set, and the classification filter must be set
+    in the configurations file. See trainer.yml for an example."""
 
     parser_test_ann = subparsers.add_parser('test-ann',
         help=help_test_ann, description=help_test_ann)
     parser_test_ann.add_argument("--ann", metavar="FILE", required=True,
         help="A trained artificial neural network.")
     parser_test_ann.add_argument("--db", metavar="DB",
-        help="Path to a database file with photo meta data. Must be" \
+        help="Path to a database file with photo meta data. Must be " \
         "used together with --output.")
     parser_test_ann.add_argument("--output", "-o", metavar="FILE",
         help="Output file name for the test results. Specifying this " \
@@ -163,6 +164,31 @@ def main():
         "is 0.00001")
     parser_test_ann.add_argument("data", metavar="TEST_DATA",
         help="Path to tab separated file containing test data.")
+
+    # Create an argument parser for sub-command 'test-ann'.
+    help_test_ann_batch = """Test the artificial neural networks for a classification hierarchy. See trainer.yml for an example."""
+
+    parser_test_ann_batch = subparsers.add_parser('test-ann-batch',
+        help=help_test_ann_batch, description=help_test_ann_batch)
+    parser_test_ann_batch.add_argument("--conf", metavar="FILE", required=True,
+        help="Path to a configurations file with a classification filter.")
+    parser_test_ann_batch.add_argument("--db", metavar="DB",
+        help="Path to a database file with photo meta data. Must be " \
+        "used together with --output.")
+    parser_test_ann_batch.add_argument("--test-data", metavar="PATH",
+        required=True,
+        help="Directory where the test data is stored.")
+    parser_test_ann_batch.add_argument("--anns", metavar="PATH",
+        required=True,
+        help="Directory where the artificial neural networks are stored.")
+    parser_test_ann_batch.add_argument("--error", metavar="N", type=float,
+        default=0.00001,
+        help="The maximum mean square error for classification. Default " \
+        "is 0.00001")
+    parser_test_ann_batch.add_argument("--output", "-o", metavar="FILE",
+        help="Output the test results to FILE. Specifying this " \
+        "option will output a table with the classification result for " \
+        "each sample in the test data.")
 
     # Create an argument parser for sub-command 'classify'.
     help_classify = """Classify a digital photo. The classification filter
@@ -195,7 +221,7 @@ def main():
         try:
             filter_ = config.classification.filter
         except:
-            logging.error("The configuration file is missing object classification.filter")
+            logging.error("The configuration file is missing `classification.filter`")
             return
 
         try:
@@ -242,12 +268,28 @@ def main():
         if args.output:
             if not args.db:
                 sys.exit("Option --output must be used together with --db")
-            tester.export_results(args.output, args.db, args.error)
+
+            try:
+                filter_ = config.classification.filter
+            except:
+                raise nbc.ConfigurationError("missing `classification.filter`")
+
+            tester.export_results(args.output, args.db, filter_, args.error)
+
+    elif args.task == 'test-ann-batch':
+        config = open_yaml(args.conf)
+        tester = TestAnn(config)
+        tester.test_with_hierarchy(args.db, args.test_data, args.anns, args.error)
+
+        if args.output:
+            total, correct = tester.export_hierarchy_results(args.output)
+            sys.stderr.write("Correctly classified: {0}/{1} ({2:.2%})\n".format(correct, total, float(correct)/total))
 
     elif args.task == 'classify':
         config = open_yaml(args.conf)
         classifier = ImageClassifier(config, args.ann, args.db)
         class_ = classifier.classify(args.image, args.error)
+        class_ = [class_ for mse,class_ in class_ann]
         logging.info("Image is classified as %s" % ", ".join(class_))
 
     sys.exit()
@@ -320,8 +362,7 @@ class MakeTrainData(nbc.Common):
         # Get list of image paths and corresponding classifications from
         # the meta data database.
         with session_scope(self.db_path) as (session, metadata):
-            q = self.query_images(session, metadata, filter_)
-            images = list(q)
+            images = self.get_photos_with_class(session, metadata, filter_)
 
         if len(images) == 0:
             logging.info("No images found for the filter `%s`" % filter_)
@@ -391,10 +432,10 @@ class MakeTrainData(nbc.Common):
     def __make_header(self, n_out):
         """Construct a header from features configurations.
 
-        Header is returned as a tuple (data_columns, output_columns).
+        Header is returned as a 2-tuple ``(data_columns, output_columns)``.
         """
         if 'features' not in self.config:
-            raise ValueError("Features not set in configuration")
+            raise nbc.ConfigurationError("missing `features`")
 
         data = []
         out = []
@@ -465,7 +506,7 @@ class BatchMakeTrainData(MakeTrainData):
         try:
             self.class_hr = self.config.classification.hierarchy
         except:
-            raise ValueError("The configuration file is missing object classification.hierarchy")
+            raise nbc.ConfigurationError("missing `classification.hierarchy`")
 
     def batch_export(self, target):
         """Batch export training data to directory `target`."""
@@ -475,37 +516,21 @@ class BatchMakeTrainData(MakeTrainData):
         # Train an ANN for each path in the classification hierarchy.
         for filter_ in self.classification_hierarchy_filters(levels, self.taxon_hr):
             level = levels.index(filter_['class'])
-            data_file = os.path.join(target, self.class_hr[level].data_file)
+            train_file = os.path.join(target, self.class_hr[level].train_file)
             config = self.class_hr[level]
 
             # Replace any placeholders in the paths.
             for key, val in filter_['where'].items():
                 val = val if val is not None else '_'
-                data_file = data_file.replace("__%s__" % key, val)
+                train_file = train_file.replace("__%s__" % key, val)
 
             # Generate and export the training data.
             logging.info("Classifying images on %s" % self.readable_filter(filter_))
             try:
-                self.export(data_file, filter_, config)
+                self.export(train_file, filter_, config)
             except nbc.FileExistsError as e:
                 # Don't export if the file already exists.
                 logging.warning("Skipping: %s" % e)
-
-    def readable_filter(self, filter_):
-        class_ = filter_.get('class')
-        where = filter_.get('where', {})
-        where_n = len(where)
-        where_s = ""
-        for i, (k,v) in enumerate(where.items()):
-            if i > 0 and i < where_n - 1:
-                where_s += ", "
-            elif where_n > 1 and i == where_n - 1:
-                where_s += " and "
-            where_s += "%s is %s" % (k,v)
-
-        if where_n > 0:
-            return "%s where %s" % (class_, where_s)
-        return "%s" % class_
 
 class MakeAnn(nbc.Common):
     """Train an artificial neural network."""
@@ -531,7 +556,7 @@ class MakeAnn(nbc.Common):
         if not overwrite and os.path.isfile(output_file):
             raise nbc.FileExistsError("Output file %s already exists." % output_file)
         if config and not isinstance(config, nbc.Struct):
-            raise ValueError("Attribute `config` must either be None or an nbclassify.Struct instance")
+            raise ValueError("Expected an nbclassify.Struct instance for `config`")
 
         # Instantiate the ANN trainer.
         trainer = nbc.TrainANN()
@@ -595,7 +620,7 @@ class BatchMakeAnn(MakeAnn):
         try:
             self.class_hr = self.config.classification.hierarchy
         except:
-            raise ValueError("The configuration file is missing object classification.hierarchy")
+            raise nbc.ConfigurationError("missing `classification.hierarchy`")
 
     def batch_train(self, data_dir, target):
         """Batch train neural networks.
@@ -611,20 +636,20 @@ class BatchMakeAnn(MakeAnn):
         # Train an ANN for each path in the classification hierarchy.
         for filter_ in self.classification_hierarchy_filters(levels, self.taxon_hr):
             level = levels.index(filter_['class'])
-            data_file = os.path.join(data_dir, self.class_hr[level].data_file)
+            train_file = os.path.join(data_dir, self.class_hr[level].train_file)
             ann_file = os.path.join(target, self.class_hr[level].ann_file)
             config = None if 'ann' not in self.class_hr[level] else self.class_hr[level].ann
 
             # Replace any placeholders in the paths.
             for key, val in filter_['where'].items():
                 val = val if val is not None else '_'
-                data_file = data_file.replace("__%s__" % key, val)
+                train_file = train_file.replace("__%s__" % key, val)
                 ann_file = ann_file.replace("__%s__" % key, val)
 
             # Train the ANN.
-            logging.info("Training network `%s` with training data from `%s` ..." % (ann_file, data_file))
+            logging.info("Training network `%s` with training data from `%s` ..." % (ann_file, train_file))
             try:
-                self.train(data_file, ann_file, config, overwrite=False)
+                self.train(train_file, ann_file, config, overwrite=False)
             except nbc.FileExistsError as e:
                 # Don't train if the file already exists.
                 logging.warning("Skipping: %s" % e)
@@ -636,6 +661,9 @@ class TestAnn(nbc.Common):
         super(TestAnn, self).__init__(config)
         self.test_data = None
         self.ann = None
+        self.re_photo_id = re.compile(r'([0-9]+)\.\w+$')
+        self.classifications = {}
+        self.classifications_expected = {}
 
     def test(self, ann_file, test_file):
         """Test an artificial neural network."""
@@ -669,28 +697,32 @@ class TestAnn(nbc.Common):
         mse = self.ann.get_MSE()
         logging.info("Mean Square Error on test data: %f" % mse)
 
-    def export_results(self, filename, db_path, error=0.01):
-        """Export the classification results to a TSV file."""
+    def export_results(self, filename, db_path, filter_, error=0.01):
+        """Export the classification results to a TSV file.
+
+        Export the test results to a tab separated file `filename`. The class
+        name for a codeword is obtained from the database `db_path`, using the
+        classification filter `filter_`. A bit in a codeword is considered on
+        if the mean square error for a bit is less or equal to `error`.
+        """
         if self.test_data is None:
             raise RuntimeError("Test data is not set")
 
         # Get the classification categories from the database.
         with session_scope(db_path) as (session, metadata):
-            try:
-                filter_ = self.config.classification.filter
-            except:
-                raise RuntimeError("The configuration file is missing object classification.filter")
+            classes = self.get_classes_from_filter(session, metadata, filter_)
+            classes = list(classes)
 
-            q = self.query_classes(session, metadata, filter_)
-            classes = [x[1] for x in q]
-
-        if len(classes) == 0:
+        # Get the codeword for each class.
+        if not classes:
             raise RuntimeError("No classes found for filter `%s`" % filter_)
+        codewords = self.get_codewords(classes)
 
+        # Write results to file.
         with open(filename, 'w') as fh:
+            # Write the header.
             fh.write( "%s\n" % "\t".join(['ID','Class','Classification','Match']) )
 
-            codewords = self.get_codewords(classes)
             total = 0
             correct = 0
             for label, input, output in self.test_data:
@@ -703,18 +735,20 @@ class TestAnn(nbc.Common):
                     row.append("")
 
                 if len(codewords) != len(output):
-                    raise RuntimeError("Codeword length (%d) does not match the " \
-                        "output length (%d). Please make sure the test data " \
-                        "matches the class query in the configurations " \
-                        "file." % (len(codewords), len(output))
+                    raise ValueError("Codeword length ({0}) does not " \
+                        "match output length ({1}). Is the classification " \
+                        "filter correct?".format(len(codewords), len(output))
                     )
 
                 class_expected = self.get_classification(codewords, output, error)
+                class_expected = [class_ for mse,class_ in class_expected]
                 assert len(class_expected) == 1, "The codeword for a class can only have one positive value"
                 row.append(class_expected[0])
 
                 codeword = self.ann.run(input)
                 class_ann = self.get_classification(codewords, codeword, error)
+                class_ann = [class_ for mse,class_ in class_ann]
+
                 row.append(", ".join(class_ann))
 
                 # Assume a match if the first items of the classifications match.
@@ -726,13 +760,181 @@ class TestAnn(nbc.Common):
 
                 fh.write( "%s\n" % "\t".join(row) )
 
-                fraction = float(correct) / total
+            # Calculate fraction correctly classified.
+            fraction = float(correct) / total
 
             # Write correctly classified fraction.
             fh.write( "%s\n" % "\t".join(['','','',"%.3f" % fraction]) )
 
-        logging.info("Correctly classified: %.1f%%" % (fraction*100))
-        logging.info("Testing results written to %s" % filename)
+        print "Correctly classified: %.1f%%" % (fraction*100)
+        print "Testing results written to %s" % filename
+
+    def test_with_hierarchy(self, db_path, test_data_dir, ann_dir,
+                            max_error=0.001):
+        """Test each ANN in a classification hierarchy and export results.
+
+        Returns a 2-tuple ``(total_classified, correctly_classified)``.
+        """
+        self.classifications = {}
+        self.classifications_expected = {}
+
+        # Get the taxonomic hierarchy from the database.
+        with session_scope(db_path) as (session, metadata):
+            self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
+
+        # Get the taxonomic hierarchy from the configurations.
+        try:
+            self.class_hr = self.config.classification.hierarchy
+        except:
+            raise nbc.ConfigurationError("Missing `classification.hierarchy`")
+
+        # Get the name of each level in the classification hierarchy.
+        levels = [l.name for l in self.class_hr]
+
+        # Get the prefix for the classification columns.
+        try:
+            dependent_prefix = self.config.data.dependent_prefix
+        except:
+            dependent_prefix = OUTPUT_PREFIX
+
+        # Get the expected and recognized classification for each sample in
+        # the test data.
+        for filter_ in self.classification_hierarchy_filters(levels, self.taxon_hr):
+            logging.info("Classifying on %s" % self.readable_filter(filter_))
+
+            level_name = filter_['class']
+            level_n = levels.index(level_name)
+            level = self.class_hr[level_n]
+            test_file = os.path.join(test_data_dir, level.test_file)
+            ann_file = os.path.join(ann_dir, level.ann_file)
+
+            # Set the maximum error for classification.
+            try:
+                max_error = level.max_error
+            except:
+                pass
+
+            # Replace any placeholders in the paths.
+            for key, val in filter_['where'].items():
+                val = val if val is not None else '_'
+                test_file = test_file.replace("__%s__" % key, val)
+                ann_file = ann_file.replace("__%s__" % key, val)
+
+            # Get the class names for this node in the taxonomic hierarchy.
+            path = []
+            for name in levels:
+                try:
+                    path.append(filter_['where'][name])
+                except:
+                    pass
+            classes = self.get_childs_from_hierarchy(self.taxon_hr, path)
+
+            # Get the codeword for each class.
+            if not classes:
+                raise RuntimeError("No classes found for filter `%s`" % filter_)
+            codewords = self.get_codewords(classes)
+
+            # Load the ANN.
+            ann = libfann.neural_net()
+            ann.create_from_file(str(ann_file))
+
+            # Load the test data.
+            test_data = nbc.TrainData()
+            test_data.read_from_file(test_file, dependent_prefix)
+
+            # Test each sample in the test data.
+            for label, input, output in test_data:
+                assert len(codewords) == len(output), \
+                    "Codeword length {0} does not match output " \
+                    "length {1}".format(len(codewords), len(output))
+
+                # Obtain the photo ID from the label.
+                if not label:
+                    raise ValueError("Label for test sample not set")
+                    row.append(label)
+                try:
+                    photo_id = self.re_photo_id.search(label).group(1)
+                    photo_id = int(photo_id)
+                except IndexError:
+                    raise RuntimeError("Failed to obtain the photo ID from the sample label")
+
+                # Set the expected class.
+                class_expected = self.get_classification(codewords, output, max_error)
+                class_expected = [class_ for mse,class_ in class_expected]
+
+                assert len(class_expected) == 1, "The codeword for a class can only have one positive value"
+
+                # Get the recognized class.
+                codeword = ann.run(input)
+                class_ann = self.get_classification(codewords, codeword, max_error)
+                class_ann = [class_ for mse,class_ in class_ann]
+
+                # Save the classification at each level.
+                if level_n == 0:
+                    self.classifications[photo_id] = {}
+                    self.classifications_expected[photo_id] = {}
+                self.classifications[photo_id][level_name] = class_ann
+                self.classifications_expected[photo_id][level_name] = class_expected
+
+    def export_hierarchy_results(self, filename):
+        """Export classification results generated by :meth:`test_with_hierarchy`."""
+        if not self.classifications or not self.classifications_expected:
+            raise RuntimeError("Classifications not set")
+
+        total = 0
+        correct = 0
+
+        # Get the name of each level in the classification hierarchy.
+        levels = [l.name for l in self.class_hr]
+
+        # Export the results.
+        with open(filename, 'w') as fh:
+            # Write the header.
+            row = ['ID']
+            row.extend(["%s (exp.)" % level for level in levels])
+            row.extend(["%s (class.)" % level for level in levels])
+            row.append('Match')
+            fh.write( "%s\n" % "\t".join(row) )
+
+            # Write the results.
+            for photo_id, class_exp in self.classifications_expected.iteritems():
+                # Check if we have a match.
+                match = True
+                for level in levels:
+                    if level not in class_exp:
+                        continue
+                    expected = class_exp[level][0]
+                    if expected not in self.classifications[photo_id][level]:
+                        match = False
+                        break
+
+                # Construct the results row.
+                row = [str(photo_id)]
+
+                # Expected classification.
+                for level in levels:
+                    class_ = class_exp.get(level)
+                    class_ = '' if class_ is None else class_[0]
+                    row.append(class_)
+
+                # Accuired classification.
+                for level in levels:
+                    class_ = self.classifications[photo_id].get(level, [])
+                    class_ = ", ".join(class_)
+                    row.append(class_)
+
+                # Match or not.
+                if match:
+                    row.append("+")
+                    correct += 1
+                else:
+                    row.append("-")
+
+                fh.write("%s\n" % "\t".join(row))
+
+                total += 1
+
+        return (total, correct)
 
 class ImageClassifier(nbc.Common):
     """Classify an image."""
@@ -746,10 +948,10 @@ class ImageClassifier(nbc.Common):
             try:
                 filter_ = self.config.classification.filter
             except:
-                raise RuntimeError("The configuration file is missing object classification.filter")
+                raise nbc.ConfigurationError("Missing `classification.filter`")
 
-            q = self.query_classes(session, metadata, filter_)
-            self.classes = [x[1] for x in q]
+            self.classes = self.get_classes_from_filter(session, metadata, filter_)
+            self.classes = list(self.classes)
 
     def set_ann(self, path):
         if not os.path.isfile(path):

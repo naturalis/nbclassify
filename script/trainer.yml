@@ -100,7 +100,8 @@ classification:
           preprocess: *preprocess_std
           features: *features_std
           ann: *ann_genus
-          data_file: genus.tsv
+          train_file: genus.tsv
+          test_file: genus.tsv
           ann_file: genus.ann
           max_error: 0.00001
 
@@ -108,7 +109,8 @@ classification:
           preprocess: *preprocess_std
           features: *features_std
           ann: *ann_std
-          data_file: __genus__.section.tsv
+          train_file: __genus__.section.tsv
+          test_file: __genus__.section.tsv
           ann_file: __genus__.section.ann
           max_error: 0.0001
 
@@ -116,6 +118,7 @@ classification:
           preprocess: *preprocess_std
           features: *features_std
           ann: *ann_std
-          data_file: __genus__.__section__.species.tsv
+          train_file: __genus__.__section__.species.tsv
+          test_file: __genus__.__section__.species.tsv
           ann_file: __genus__.__section__.species.ann
           max_error: 0.001

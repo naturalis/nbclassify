@@ -73,8 +73,9 @@ class Common(object):
         assigned to the codeword. So it is possible that a codeword is
         assigned to multiple classes.
 
-        The result is returned as a sorted 2-list ``[(mse, ..), (class,
-        ..)]``. Returns a pair of empty tuples if no classes were found.
+        The result is returned as a sorted list of 2-tuples ``[(error,
+        class), ..]``. Returns a pair of empty tuples if no classes were
+        found.
         """
         if len(codewords) != len(codeword):
             raise ValueError("Lenth of `codewords` must be equal to `codeword` length")
@@ -86,15 +87,14 @@ class Common(object):
                     if mse <= error:
                         classes.append((mse, class_))
                     break
-        if len(classes) == 0:
-            return [(),()]
-        return zip(*sorted(classes))
+        return sorted(classes)
 
-    def query_images(self, session, metadata, filter_):
+    def get_photos_with_class(self, session, metadata, filter_):
         """Return photos with corresponding class from the database.
 
         Photos obtained from the database are filtered by rules set in the
-        `filter_` parameter. Returned rows are (photo_path, class) tuples.
+        `filter_` parameter. Returned rows are 2-tuples ``(photo_path,
+        class)``.
         """
         if 'class' not in filter_:
             raise ValueError("The filter is missing the 'class' key")
@@ -142,11 +142,14 @@ class Common(object):
 
         return q
 
-    def query_classes(self, session, metadata, filter_):
-        """Return classes from the database.
+    def get_classes_from_filter(self, session, metadata, filter_):
+        """Return the classes for a classification filter.
 
-        Returned classes are filtered by rules set in the `filter_` parameter.
-        Returned rows are (photo_id, class) tuples.
+        Requires access to a database via an SQLAlchemy Session and
+        MetaData object.
+
+        This is a generator that returns one class at a time. The unique
+        set of classes for the classification filter `filter_` are returned.
         """
         if 'class' not in filter_:
             raise ValueError("The filter is missing the 'class' key")
@@ -169,8 +172,8 @@ class Common(object):
         # Construct the query, ORM style.
         q = session.query(Photos.id, Taxa['class'].name)
 
-        if 'where' in query:
-            for rank, name in vars(query.where).items():
+        if 'where' in filter_ and filter_.where:
+            for rank, name in vars(filter_.where).items():
                 PhotosTaxa[rank] = orm.aliased(Base.classes.photos_taxa)
                 Taxa[rank] = orm.aliased(Base.classes.taxa)
                 Ranks[rank] = orm.aliased(Base.classes.ranks)
@@ -180,7 +183,7 @@ class Common(object):
                     filter(Ranks[rank].name == rank, Taxa[rank].name == name)
 
         # The classification column.
-        rank = getattr(query, 'class')
+        rank = getattr(filter_, 'class')
         q = q.join(PhotosTaxa['class'], PhotosTaxa['class'].photo_id == Photos.id).\
             join(Taxa['class']).join(Ranks['class']).\
             filter(Ranks['class'].name == rank)
@@ -188,7 +191,9 @@ class Common(object):
         # Order by classification.
         q = q.group_by(Taxa['class'].name)
 
-        return q
+        # Return the results.
+        for (_, class_) in q:
+            yield class_
 
     def get_taxon_hierarchy(self, session, metadata):
         """Return the taxanomic hierarchy for photos in the database.
@@ -247,7 +252,7 @@ class Common(object):
         Returns the classification filter for each possible path in the
         hierarchy `hr`. The name of each level in the hierarchy must be set
         in the sequence `levels`. The sequence `path` holds the position in
-        the hierarchy.
+        the hierarchy. Filters that return no classes are not returned.
         """
         filter_ = {}
 
@@ -308,6 +313,23 @@ class Common(object):
             raise ValueError("Incorrect hierarchy format")
 
         return names
+
+    def readable_filter(self, filter_):
+        """Return a human-readable description of a classification filter."""
+        class_ = filter_.get('class')
+        where = filter_.get('where', {})
+        where_n = len(where)
+        where_s = ""
+        for i, (k,v) in enumerate(where.items()):
+            if i > 0 and i < where_n - 1:
+                where_s += ", "
+            elif where_n > 1 and i == where_n - 1:
+                where_s += " and "
+            where_s += "%s is %s" % (k,v)
+
+        if where_n > 0:
+            return "%s where %s" % (class_, where_s)
+        return "%s" % class_
 
 class Phenotyper(object):
     """Generate numerical features from an image."""

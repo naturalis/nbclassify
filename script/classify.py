@@ -181,7 +181,7 @@ class ImageClassifier(nbc.Common):
         try:
             self.class_hr = self.config.classification.hierarchy
         except:
-            raise ValueError("The configuration file is missing object classification.hierarchy")
+            raise nbc.ConfigurationError("missing `classification.hierarchy`")
 
         # Get the classification hierarchy from the database.
         with session_scope(db_path) as (session, metadata):
@@ -200,6 +200,7 @@ class ImageClassifier(nbc.Common):
         self.error = error
 
     def get_classification_hierarchy_levels(self):
+        """Return the list of level names from the classification hierarchy."""
         return [l.name for l in self.class_hr]
 
     def classify_image(self, im_path, ann_path, config):
@@ -214,9 +215,9 @@ class ImageClassifier(nbc.Common):
         if not os.path.isfile(ann_path):
             raise IOError("Cannot open %s (no such file)" % ann_path)
         if 'preprocess' not in config:
-            raise ValueError("Attribute `preprocess` not set in the configuration object")
+            raise nbc.ConfigurationError("missing `preprocess`")
         if 'features' not in config:
-            raise ValueError("Attribute `features` not set in the configuration object")
+            raise nbc.ConfigurationError("missing `features`")
 
         ann = libfann.neural_net()
         ann.create_from_file(str(ann_path))
@@ -255,7 +256,7 @@ class ImageClassifier(nbc.Common):
         in the classification hierarchy ``classification.hierarchy`` set in
         the configurations file. Each level can use a different neural
         network for classification; the file names for the neural networks
-        are set in ``classification.hierarchy[n].ann``. Multiple
+        are set in ``classification.hierarchy[n].ann_file``. Multiple
         classifications are returned if the classification of a level in
         the hierarchy returns multiple classifications, in which case the
         classification path is split into multiple classifications paths.
@@ -311,8 +312,12 @@ class ImageClassifier(nbc.Common):
                 max_error = self.error
 
             # Get the class name associated with this codeword.
-            class_errors, classes = self.get_classification(class_codewords,
+            classes = self.get_classification(class_codewords,
                 codeword, max_error)
+            if classes:
+                class_errors, classes = zip(*classes)
+            else:
+                class_errors = classes = []
 
             # Test branching.
             #if level.name == 'section':

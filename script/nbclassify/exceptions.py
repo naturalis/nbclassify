@@ -9,3 +9,10 @@ class FileExistsError(Exception):
         self.value = value
     def __str__(self):
         return str(self.value)
+
+class ConfigurationError(Exception):
+    """Raised when there is a configuration related error."""
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return str(self.value)
