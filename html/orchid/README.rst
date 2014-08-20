@@ -77,9 +77,9 @@ This setup assumes you have Apache 2.4.
    For security reasons, a Django site (i.e. ``/path/to/mysite.com``) must not
    be in the Apache document root. In this example setup, the paths
    ``/usr/local/www/documents/{static|media}/`` could be system links to
-   ``/path/to/mysite.com/...``. This way, Apache can still serve static and
-   user uploaded files. Also make sure that
-   ``/path/to/mysite.com/orchid/media/`` is writable to Apache.
+   ``/path/to/mysite.com/{orchid/static|media}/``. This way, Apache can still
+   serve static and user uploaded files. Also make sure that
+   ``/path/to/mysite.com/media/`` is writable to Apache.
 
    If you use an SQLite database, make sure that Apache can write to the
    database file and to the parent directory of the database.
@@ -88,5 +88,5 @@ This setup assumes you have Apache 2.4.
    following options set for this to work::
 
       STATIC_URL = '/static/'
-      MEDIA_ROOT = '/usr/local/www/documents/media/'
+      MEDIA_ROOT = '/path/to/mysite.com/media/'
       MEDIA_URL = '/media/'
