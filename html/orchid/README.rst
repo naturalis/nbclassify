@@ -35,7 +35,7 @@ Deploying on Apache with mod_wsgi
 
 This setup assumes you have Apache 2.4.
 
-1. Make sure that `mod_wsgi` is enabled on Apache.
+1. Make sure that `mod_wsgi` is enabled::
 
       sudo apt-get install libapache2-mod-wsgi
       sudo a2enmod wsgi
@@ -45,7 +45,7 @@ This setup assumes you have Apache 2.4.
    https://code.google.com/p/modwsgi/wiki/QuickConfigurationGuide
 
    A complete virtual host configuration for hosting Django in daemon mode
-   could be something like:
+   could be something like::
 
       <VirtualHost *:80>
           ServerName mysite.com
@@ -77,15 +77,15 @@ This setup assumes you have Apache 2.4.
    For security reasons, a Django site (i.e. ``/path/to/mysite.com``) must not
    be in the Apache document root. In this example setup, the paths
    ``/usr/local/www/documents/{static|media}/`` could be system links to
-   ``/path/to/mysite.com/orchid/{static|media}/``. This way, Apache can still
-   serve static and user uploaded files. Also make sure that
+   ``/path/to/mysite.com/...``. This way, Apache can still serve static and
+   user uploaded files. Also make sure that
    ``/path/to/mysite.com/orchid/media/`` is writable to Apache.
 
    If you use an SQLite database, make sure that Apache can write to the
    database file and to the parent directory of the database.
 
    The corresponding ``settings.py`` for your Django site must have the
-   following options set for this to work:
+   following options set for this to work::
 
       STATIC_URL = '/static/'
       MEDIA_ROOT = '/usr/local/www/documents/media/'
