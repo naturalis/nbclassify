@@ -25,8 +25,7 @@ def upload(request):
         form = UploadPictureForm(request.POST, request.FILES)
 
         if form.is_valid():
-            # Save the file to the location specified in the PhotoUploads
-            # model.
+            # Save the file to the location specified in the Photos model.
             form_instance = form.save()
 
             data.update(csrf(request))

@@ -1,36 +1,50 @@
 {% load staticfiles %}
 <!DOCTYPE html>
-<html lang="en">
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>{% block title %}Slipper Orchid Photo Identifier{% endblock %}</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="{% static 'orchid/css/normalize.css' %}">
+        <link rel="stylesheet" href="{% static 'orchid/css/main.css' %}">
+        <script src="{% static 'orchid/js/vendor/modernizr-2.6.2.min.js' %}"></script>
+    </head>
+    <body>
+        <!--[if lt IE 7]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
 
-<head>
-    <title>{% block title %}Slipper Orchid Photo Identifier{% endblock %}</title>
+        <!-- Add your site or application content here -->
+        <div id="page">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" media="only screen and (max-width: 400px)" href="{% static 'orchid/css/mobile.css' %}">
-    <link rel="stylesheet" media="only screen and (min-width: 401px)" href="{% static 'orchid/css/main.css' %}">
-</head>
+            <div id="logo">
+                {% block logo %}
+                <ul>
+                    <a href="http://www.naturalis.nl"><img src="{% static 'orchid/images/Naturalis_logo.png' %}" width="100px"></a>
+                </ul>
+                {% endblock %}
+            </div>
 
-<body>
+            <div id="content">
+                {% block content %}No content.{% endblock %}
+            </div>
 
-    <div id="page">
+            <div id="footer">
+                {% block footer %}
+                <p>Copyright 2013-2014 Naturalis Biodiversity Center</p>
+                {% endblock %}
+            </div>
 
-    <div id="logo">
-        {% block logo %}
-        <ul>
-            <a href="http://www.naturalis.nl"><img src="{% static 'orchid/images/Naturalis_logo.png' %}" width="100"></a>
-        </ul>
-        {% endblock %}
-    </div>
+        </div>
 
-    <div id="content">
-        {% block content %}No content.{% endblock %}
-    </div>
-
-    <div id="footer">
-        {% block footer %}
-        <p>Copyright 2013-2014 Naturalis Biodiversity Center</p>
-        {% endblock %}
-    </div>
-
-</body>
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script>window.jQuery || document.write('<script src="{% static "orchid/js/vendor/jquery-1.10.2.min.js" %}"><\/script>')</script>
+        <script src="{% static 'orchid/js/plugins.js' %}"></script>
+        <script src="{% static 'orchid/js/main.js' %}"></script>
+    </body>
 </html>

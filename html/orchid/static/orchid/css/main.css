@@ -1,119 +1,312 @@
-/* This is the default lay-out for the webpages */
+/*! HTML5 Boilerplate v4.3.0 | MIT License | http://h5bp.com/ */
 
-@media screen {
-    /* Lay-out for the body */
-    body {
-                /* Place the text in the middel of the page */
-                text-align: center;
+/*
+ * What follows is the result of much research on cross-browser styling.
+ * Credit left inline and big thanks to Nicolas Gallagher, Jonathan Neal,
+ * Kroc Camen, and the H5BP dev community and team.
+ */
+
+/* ==========================================================================
+   Base styles: opinionated defaults
+   ========================================================================== */
+
+html,
+button,
+input,
+select,
+textarea {
+    color: #222;
+}
+
+html {
+    font-size: 1em;
+    line-height: 1.4;
+}
+
+/*
+ * Remove text-shadow in selection highlight: h5bp.com/i
+ * These selection rule sets have to be separate.
+ * Customize the background color to match your design.
+ */
+
+::-moz-selection {
+    background: #b3d4fc;
+    text-shadow: none;
+}
+
+::selection {
+    background: #b3d4fc;
+    text-shadow: none;
+}
+
+/*
+ * A better looking default horizontal rule
+ */
+
+hr {
+    display: block;
+    height: 1px;
+    border: 0;
+    border-top: 1px solid #ccc;
+    margin: 1em 0;
+    padding: 0;
+}
+
+/*
+ * Remove the gap between images, videos, audio and canvas and the bottom of
+ * their containers: h5bp.com/i/440
+ */
+
+audio,
+canvas,
+img,
+video {
+    vertical-align: middle;
+}
+
+/*
+ * Remove default fieldset styles.
+ */
+
+fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+/*
+ * Allow only vertical resizing of textareas.
+ */
+
+textarea {
+    resize: vertical;
+}
+
+/* ==========================================================================
+   Browse Happy prompt
+   ========================================================================== */
+
+.browsehappy {
+    margin: 0.2em 0;
+    background: #ccc;
+    color: #000;
+    padding: 0.2em 0;
+}
+
+/* ==========================================================================
+   Author's custom styles
+   ========================================================================== */
+
+#page {
+    background-color: white;
+    margin: 10px auto 20px auto;
+    text-align: left;
+    width: 960px;
+}
+
+#logo {
+    float: left;
+    width: 200px;
+}
+
+#content {
+    border: 3px solid #E3004A;
+    float: left;
+    padding: 10px;
+    width: 70%;
+}
+
+#footer {
+    bottom: 10px;
+    position: absolute;
+}
+
+/* ==========================================================================
+   Helper classes
+   ========================================================================== */
+
+/*
+ * Image replacement
+ */
+
+.ir {
+    background-color: transparent;
+    border: 0;
+    overflow: hidden;
+    /* IE 6/7 fallback */
+    *text-indent: -9999px;
+}
+
+.ir:before {
+    content: "";
+    display: block;
+    width: 0;
+    height: 150%;
+}
+
+/*
+ * Hide from both screenreaders and browsers: h5bp.com/u
+ */
+
+.hidden {
+    display: none !important;
+    visibility: hidden;
+}
+
+/*
+ * Hide only visually, but have it available for screenreaders: h5bp.com/v
+ */
+
+.visuallyhidden {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+}
+
+/*
+ * Extends the .visuallyhidden class to allow the element to be focusable
+ * when navigated to via the keyboard: h5bp.com/p
+ */
+
+.visuallyhidden.focusable:active,
+.visuallyhidden.focusable:focus {
+    clip: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    position: static;
+    width: auto;
+}
+
+/*
+ * Hide visually and from screenreaders, but maintain layout
+ */
+
+.invisible {
+    visibility: hidden;
+}
+
+/*
+ * Clearfix: contain floats
+ *
+ * For modern browsers
+ * 1. The space content is one way to avoid an Opera bug when the
+ *    `contenteditable` attribute is included anywhere else in the document.
+ *    Otherwise it causes space to appear at the top and bottom of elements
+ *    that receive the `clearfix` class.
+ * 2. The use of `table` rather than `block` is only necessary if using
+ *    `:before` to contain the top-margins of child elements.
+ */
+
+.clearfix:before,
+.clearfix:after {
+    content: " "; /* 1 */
+    display: table; /* 2 */
+}
+
+.clearfix:after {
+    clear: both;
+}
+
+/*
+ * For IE 6/7 only
+ * Include this rule to trigger hasLayout and contain floats.
+ */
+
+.clearfix {
+    *zoom: 1;
+}
+
+/* ==========================================================================
+   EXAMPLE Media Queries for Responsive Design.
+   These examples override the primary ('mobile first') styles.
+   Modify as content requires.
+   ========================================================================== */
+
+@media only screen and (min-width: 35em) {
+    /* Style adjustments for viewports that meet the condition */
+}
+
+@media print,
+       (-o-min-device-pixel-ratio: 5/4),
+       (-webkit-min-device-pixel-ratio: 1.25),
+       (min-resolution: 120dpi) {
+    /* Style adjustments for high resolution devices */
+}
+
+/* ==========================================================================
+   Print styles.
+   Inlined to avoid required HTTP connection: h5bp.com/r
+   ========================================================================== */
+
+@media print {
+    * {
+        background: transparent !important;
+        color: #000 !important; /* Black prints faster: h5bp.com/s */
+        box-shadow: none !important;
+        text-shadow: none !important;
     }
 
-    /* Lay-out for the page */
-    #page {
-        /* the width */
-        width: 960px;
-
-        /* place the text left */
-        text-align: left;
-
-        /* clear automatically the area around the page */
-        margin: 10px auto 20px auto;
-
-        /* Set the background color to white */
-        background-color:white;
+    a,
+    a:visited {
+        text-decoration: underline;
     }
 
-    /* Lay-out for the logo */
-    #logo {
-        /* Place the logo on the leftside of the page */
-        float: left;
-
-        /* the width of the logo is 200 pixels */
-        width: 200px;
+    a[href]:after {
+        content: " (" attr(href) ")";
     }
 
-    /* Lay-out for sidebar, not used, but available for later */
-    /*#sidebar {
-        float: right;
-        width: 200px;
-        border: 1px solid #E3004A;
-    }*/
-
-    /* Lay-out for the content */
-    #content {
-        /* place the content left, because logo is described first, the content will
-        be displayed right of the logo */
-        float: left;
-
-        /* The width of this box will be automaticly changed to the content */
-        width: 70%;
-
-        /* Place a border around the content
-        3 pixels widht with a pink-like color, The same color of the
-        Naturalis logo */
-        border: 3px solid #E3004A;
-
-        /* Clear 10 pixels around the content, inside de border */
-        padding: 10px;
+    abbr[title]:after {
+        content: " (" attr(title) ")";
     }
 
-    /* Lay-out for the footer */
-    #footer {
-        /* Place the footer on the bottom */
-        position:absolute;
-        bottom:10px;
+    /*
+     * Don't show links for images, or javascript/internal links
+     */
+
+    .ir a:after,
+    a[href^="javascript:"]:after,
+    a[href^="#"]:after {
+        content: "";
     }
 
-    /* Standard font settings for a paragraph */
-    p {
-        font-family: Arial;
-        font-size: 1em;
+    pre,
+    blockquote {
+        border: 1px solid #999;
+        page-break-inside: avoid;
     }
 
-    /* Standard font settings for a Header1 */
-    h1 {
-        font-family: Arial;
-        font-size: 1.9em;
+    thead {
+        display: table-header-group; /* h5bp.com/t */
     }
 
-    /* Standard font settings for a Header2 */
-    h2 {
-        font-family: Arial;
-        font-size: 1.7em;
-
+    tr,
+    img {
+        page-break-inside: avoid;
     }
 
-    /* Standard font settings for a Header3 */
+    img {
+        max-width: 100% !important;
+    }
+
+    @page {
+        margin: 0.5cm;
+    }
+
+    p,
+    h2,
     h3 {
-        font-family: Arial;
-        font-size: 1.5em;
+        orphans: 3;
+        widows: 3;
     }
 
-    /* Standard font settings for a Header4 */
-    h4 {
-        font-family: Arial;
-        font-size: 1.3em;
-    }
-
-    /* Standard font settings for text with id small */
-    #small {
-        font-size: 0.75em;
-    }
-
-    /* Standard font settings for the forms */
-    form {
-        font-family: Arial;
-        font-size: 1em;
-    }
-
-    /* Standard font settings for the input box */
-    input {
-        font-family: Arial;
-        font-size: 1em;
-    }
-
-    /* Standard font settings for the text with id button */
-    #button {
-        font-family: Arial;
-        font-size: 1.25em;
+    h2,
+    h3 {
+        page-break-after: avoid;
     }
 }
