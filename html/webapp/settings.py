@@ -88,7 +88,7 @@ STATICFILES_FINDERS = (
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/var/www/example.com/media/"
-MEDIA_ROOT = '/home/serrano/public_html/documents/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # URL that handles the media served from MEDIA_ROOT, used for managing stored
 # files. It must end in a slash if set to a non-empty value. You will need to

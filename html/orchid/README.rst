@@ -88,5 +88,5 @@ This setup assumes you have Apache 2.4.
    following options set for this to work::
 
       STATIC_URL = '/static/'
-      MEDIA_ROOT = '/path/to/mysite.com/media/'
+      MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
       MEDIA_URL = '/media/'
