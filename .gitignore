@@ -1,3 +1,6 @@
 *.DS_Store
 *.pyc
-data/splitter
+*.sqlite3
+
+# Where user uploads are stored.
+html/media/

@@ -1,22 +1,25 @@
-dependencies
-============
-* python2.7
-* Django 1.6.4 (sudo pip install Django==1.6.4)
-* ImageMagick (c library) and Image::Magick (perl bindings)
-* FANN (c library) version 2.2.0 and AI::FANN (perl bindings)
-* Bio::Phylo (for logging)
+# Orchid Classifier (Django app)
 
-How to start the app locally?
-=============================
-* Start the command line
-* Go to the directory which contains manage.py
-* Type `python manage.py runserver`
-* Open a webbrowser (not Internet Explorer!) and go to <http://127.0.0.1:8000/> (or use the link generated in the command line)
+## Dependencies
 
-How to start the app in a network?
-==================================
-* Find the ip-adres of the local machine
-* Start the command line
-* Go to the direcory which contains manage.py
-* Type `python manage.py runserver ip-adres:8000`
-* Open a webbrowser (not Internet Explorer!) and go to <http://ip-adres:8000/> (This will work for every computer in the same network)
+This Django app requires all dependencies mentioned in the parent directory,
+and in addition:
+
+* Django 1.6
+* Python Imaging Library
+
+On Debian (based) systems, most dependencies can be installed from the
+software repository:
+
+    sudo apt-get install python-pil
+
+It's best to install some Python packages via the Python Package Index in
+order to get the latest versions:
+
+    sudo apt-get install python-pip
+
+    sudo pip install django
+
+## Installation
+
+For installation instructions, see the "orchid" subdirectory.

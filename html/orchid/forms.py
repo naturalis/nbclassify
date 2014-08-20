@@ -1,11 +1,8 @@
-# Import the required modules
 from django import forms
-from models import Orchid
+from models import PhotoUploads
 
-# Class for uploading pictures
 class UploadPictureForm(forms.ModelForm):
-    
-    # The meta data
+    """Form model for uploading photos."""
+
     class Meta:
-        # The used model, Orchids in this case
-        model = Orchid
+        model = PhotoUploads

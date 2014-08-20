@@ -27,21 +27,22 @@ is as follows:
 * OpenCV (2.4.x)
   * Python bindings
 * Python (>=2.7 && <2.8)
+  * SQLite (>=3.6.19)
+* Python Flickr API
 * PyYAML
 * Python package for [image feature extraction][1]
 * SQLAlchemy
-* SQLite (>=3.6.19)
 
 On Debian (based) systems, most dependencies can be installed from the
 software repository:
 
-    sudo apt-get install libfann2 opencv python python-pyfann python-opencv python-numpy sqlite3
+    sudo apt-get install libfann2 opencv python python-pyfann python-opencv python-numpy
 
 It's best to install some Python packages via the Python Package Index in
 order to get the latest versions:
 
     sudo apt-get install python-pip
 
-    sudo pip install yaml sqlalchemy
+    sudo pip install flickrapi sqlalchemy yaml
 
 [1]: https://github.com/naturalis/feature-extraction "Python package for image feature extraction"

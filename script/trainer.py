@@ -363,6 +363,7 @@ class MakeTrainData(nbc.Common):
         # the meta data database.
         with session_scope(self.db_path) as (session, metadata):
             images = self.get_photos_with_class(session, metadata, filter_)
+            images = list(images)
 
         if len(images) == 0:
             logging.info("No images found for the filter `%s`" % filter_)

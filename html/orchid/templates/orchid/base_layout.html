@@ -1,0 +1,36 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>{% block title %}Slipper Orchid Photo Identifier{% endblock %}</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" media="only screen and (max-width: 400px)" href="{% static 'orchid/css/mobile.css' %}">
+    <link rel="stylesheet" media="only screen and (min-width: 401px)" href="{% static 'orchid/css/main.css' %}">
+</head>
+
+<body>
+
+    <div id="page">
+
+    <div id="logo">
+        {% block logo %}
+        <ul>
+            <a href="http://www.naturalis.nl"><img src="{% static 'orchid/images/Naturalis_logo.png' %}" width="100"></a>
+        </ul>
+        {% endblock %}
+    </div>
+
+    <div id="content">
+        {% block content %}No content.{% endblock %}
+    </div>
+
+    <div id="footer">
+        {% block footer %}
+        <p>Copyright 2013-2014 Naturalis Biodiversity Center</p>
+        {% endblock %}
+    </div>
+
+</body>
+</html>

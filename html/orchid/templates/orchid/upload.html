@@ -1,0 +1,23 @@
+{% extends "orchid/base_layout.html" %}
+
+{% block title %}Photo Upload{% endblock %}
+
+{% block content %}
+<h2>Photo Upload</h2>
+
+{% if message %}
+<p style="color:red; font-size:0.9em"><em>{{message}}</em></p>
+{% endif %}
+
+<form action="{% url 'orchid:upload' %}" method="post" style="{{style}}" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{form}}
+    <p><input type="submit" value="Upload picture" id="button"></p>
+</form>
+
+<br>
+
+<form action="{% url 'orchid:home' %}">
+    <input type="submit" value="Home" id="button">
+</form>
+{% endblock %}

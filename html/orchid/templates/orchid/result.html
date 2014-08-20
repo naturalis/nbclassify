@@ -1,0 +1,18 @@
+{% extends "orchid/base_layout.html" %}
+
+{% block title %}Orchid Identifier - Result{% endblock %}
+
+{% block content %}
+<h2>Results</h2>
+
+<ul>
+    <li>Genus: <em>{{genus}}</em></li>
+    <li>Section: <em>{{section}}</em> </li>
+</ul>
+
+<p><a href="/static/assets/uploaded_files/{{ip}}/{{filename}}"><img src="/static/assets/uploaded_files/{{ip}}/{{filename}}" width="200"/></a></p>
+
+<form action="{% url 'orchid:exit' %}">
+    <input type="submit" value="Exit" id="button">
+</form>
+{% endblock %}

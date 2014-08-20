@@ -1,0 +1,15 @@
+{% extends "orchid/base_layout.html" %}
+
+{% block content %}
+<h2>Welcome</h2>
+
+<p>Welcome to the slipper orchid identifier of Naturalis Biodiversity Center</p>
+
+<p>After uploading your picture the website will identify the genus and section. Please click the upload picture button below to upload a picture of a flower.<p>
+
+<a href="{% url 'orchid:upload' %}" id="button">Upload Orchid Photo</a>
+
+<p>To remove all unused uploaded pictures and their temporary files click below (login required).</p>
+
+<a href="{% url 'orchid:cleanup' %}" id="button">Cleanup Temporary Files</a>
+{% endblock %}

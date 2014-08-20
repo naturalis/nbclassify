@@ -1,0 +1,19 @@
+{% extends "orchid/base_layout.html" %}
+
+{% block title %}Upload Completed{% endblock %}
+
+{% block content %}
+<h2>Photo successfully uploaded</h2>
+
+<p><a href="{{photo_url}}"><img src="{{photo_url}}" width="200px"></a></p>
+
+<form action="{% url 'orchid:result' %}">
+    <input type="submit" value="Result" id="button">
+</form>
+
+<br>
+
+<form action="{% url 'orchid:upload' %}">
+    <input type="submit" value="Upload Another Photo" id="button">
+</form>
+{% endblock %}
