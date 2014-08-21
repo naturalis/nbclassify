@@ -24,13 +24,16 @@ class Photo(models.Model):
 
 class Identity(models.Model):
     photo = models.ForeignKey(Photo)
-    genus = models.CharField(max_length=100)
-    section = models.CharField(max_length=100)
-    species = models.CharField(max_length=100)
+    genus = models.CharField(max_length=50)
+    section = models.CharField(max_length=50, null=True, blank=True)
+    species = models.CharField(max_length=50, null=True, blank=True)
+    error = models.FloatField()
 
     def __unicode__(self):
-        class_ = ' '.join([genus,section,species])
-        return "%s: %s" % (photo.file_name, class_)
+        if self.species:
+            return "%s %s" % (self.genus, self.species)
+        else:
+            return self.genus
 
 @receiver(post_delete, sender=Photo)
 def photo_delete_hook(sender, instance, **kwargs):

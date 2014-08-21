@@ -1,29 +1,29 @@
 {% extends "orchid/base_layout.html" %}
 
-{% block title %}Classification Result | OrchiD{% endblock %}
+{% block title %}Classification | OrchiD{% endblock %}
 
 {% block content %}
-<h2>Results</h2>
+<h2>Classification</h2>
 
-{% if classification %}
-    <p>The following classifications were made for your photo:</p>
+{% if identities %}
+    <p>There w{{ identities|pluralize:"as,ere" }}  {{ identities|length }} classification{{ identities|pluralize }} made for your photo:</p>
 
     <table class="pure-table pure-table-horizontal">
     <thead>
         <tr>
-            <th>MSE</th>
+            <th>#</th>
             <th>Genus</th>
             <th>Section</th>
             <th>Species</th>
         </tr>
     </thead>
     <tbody>
-        {% for class in classification %}
+        {% for id in identities %}
         <tr>
-            <td>{{ class.error }}</td>
-            <td class="italic">{{ class.genus }}</td>
-            <td class="italic">{{ class.section }}</td>
-            <td class="italic">{{ class.species }}</td>
+            <td>{{ forloop.counter }}</td>
+            <td class="italic">{{ id.genus }}</td>
+            <td class="italic">{% firstof id.section "&mdash;" %}</td>
+            <td class="italic">{% firstof id.species "&mdash;" %}</td>
         </tr>
         {% endfor %}
     </tbody>
