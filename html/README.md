@@ -1,4 +1,4 @@
-# Orchid Classifier (Django app)
+# NBClassify OrchiD
 
 ## Dependencies
 
