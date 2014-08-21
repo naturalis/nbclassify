@@ -1,6 +1,6 @@
 {% extends "orchid/base_layout.html" %}
 
-{% block title %}Photo Uploaded{% endblock %}
+{% block title %}Photo Uploaded | OrchiD{% endblock %}
 
 {% block content %}
 <h2>Photo Uploaded</h2>
@@ -10,6 +10,6 @@
 <p><a class="pure-button pure-button-primary button-nbc" href="{% url 'orchid:classify' photo.id %}">Classify Photo</a></p>
 
 <p>
-    <a href="{{ photo.photo.url }}"><img src="{{ photo.photo.url }}" class="pure-img"></a>
+    <img src="{{ photo.photo.url }}" class="pure-img">
 </p>
 {% endblock %}

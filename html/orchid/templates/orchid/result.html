@@ -1,12 +1,12 @@
 {% extends "orchid/base_layout.html" %}
 
-{% block title %}Classification Result{% endblock %}
+{% block title %}Classification Result | OrchiD{% endblock %}
 
 {% block content %}
 <h2>Results</h2>
 
 {% if classification %}
-    <p>The following classifications were found for your photo:</p>
+    <p>The following classifications were made for your photo:</p>
 
     <table class="pure-table pure-table-horizontal">
     <thead>
@@ -21,9 +21,9 @@
         {% for class in classification %}
         <tr>
             <td>{{ class.error }}</td>
-            <td>{{ class.genus }}</td>
-            <td>{{ class.section }}</td>
-            <td>{{ class.species }}</td>
+            <td class="italic">{{ class.genus }}</td>
+            <td class="italic">{{ class.section }}</td>
+            <td class="italic">{{ class.species }}</td>
         </tr>
         {% endfor %}
     </tbody>
@@ -33,6 +33,6 @@
 {% endif %}
 
 <p>
-    <a href="{{ photo.photo.url }}"><img src="{{ photo.photo.url }}" class="pure-img"></a>
+    <img src="{{ photo.photo.url }}" class="pure-img">
 </p>
 {% endblock %}
