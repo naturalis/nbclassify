@@ -22,6 +22,16 @@ class Photo(models.Model):
     image_tag.short_description = 'Thumbnail'
     image_tag.allow_tags = True
 
+class Identity(models.Model):
+    photo = models.ForeignKey(Photo)
+    genus = models.CharField(max_length=100)
+    section = models.CharField(max_length=100)
+    species = models.CharField(max_length=100)
+
+    def __unicode__(self):
+        class_ = ' '.join([genus,section,species])
+        return "%s: %s" % (photo.file_name, class_)
+
 @receiver(post_delete, sender=Photo)
 def photo_delete_hook(sender, instance, **kwargs):
     """Delete file associated with Photo instance.

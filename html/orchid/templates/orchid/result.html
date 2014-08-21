@@ -1,18 +1,20 @@
 {% extends "orchid/base_layout.html" %}
 
-{% block title %}Orchid Identifier - Result{% endblock %}
+{% block title %}Classification Result{% endblock %}
 
 {% block content %}
 <h2>Results</h2>
 
-<ul>
-    <li>Genus: <em>{{genus}}</em></li>
-    <li>Section: <em>{{section}}</em> </li>
-</ul>
+{% if classification %}
+<p>This photo has been classified as:</p>
+    <ul>
+    {% for rank, taxon in classification %}
+        <li>{{ rank }}: {{ taxon }}</li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>Sorry, the photo could not be classified.</p>
+{% endif %}
 
-<p><a href="/static/assets/uploaded_files/{{ip}}/{{filename}}"><img src="/static/assets/uploaded_files/{{ip}}/{{filename}}" width="200"/></a></p>
-
-<form action="{% url 'orchid:exit' %}">
-    <input type="submit" value="Exit" id="button">
-</form>
+<a href="{{ photo.photo.url }}"><img src="{{ photo.photo.url }}" class="pure-img"></a>
 {% endblock %}

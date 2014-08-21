@@ -1,15 +1,24 @@
 {% extends "orchid/base_layout.html" %}
 
 {% block content %}
-<h2>Welcome</h2>
+<h2>Slipper Orchid Photo Identifier</h2>
 
-<p>Welcome to the slipper orchid identifier of Naturalis Biodiversity Center</p>
+<p>Welcome to the Slipper Orchid Photo Identifier. This web application allows you to identify a photo of a slippper orchid up to the species level. Use the form below to upload your photo. The photo needs to be reasonably standardized for the identification to work properly.</p>
 
-<p>After uploading your picture the website will identify the genus and section. Please click the upload picture button below to upload a picture of a flower.<p>
+<p>Please check that your photo:</p>
+<ol>
+    <li>has a frontal view of the flower;</li>
+    <li>has only one flower;</li>
+    <li>has a background with good contrast to the flower.</li>
+</ol>
 
-<a href="{% url 'orchid:upload' %}" id="button">Upload Orchid Photo</a>
+{% if error_message %}
+    <div class="message error">{{error_message}}</div>
+{% endif %}
 
-<p>To remove all unused uploaded pictures and their temporary files click below (login required).</p>
-
-<a href="{% url 'orchid:cleanup' %}" id="button">Cleanup Temporary Files</a>
+<form action="{% url 'orchid:home' %}" method="post" enctype="multipart/form-data" class="pure-form">
+    {% csrf_token %}
+    {{form}}
+    <p><button type="submit" class="pure-button pure-button-primary button-nbc">Upload Photo</button></p>
+</form>
 {% endblock %}

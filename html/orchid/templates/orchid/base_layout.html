@@ -10,7 +10,10 @@
         <title>{% block title %}Slipper Orchid Photo Identifier{% endblock %}</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans:700,400,300" media="all">
         <link rel="stylesheet" href="{% static 'orchid/css/normalize.css' %}">
+        <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.5.0/pure-min.css">
+        <link rel="stylesheet" href="{% static 'orchid/css/side-menu.css' %}">
         <link rel="stylesheet" href="{% static 'orchid/css/main.css' %}">
         <script src="{% static 'orchid/js/vendor/modernizr-2.6.2.min.js' %}"></script>
     </head>
@@ -19,27 +22,32 @@
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
 
-        <!-- Add your site or application content here -->
-        <div id="page">
+        <div id="layout">
+            <a id="menuLink" class="menu-link" href="#menu">
+                <span></span>
+            </a>
+            <nav id="menu" role="navigation">
+                <div class="pure-menu pure-menu-open">
+                    <a class="pure-menu-heading">Orchid</a>
+                    <ul>
+                        <li><a href="{% url 'orchid:home' %}">Home</a></li>
+                        <li class="pure-menu-heading">Admin</li>
+                        <li><a href="{% url 'admin:index' %}">Login</a></li>
+                    </ul>
+                </div>
+            </nav>
 
-            <div id="logo">
-                {% block logo %}
-                <ul>
-                    <a href="http://www.naturalis.nl"><img src="{% static 'orchid/images/Naturalis_logo.png' %}" width="100px"></a>
-                </ul>
-                {% endblock %}
-            </div>
-
-            <div id="content">
+            <main id="main" role="main">
+                <div class="content">
                 {% block content %}No content.{% endblock %}
-            </div>
+                </div>
 
-            <div id="footer">
-                {% block footer %}
-                <p>Copyright 2013-2014 Naturalis Biodiversity Center</p>
-                {% endblock %}
-            </div>
-
+                <footer class="footer">
+                    {% block footer %}
+                    <p>Copyright 2013-2014 Naturalis Biodiversity Center</p>
+                    {% endblock %}
+                </footer>
+            </main>
         </div>
 
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
