@@ -6,15 +6,33 @@
 <h2>Results</h2>
 
 {% if classification %}
-<p>This photo has been classified as:</p>
-    <ul>
-    {% for rank, taxon in classification %}
-        <li>{{ rank }}: {{ taxon }}</li>
-    {% endfor %}
-    </ul>
+    <p>The following classifications were found for your photo:</p>
+
+    <table class="pure-table pure-table-horizontal">
+    <thead>
+        <tr>
+            <th>MSE</th>
+            <th>Genus</th>
+            <th>Section</th>
+            <th>Species</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for class in classification %}
+        <tr>
+            <td>{{ class.error }}</td>
+            <td>{{ class.genus }}</td>
+            <td>{{ class.section }}</td>
+            <td>{{ class.species }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    </table>
 {% else %}
     <p>Sorry, the photo could not be classified.</p>
 {% endif %}
 
-<a href="{{ photo.photo.url }}"><img src="{{ photo.photo.url }}" class="pure-img"></a>
+<p>
+    <a href="{{ photo.photo.url }}"><img src="{{ photo.photo.url }}" class="pure-img"></a>
+</p>
 {% endblock %}

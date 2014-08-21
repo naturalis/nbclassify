@@ -44,6 +44,9 @@ def result(request, photo_id):
     data['photo'] = photo
 
     # TODO: Get the classification from the database.
-    data['classification'] = []
+    data['classification'] = [
+        {'genus':'Paphiopedilum', 'section':'Cochlopetalum', 'species':'liemianum', 'error':0.0001},
+        {'genus':'Paphiopedilum', 'section':'Cochlopetalum', 'species':'primulinum', 'error':0.0002},
+    ]
 
     return render_to_response("orchid/result.html", data)

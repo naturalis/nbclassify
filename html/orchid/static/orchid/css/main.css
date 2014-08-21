@@ -114,7 +114,7 @@ main {
 }
 
 main .content {
-    padding: 2em;
+    padding-top: 0.1em;
 }
 
 footer {
@@ -153,10 +153,16 @@ h2 {
 }
 
 .button-nbc {
-    background-color: #E3004D;
+    background-color: #E3004D !important;
     border-radius: 4px;
     -moz-border-radius: 4px;
     -webkit-border-radius: 4px;
+}
+
+.content img {
+    border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
 }
 
 /* Override some Pure styles */
