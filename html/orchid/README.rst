@@ -1,9 +1,9 @@
 =================
-NBClassify Orchid
+NBClassify OrchiD
 =================
 
-Orchid is a proof-of-concept Django app for classifying digital images of
-orchids. It is part of the NBClassify Python package for automated
+OrchiD is a proof-of-concept Django app for classifying digital images of
+orchids. It implements the "nbclassify" Python package for automated
 classification of images using artificial neural networks.
 
 Quick start
@@ -35,7 +35,7 @@ Deploying on Apache with mod_wsgi
 
 This setup assumes you have Apache 2.4.
 
-1. Make sure that `mod_wsgi` is enabled::
+1. Make sure that mod_wsgi is enabled::
 
       sudo apt-get install libapache2-mod-wsgi
       sudo a2enmod wsgi
