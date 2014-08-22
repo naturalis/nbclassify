@@ -118,9 +118,27 @@ main .content {
 }
 
 footer {
+    color: #4D4D4D;
+    text-align: center;
     border-top: 1px solid #EEEEEE;
     font-size: 90%;
+    line-height: 1.1;
     padding: 1em;
+}
+
+footer a {
+    border-bottom: 1px dotted #6E5E40;
+    text-decoration: none;
+}
+
+footer a,
+footer a:hover,
+footer a:visited {
+    color: #6E5E40;
+}
+
+footer a:hover {
+    border-bottom: 1px solid #6E5E40;
 }
 
 form label {
@@ -167,6 +185,12 @@ h2 {
 
 .italic {
     font-style: italic;
+}
+
+/* Override some Font Awesome styles */
+
+.fa-li {
+    top: 0.3em;
 }
 
 /* Override some Pure styles */

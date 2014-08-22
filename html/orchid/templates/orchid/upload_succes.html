@@ -5,9 +5,9 @@
 {% block content %}
 <h2>Photo Uploaded</h2>
 
-<p>The photo was uploaded. Click "Classify Photo" to classify this photo.</p>
+<p>The photo was uploaded. Click "Identify Photo" to identify this photo.</p>
 
-<p><a class="pure-button pure-button-primary button-nbc" href="{% url 'orchid:classify' photo.id %}">Classify Photo</a></p>
+<p><a class="pure-button pure-button-primary button-nbc" href="{% url 'orchid:classify' photo.id %}"><i class="fa fa-search fa-fw"></i> Identify Photo</a></p>
 
 <p>
     <img src="{{ photo.photo.url }}" class="pure-img">

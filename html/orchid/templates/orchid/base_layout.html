@@ -11,6 +11,7 @@
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans:700,400,300" media="all">
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css">
         <link rel="stylesheet" href="{% static 'orchid/css/normalize.css' %}">
         <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.5.0/pure-min.css">
         <link rel="stylesheet" href="{% static 'orchid/css/side-menu.css' %}">
@@ -28,9 +29,9 @@
             </a>
             <nav id="menu" role="navigation">
                 <div class="pure-menu pure-menu-open">
-                    <a class="pure-menu-heading">OrchiD</a>
+                    <a class="pure-menu-heading">OrchiD <i class="fa fa-leaf"></i></a>
                     <ul>
-                        <li><a href="{% url 'orchid:home' %}">Home</a></li>
+                        <li><a href="{% url 'orchid:home' %}">Identify Photo</a></li>
                         <li class="pure-menu-heading">Admin</li>
                         <li><a href="{% url 'admin:index' %}">Login</a></li>
                     </ul>
@@ -42,9 +43,10 @@
                 {% block content %}No content.{% endblock %}
                 </div>
 
-                <footer class="footer">
+                <footer id="footer">
                     {% block footer %}
-                    <p>Copyright 2013-2014 Naturalis Biodiversity Center</p>
+                    <p>By <a href="http://www.naturalis.nl/">Naturalis Biodiversity Center</a></p>
+                    <p><a href="https://github.com/naturalis/img-classify">GitHub Project</a></p>
                     {% endblock %}
                 </footer>
             </main>
