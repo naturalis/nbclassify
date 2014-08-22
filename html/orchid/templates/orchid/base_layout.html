@@ -32,8 +32,6 @@
                     <a class="pure-menu-heading">OrchiD <i class="fa fa-leaf"></i></a>
                     <ul>
                         <li><a href="{% url 'orchid:home' %}">Identify Photo</a></li>
-                        <li class="pure-menu-heading">Admin</li>
-                        <li><a href="{% url 'admin:index' %}">Login</a></li>
                     </ul>
                 </div>
             </nav>
@@ -46,7 +44,7 @@
                 <footer id="footer">
                     {% block footer %}
                     <p>By <a href="http://www.naturalis.nl/">Naturalis Biodiversity Center</a></p>
-                    <p><a href="https://github.com/naturalis/img-classify">GitHub Project</a></p>
+                    <p><a href="https://github.com/naturalis/img-classify">GitHub Project</a> · <a href="{% url 'admin:index' %}">Admin</a></p>
                     {% endblock %}
                 </footer>
             </main>
