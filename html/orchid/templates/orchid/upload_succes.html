@@ -7,9 +7,9 @@
 
 <p>The photo was uploaded. Click "Identify Photo" to identify this photo.</p>
 
-<p><a class="pure-button pure-button-primary button-nbc" href="{% url 'orchid:classify' photo.id %}"><i class="fa fa-search fa-fw"></i> Identify Photo</a></p>
+<p><a class="pure-button pure-button-primary nbc" href="{% url 'orchid:classify' photo.id %}"><i class="fa fa-search fa-fw"></i> Identify Photo</a></p>
 
 <p>
-    <img src="{{ photo.photo.url }}" class="pure-img">
+    <img src="{{ photo.photo.url }}" class="img-responsive img-rounded" alt="Photo">
 </p>
 {% endblock %}

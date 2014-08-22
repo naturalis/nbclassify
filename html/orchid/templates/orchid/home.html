@@ -15,12 +15,14 @@
 </ul>
 
 {% if error_message %}
-    <div class="message error"><i class="fa fa-exclamation-circle fa-fw"></i> {{error_message}}</div>
+    <div class="message"><i class="fa fa-exclamation-circle fa-fw"></i> {{error_message}}</div>
 {% endif %}
 
-<form action="{% url 'orchid:home' %}" method="post" enctype="multipart/form-data" class="pure-form">
+<form action="{% url 'orchid:home' %}" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    {{form}}
-    <p><button type="submit" class="pure-button pure-button-primary button-nbc"><i class="fa fa-upload fa-fw"></i> Upload Photo</button></p>
+    <div class="form-group">
+        {{form}}
+    </div>
+    <button type="submit" class="pure-button pure-button-primary nbc"><i class="fa fa-upload fa-fw"></i> Upload Photo</button>
 </form>
 {% endblock %}

@@ -118,7 +118,7 @@ main .content {
 }
 
 footer {
-    color: #4D4D4D;
+    color: #999;
     text-align: center;
     border-top: 1px solid #EEEEEE;
     font-size: 90%;
@@ -126,23 +126,29 @@ footer {
     padding: 1em;
 }
 
-footer a {
-    border-bottom: 1px dotted #6E5E40;
-    text-decoration: none;
-}
-
 footer a,
 footer a:hover,
 footer a:visited {
     color: #6E5E40;
+    text-decoration: none;
 }
-
+footer a {
+    border-bottom: 1px dotted #7F7A80;
+}
 footer a:hover {
     border-bottom: 1px solid #6E5E40;
 }
 
-form label {
-    margin-right: 0.5em;
+footer .links {
+    margin-top: 20px;
+    padding-left: 0;
+}
+footer .links li:first-child {
+    padding-left: 0;
+}
+footer .links li {
+    display: inline;
+    padding: 0 2px;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -167,24 +173,22 @@ h2 {
     margin: 1em 0;
     padding: 0.5em;
 }
-.message.error {
-}
 
-.button-nbc {
+.pure-button.nbc {
     background-color: #E3004D !important;
     border-radius: 4px;
     -moz-border-radius: 4px;
     -webkit-border-radius: 4px;
 }
 
-.content img {
-    border-radius: 5px;
-    -moz-border-radius: 5px;
-    -webkit-border-radius: 5px;
+/* Override some Bootstrap styles */
+
+a:hover, a:focus {
+    text-decoration: none;
 }
 
-.italic {
-    font-style: italic;
+#menuLink {
+    box-sizing: content-box;
 }
 
 /* Override some Font Awesome styles */
@@ -196,12 +200,7 @@ h2 {
 /* Override some Pure styles */
 
 .pure-menu .pure-menu-heading {
-    border-bottom: none;
     text-transform: none;
-}
-
-.pure-form label {
-    margin: 0.5em 0.5em 0.2em;
 }
 
 /* ==========================================================================

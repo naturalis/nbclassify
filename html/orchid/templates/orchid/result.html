@@ -8,31 +8,33 @@
 {% if identities %}
     <p>There w{{ identities|pluralize:"as,ere" }}  {{ identities|length }} classification{{ identities|pluralize }} made for your photo:</p>
 
-    <table class="pure-table pure-table-horizontal">
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>Genus</th>
-            <th>Section</th>
-            <th>Species</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for id in identities %}
-        <tr>
-            <td>{{ forloop.counter }}</td>
-            <td class="italic">{{ id.genus }}</td>
-            <td class="italic">{% firstof id.section "&mdash;" %}</td>
-            <td class="italic">{% firstof id.species "&mdash;" %}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Genus</th>
+                <th>Section</th>
+                <th>Species</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for id in identities %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><em>{{ id.genus }}</em></td>
+                <td><em>{% firstof id.section "&mdash;" %}</em></td>
+                <td><em>{% firstof id.species "&mdash;" %}</em></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+      </table>
+    </div>
 {% else %}
     <p>Sorry, the photo could not be classified.</p>
 {% endif %}
 
 <p>
-    <img src="{{ photo.photo.url }}" class="pure-img">
+    <img src="{{ photo.photo.url }}" class="img-responsive img-rounded" alt="Photo">
 </p>
 {% endblock %}
