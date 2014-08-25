@@ -5,5 +5,5 @@ from orchid import views
 urlpatterns = patterns('',
     url(r'^$', views.home, name='home'),
     url(r'^result/(?P<photo_id>\d+)/$', views.result, name='result'),
-    url(r'^classify/(?P<photo_id>\d+)/$', views.classify, name='classify'),
+    url(r'^identify/(?P<photo_id>\d+)/$', views.identify_ajax, name='identify'),
 )

@@ -1,0 +1,20 @@
+{% extends "orchid/base_layout.html" %}
+
+{% block title %}Identify Photo | OrchiD{% endblock %}
+
+{% block content %}
+<h2>Identify Photo</h2>
+
+<p>Click "Identify Photo" to identify this photo.</p>
+
+<form action="{% url 'orchid:identify' photo.id %}" method="post" id="identify_form">
+    {% csrf_token %}
+    <button type="submit" class="pure-button pure-button-primary nbc"><i class="fa fa-search fa-fw"></i> Identify Photo</button>
+</form>
+
+<div id="identity"></div>
+
+<p>
+    <img src="{{ photo.photo.url }}" class="img-responsive img-rounded" alt="Photo">
+</p>
+{% endblock %}

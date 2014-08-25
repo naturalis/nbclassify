@@ -1,10 +1,3 @@
-{% extends "orchid/base_layout.html" %}
-
-{% block title %}Classification | OrchiD{% endblock %}
-
-{% block content %}
-<h2>Classification</h2>
-
 {% if identities %}
     <p>There w{{ identities|pluralize:"as,ere" }}  {{ identities|length }} classification{{ identities|pluralize }} made for your photo:</p>
 
@@ -35,8 +28,3 @@
 {% else %}
     <p>Sorry, the photo could not be classified.</p>
 {% endif %}
-
-<p>
-    <img src="{{ photo.photo.url }}" class="img-responsive img-rounded" alt="Photo">
-</p>
-{% endblock %}
