@@ -12,7 +12,9 @@
     <button type="submit" class="pure-button pure-button-primary nbc"><i class="fa fa-search fa-fw"></i> Identify Photo</button>
 </form>
 
-<div id="identity"></div>
+<p>
+    <div id="identity"></div>
+</p>
 
 <p>
     <img src="{{ photo.photo.url }}" class="img-responsive img-rounded" alt="Photo">
@@ -23,7 +25,7 @@
 <script>
 jQuery( document ).ready(function( $ ) {
     $('#identify_form button').click(function(event) {
-        $("#identity").html('<div class="message"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
+        $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
         $("#identify_form").ajaxForm({
             target: '#identity'
         }).submit();

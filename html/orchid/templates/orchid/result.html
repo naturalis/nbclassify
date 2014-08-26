@@ -5,7 +5,9 @@
 {% block content %}
 <h2>Photo Identity</h2>
 
-<div id="identity"></div>
+<p>
+    <div id="identity"></div>
+</p>
 
 <p>
     <img src="{{ photo.photo.url }}" class="img-responsive img-rounded" alt="Photo">
@@ -14,7 +16,7 @@
 {% block scripts %}
 <script>
 jQuery( document ).ready(function( $ ) {
-    $("#identity").html('<div class="message"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
+    $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
     $.ajax({
         url: "{% url 'orchid:identify' photo.id %}",
         dataType: "html"

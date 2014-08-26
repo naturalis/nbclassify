@@ -164,16 +164,6 @@ h2 {
     margin-top: 0.8em;
 }
 
-.message {
-    background-color: #F7E9A8;
-    border: 0 none rgba(0, 0, 0, 0);
-    border-radius: 4px;
-    -moz-border-radius: 4px;
-    -webkit-border-radius: 4px;
-    margin: 1em 0;
-    padding: 0.5em;
-}
-
 .pure-button.nbc {
     background-color: #E3004D !important;
     border-radius: 4px;

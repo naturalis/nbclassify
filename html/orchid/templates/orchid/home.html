@@ -15,7 +15,7 @@
 </ul>
 
 {% if error_message %}
-    <div class="message"><i class="fa fa-exclamation-circle fa-fw"></i> {{error_message}}</div>
+    <div class="alert alert-warning" role="alert"><i class="fa fa-exclamation-circle fa-fw"></i> {{error_message}}</div>
 {% endif %}
 
 <form action="{% url 'orchid:home' %}" method="post" enctype="multipart/form-data">
