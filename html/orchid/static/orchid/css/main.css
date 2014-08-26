@@ -140,7 +140,6 @@ footer a:hover {
 }
 
 footer .links {
-    margin-top: 20px;
     padding-left: 0;
 }
 footer .links li:first-child {
@@ -148,6 +147,7 @@ footer .links li:first-child {
 }
 footer .links li {
     display: inline;
+    line-height: 1.7rem;
     padding: 0 2px;
 }
 

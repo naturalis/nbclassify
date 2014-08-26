@@ -9,7 +9,7 @@
                 <th>Genus</th>
                 <th>Section</th>
                 <th>Species</th>
-                <th>MSE</th>
+                <th><abbr title="Mean Square Error">MSE</abbr></th>
             </tr>
         </thead>
         <tbody>
@@ -19,7 +19,7 @@
                 <td><em>{{ id.genus }}</em></td>
                 <td><em>{% firstof id.section "&mdash;" %}</em></td>
                 <td><em>{% firstof id.species "&mdash;" %}</em></td>
-                <td><em>{{ id.error }}</em></td>
+                <td>{{ id.error }}</td>
             </tr>
             {% endfor %}
         </tbody>
