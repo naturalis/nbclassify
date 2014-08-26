@@ -16,7 +16,7 @@
 
 {% block scripts %}
 <script>
-jQuery( document ).ready(function( $ ) {
+jQuery(function( $ ) {
     $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
     $.ajax({
         url: "{% url 'orchid:identify' photo.id %}",

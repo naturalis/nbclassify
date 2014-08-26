@@ -5,10 +5,13 @@
 {% block content %}
 <h2>Identify Photo</h2>
 
-<p>Click "Identify Photo" to identify this photo.</p>
+<p>Select the flower in the photo below. Make sure there's only one flower
+in the selection and keep at least a 10 pixel border around the flower's
+contours. Then click "Identify Photo" to identify the flower.</p>
 
 <form action="{% url 'orchid:identify' photo.id %}" method="post" id="identify_form">
     {% csrf_token %}
+    <input type="hidden" id="cropped" name="cropped" value="">
     <button type="submit" class="pure-button pure-button-primary nbc"><i class="fa fa-search fa-fw"></i> Identify Photo</button>
 </form>
 
@@ -17,13 +20,30 @@
 </p>
 
 <p>
-    <img src="{{ photo.photo.url }}" class="img-responsive img-rounded" alt="Photo">
+    <img src="{{ photo.photo.url }}" id="photo" class="img-responsive img-rounded" alt="Photo">
 </p>
 {% endblock %}
 
 {% block scripts %}
 <script>
-jQuery( document ).ready(function( $ ) {
+jQuery(function( $ ) {
+    // Initialize Jcrop.
+    $('#photo').Jcrop({
+        onSelect: setCoords,
+        onRelease: clearCoords
+    });
+
+    /* Set the Jcrop coordinates in the form. */
+    function setCoords(c) {
+        $('#cropped').val(c.y+':'+c.y2+','+c.x+':'+c.x2);
+    };
+
+    /* Clear the Jcrop coordinates in the form. */
+    function clearCoords() {
+        $('#cropped').val('');
+    };
+
+    // Identify Photo button.
     $('#identify_form button').click(function(event) {
         $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
 
