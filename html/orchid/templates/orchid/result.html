@@ -10,13 +10,17 @@
 </p>
 
 <p>
-    <img src="{{ photo.photo.url }}" class="img-responsive img-rounded" alt="Photo">
+    <img src="{{ photo.photo.url }}" id="photo" class="img-responsive img-rounded" alt="Photo">
 </p>
 {% endblock %}
 
 {% block scripts %}
 <script>
 jQuery(function( $ ) {
+    var jcrop_api;
+    var roi;
+
+    // Load the photo identities.
     $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
     $.ajax({
         url: "{% url 'orchid:identify' photo.id %}",
@@ -29,9 +33,23 @@ jQuery(function( $ ) {
         $("a[data-toggle='popover']")
             .popover({html: true, trigger: 'focus'})
             .click(function(event) {
+                // Force focus so that the 'focus' event is triggered.
+                $(this).focus();
                 return false;
             });
     });
+
+    {% if roi %}
+    // Display the ROI on the photo if any.
+    $('#photo').Jcrop({
+            trueSize: [{{ photo.photo.width }}, {{ photo.photo.height }}]
+        },
+        function() {
+            jcrop_api = this;
+        }
+    );
+    jcrop_api.setSelect([{{roi.x}},{{roi.y}},{{roi.x2}},{{roi.y2}}]);
+    {% endif %}
 });
 </script>
 {% endblock %}

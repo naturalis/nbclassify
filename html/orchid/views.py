@@ -2,7 +2,7 @@ import os
 
 import nbclassify as nbc
 
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, Http404
 from django.core.urlresolvers import reverse
 from django.shortcuts import render_to_response, get_object_or_404
 from django.core.context_processors import csrf
@@ -43,9 +43,26 @@ def identify_ajax(request, photo_id):
     ids = photo.identity_set.all()
 
     if not ids:
+        if request.method != 'POST':
+            raise Http404
+
+        # Get the region of interest if it was set.
+        roi = request.POST['roi']
+        if roi:
+            # Set the ROI for the photo.
+            photo.roi = roi
+            photo.save()
+
+            # Convert to integer list.
+            roi = roi.split(',')
+            roi = [int(x) for x in roi]
+        else:
+            roi = None
+
         # Classify the photo.
         config = open_yaml(ORCHID_CONF)
         classifier = ImageClassifier(config, TAXA_DB)
+        classifier.set_roi(roi)
         classes = classify_image(classifier, photo.photo.path, ANN_DIR)
 
         # Identify this photo.
@@ -67,39 +84,6 @@ def identify_ajax(request, photo_id):
     ids = photo.identity_set.all()
     data = {'identities': ids}
     return render_to_response("orchid/result_ajax.html", data)
-
-def identify(request, photo_id):
-    """Classify photo with ID `photo_id`.
-
-    Each classification is saved as an Identity object in the database.
-    Redirect to the result page when classfication has finished.
-    """
-    photo = get_object_or_404(Photo, pk=photo_id)
-    ids = photo.identity_set.all()
-
-    if not ids:
-        # Classify the photo.
-        config = open_yaml(ORCHID_CONF)
-        classifier = ImageClassifier(config, TAXA_DB)
-        classes = classify_image(classifier, photo.photo.path, ANN_DIR)
-
-        # Create identities for this photo.
-        for c in classes:
-            if not c.get('genus'):
-                continue
-
-            id_ = Identity(
-                photo=photo,
-                genus=c.get('genus'),
-                section=c.get('section'),
-                species=c.get('species'),
-                error=c.get('error')
-            )
-
-            # Save the identity into the database.
-            id_.save()
-
-    return HttpResponseRedirect(reverse('orchid:result', args=(photo.id,)))
 
 def classify_image(classifier, image_path, ann_dir):
     """Classify an image using a classfication hierarchy,
@@ -143,6 +127,12 @@ def result(request, photo_id):
     data = {}
     data.update(csrf(request))
     data['photo'] = photo
+    data['roi'] = None
+
+    # Get the ROI.
+    if photo.roi:
+        y,y2,x,x2 = photo.roi.split(",")
+        data['roi'] = {'y':y, 'y2':y2, 'x':x, 'x2':x2}
 
     # Get the identities from the database.
     data['identities'] = photo.identity_set.all()

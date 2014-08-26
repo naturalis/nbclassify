@@ -7,6 +7,7 @@ from django.dispatch.dispatcher import receiver
 class Photo(models.Model):
     """Model for uploaded photos."""
     photo = models.ImageField(upload_to='orchid/uploads')
+    roi = models.CharField(max_length=30, null=True, blank=True)
 
     def __unicode__(self):
         return self.file_name()

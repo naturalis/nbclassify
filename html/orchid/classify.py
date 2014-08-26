@@ -53,6 +53,7 @@ class ImageClassifier(nbc.Common):
         self.set_db_path(db_path)
         self.error = 0.0001
         self.cache = {}
+        self.roi = None
 
         try:
             self.class_hr = self.config.classification.hierarchy
@@ -74,6 +75,22 @@ class ImageClassifier(nbc.Common):
         if not 0 < error < 1:
             raise ValueError("Error must be a value between 0 and 1" % error)
         self.error = error
+
+    def set_roi(self, roi):
+        """Set the region of interest for the image.
+
+        If a region of interest is set, only that region is used for image
+        processing. The ROI must be a ``(y,y2,x,x2)`` coordinates tuple.
+        """
+        if roi is None:
+            self.roi = roi
+            return
+        if roi and len(roi) != 4:
+            raise ValueError("ROI must be a list of four integers")
+        for x in roi:
+            if not isinstance(x, int):
+                raise ValueError("Found a non-integer in the ROI")
+        self.roi = roi
 
     def get_classification_hierarchy_levels(self):
         """Return the list of level names from the classification hierarchy."""
@@ -111,7 +128,7 @@ class ImageClassifier(nbc.Common):
             phenotype = self.cache[hash_]
         else:
             phenotyper = nbc.Phenotyper()
-            phenotyper.set_image(im_path)
+            phenotyper.set_image(im_path, self.roi)
             phenotyper.set_config(config)
             phenotype = phenotyper.make()
 

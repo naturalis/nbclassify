@@ -341,10 +341,23 @@ class Phenotyper(object):
         self.mask = None
         self.bin_mask = None
 
-    def set_image(self, path):
+    def set_image(self, path, roi=None):
+        """Load the image from path `path`.
+
+        If a region of interest `roi` was provided, only that region is used
+        for image processing. The ROI must be a ``(y,y2,x,x2)`` coordinates
+        tuple.
+        """
         self.img = cv2.imread(path)
         if self.img == None or self.img.size == 0:
             raise IOError("Failed to read image %s" % path)
+        if roi and len(roi) != 4:
+            raise ValueError("ROI must be a list of four integers")
+
+        # If a ROI was provided, use only that region.
+        if roi:
+            y, y2, x, x2 = roi
+            self.img = self.img[y:y2, x:x2]
 
         self.path = path
         self.config = None

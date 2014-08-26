@@ -6,12 +6,12 @@
 <h2>Identify Photo</h2>
 
 <p>Select the flower in the photo below. Make sure there's only one flower
-in the selection and keep at least a 10 pixel border around the flower's
-contours. Then click "Identify Photo" to identify the flower.</p>
+in the selection and keep at least a 5 pixel border around the flower's
+edges. Then click "Identify Photo" to identify the flower.</p>
 
 <form action="{% url 'orchid:identify' photo.id %}" method="post" id="identify_form">
     {% csrf_token %}
-    <input type="hidden" id="cropped" name="cropped" value="">
+    <input type="hidden" id="roi" name="roi" value="">
     <button type="submit" class="pure-button pure-button-primary nbc"><i class="fa fa-search fa-fw"></i> Identify Photo</button>
 </form>
 
@@ -29,18 +29,19 @@ contours. Then click "Identify Photo" to identify the flower.</p>
 jQuery(function( $ ) {
     // Initialize Jcrop.
     $('#photo').Jcrop({
-        onSelect: setCoords,
-        onRelease: clearCoords
+        onSelect: setROI,
+        onRelease: clearROI,
+        trueSize: [{{ photo.photo.width }}, {{ photo.photo.height }}]
     });
 
-    /* Set the Jcrop coordinates in the form. */
-    function setCoords(c) {
-        $('#cropped').val(c.y+':'+c.y2+','+c.x+':'+c.x2);
+    /* Set the region of interest. */
+    function setROI(c) {
+        $('#roi').val(parseInt(c.y)+','+parseInt(c.y2)+','+parseInt(c.x)+','+parseInt(c.x2));
     };
 
-    /* Clear the Jcrop coordinates in the form. */
-    function clearCoords() {
-        $('#cropped').val('');
+    /* Clear the region of interest. */
+    function clearROI() {
+        $('#roi').val('');
     };
 
     // Identify Photo button.
@@ -54,6 +55,8 @@ jQuery(function( $ ) {
                 $("a[data-toggle='popover']")
                     .popover({html: true, trigger: 'focus'})
                     .click(function(event) {
+                        // Force focus so that the 'focus' event is triggered.
+                        $(this).focus();
                         return false;
                     });
             }

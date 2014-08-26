@@ -7,3 +7,4 @@ class UploadPictureForm(forms.ModelForm):
 
     class Meta:
         model = Photo
+        exclude = ('roi',)
