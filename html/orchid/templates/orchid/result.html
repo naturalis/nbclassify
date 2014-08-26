@@ -1,12 +1,12 @@
 {% extends "orchid/base_layout.html" %}
 
-{% block title %}Classification | OrchiD{% endblock %}
+{% block title %}Photo Identity | OrchiD{% endblock %}
 
 {% block content %}
-<h2>Classification</h2>
+<h2>Photo Identity</h2>
 
 {% if identities %}
-    <p>There w{{ identities|pluralize:"as,ere" }}  {{ identities|length }} classification{{ identities|pluralize }} made for your photo:</p>
+    <p>There w{{ identities|pluralize:"as,ere" }}  {{ identities|length }} classification{{ identities|pluralize }} made for your photo. If the species was identified, you can click the species name to find the species on ThePlantList.org.</p>
 
     <div class="table-responsive">
       <table class="table">
@@ -24,9 +24,14 @@
             <tr>
                 <td>{{ forloop.counter }}</td>
                 <td><em>{{ id.genus }}</em></td>
-                <td><em>{% firstof id.section "&mdash;" %}</em></td>
-                <td><em>{% firstof id.species "&mdash;" %}</em></td>
-                <td>{{ id.error }}</td>
+                <td><em>{{ id.section|default:"&mdash;" }}</em></td>
+                <td><em>
+                    {% if id.genus and id.species %}
+                        <a href="http://www.theplantlist.org/tpl1.1/search?q={{ id.genus }}+{{ id.species }}"><abbr title="{{ id.genus }} {{ id.species }}">{{ id.genus|first }}. {{ id.species }}</abbr></a>
+                    {% else %}
+                        &mdash;
+                    {% endif %}</em></td>
+                <td>{{ id.error|stringformat:"e" }}</td>
             </tr>
             {% endfor %}
         </tbody>
