@@ -35,15 +35,4 @@ jQuery( document ).ready(function( $ ) {
         };
 
     }(document));
-
-    // Identify Photo button.
-    $('#identify_form button').click(function(event) {
-        $("#identity").html('<div class="message"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
-        $("#identify_form").ajaxForm({
-            target: '#identity'
-        }).submit();
-
-        // Cancel the default submit action.
-        event.preventDefault();
-    });
 });
