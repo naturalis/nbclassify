@@ -20,7 +20,7 @@
                 <td><em>{{ id.section|default:"&mdash;" }}</em></td>
                 <td><em>
                     {% if id.genus and id.species %}
-                        <a href="http://www.theplantlist.org/tpl1.1/search?q={{ id.genus }}+{{ id.species }}"><abbr title="{{ id.genus }} {{ id.species }}">{{ id.genus|first }}. {{ id.species }}</abbr></a>
+                        <a class="popover-link" href="#" data-container="body" data-toggle="popover" data-placement="bottom" data-content="View <em>{{ id.genus }} {{ id.species }}</em> on <a href='http://www.theplantlist.org/tpl1.1/search?q={{ id.genus }}+{{ id.species }}'>ThePlantList.org</a>"><abbr title="{{ id.genus }} {{ id.species }}">{{ id.genus|first }}. {{ id.species }}</abbr></a>
                     {% else %}
                         &mdash;
                     {% endif %}</em></td>
