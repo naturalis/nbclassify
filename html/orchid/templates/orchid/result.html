@@ -5,43 +5,24 @@
 {% block content %}
 <h2>Photo Identity</h2>
 
-{% if identities %}
-    <p>There w{{ identities|pluralize:"as,ere" }}  {{ identities|length }} classification{{ identities|pluralize }} made for your photo. If the species was identified, you can click the species name to find the species on ThePlantList.org.</p>
-
-    <div class="table-responsive">
-      <table class="table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Genus</th>
-                <th>Section</th>
-                <th>Species</th>
-                <th><abbr title="Mean Square Error">MSE</abbr></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for id in identities %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td><em>{{ id.genus }}</em></td>
-                <td><em>{{ id.section|default:"&mdash;" }}</em></td>
-                <td><em>
-                    {% if id.genus and id.species %}
-                        <a href="http://www.theplantlist.org/tpl1.1/search?q={{ id.genus }}+{{ id.species }}"><abbr title="{{ id.genus }} {{ id.species }}">{{ id.genus|first }}. {{ id.species }}</abbr></a>
-                    {% else %}
-                        &mdash;
-                    {% endif %}</em></td>
-                <td>{{ id.error|stringformat:"e" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-      </table>
-    </div>
-{% else %}
-    <p>Sorry, the photo could not be classified.</p>
-{% endif %}
+<div id="identity"></div>
 
 <p>
     <img src="{{ photo.photo.url }}" class="img-responsive img-rounded" alt="Photo">
 </p>
+
+{% block scripts %}
+<script>
+jQuery( document ).ready(function( $ ) {
+    $("#identity").html('<div class="message"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
+    $.ajax({
+        url: "{% url 'orchid:identify' photo.id %}",
+        dataType: "html"
+    }).done(function(data) {
+        $("#identity").html(data);
+    });
+});
+</script>
+{% endblock %}
+
 {% endblock %}

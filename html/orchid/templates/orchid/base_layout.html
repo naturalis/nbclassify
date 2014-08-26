@@ -62,5 +62,6 @@
         <script>window.jQuery || document.write('<script src="{% static "orchid/js/vendor/jquery-1.10.2.min.js" %}"><\/script>')</script>
         <script src="{% static 'orchid/js/plugins.js' %}"></script>
         <script src="{% static 'orchid/js/main.js' %}"></script>
+        {% block scripts %}{% endblock %}
     </body>
 </html>
