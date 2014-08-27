@@ -18,7 +18,6 @@
 <script>
 jQuery(function( $ ) {
     var jcrop_api;
-    var roi;
 
     // Load the photo identities.
     $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
@@ -30,13 +29,10 @@ jQuery(function( $ ) {
         $("#identity").html(data);
 
         // Initialize Bootstrap Popovers.
-        $("a[data-toggle='popover']")
-            .popover({html: true, trigger: 'focus'})
-            .click(function(event) {
-                // Force focus so that the 'focus' event is triggered.
-                $(this).focus();
-                return false;
-            });
+        $("button[data-toggle='popover']").popover({
+            html: true,
+            trigger: 'focus'
+        });
     });
 
     {% if roi %}

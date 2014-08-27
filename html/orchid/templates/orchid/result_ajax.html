@@ -18,12 +18,13 @@
                 <td>{{ forloop.counter }}</td>
                 <td><em>{{ id.genus }}</em></td>
                 <td><em>{{ id.section|default:"&mdash;" }}</em></td>
-                <td><em>
+                <td>
                     {% if id.genus and id.species %}
-                        <a class="popover-link" href="#" data-container="body" data-toggle="popover" data-placement="bottom" data-content="View <em>{{ id.genus }} {{ id.species }}</em> on <a href='http://www.theplantlist.org/tpl1.1/search?q={{ id.genus }}+{{ id.species }}'>ThePlantList.org</a>"><abbr title="{{ id.genus }} {{ id.species }}">{{ id.genus|first }}. {{ id.species }}</abbr></a>
+                        <button class="btn btn-primary" data-container="body" data-toggle="popover" data-placement="bottom" data-content="View <em>{{ id.genus }} {{ id.species }}</em> on <a href='http://www.theplantlist.org/tpl1.1/search?q={{ id.genus }}+{{ id.species }}'>ThePlantList.org</a>"><em>{{ id.genus|first }}. {{ id.species }}</em></button>
                     {% else %}
                         &mdash;
-                    {% endif %}</em></td>
+                    {% endif %}
+                </td>
                 <td>{{ id.error|stringformat:"e" }}</td>
             </tr>
             {% endfor %}

@@ -52,13 +52,10 @@ jQuery(function( $ ) {
             target: '#identity',
             success: function() {
                 // Initialize Bootstrap Popovers.
-                $("a[data-toggle='popover']")
-                    .popover({html: true, trigger: 'focus'})
-                    .click(function(event) {
-                        // Force focus so that the 'focus' event is triggered.
-                        $(this).focus();
-                        return false;
-                    });
+                $("button[data-toggle='popover']").popover({
+                    html: true,
+                    trigger: 'focus'
+                });
             }
         }).submit();
 
