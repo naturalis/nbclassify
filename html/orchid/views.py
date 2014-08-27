@@ -157,7 +157,7 @@ def my_photos(request):
         pks = []
 
     # Get the photos that belong to this session.
-    for photo_id in pks:
+    for photo_id in sorted(pks, reverse=True):
         try:
             photo = Photo.objects.get(pk=photo_id)
             photos.append(photo)
