@@ -7,7 +7,7 @@ class IdentityInline(admin.TabularInline):
     extra = 0
 
 class PhotoAdmin(admin.ModelAdmin):
-    list_display = ('file_name',)
+    list_display = ('file_name','id')
     readonly_fields = ('image_tag',)
     inlines = [IdentityInline]
 

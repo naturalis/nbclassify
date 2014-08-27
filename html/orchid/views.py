@@ -25,6 +25,13 @@ def home(request):
 
         if form.is_valid():
             photo = form.save()
+
+            # Keep track of which photo belongs to which session.
+            try:
+                request.session['photos'] += [photo.id]
+            except:
+                request.session['photos'] = [photo.id]
+
             data['photo'] = photo
             return render_to_response("orchid/photo.html", data)
         else:
@@ -138,3 +145,27 @@ def result(request, photo_id):
     data['identities'] = photo.identity_set.all()
 
     return render_to_response("orchid/result.html", data)
+
+def my_photos(request):
+    """Display the photos that were identified in a session."""
+    data = {}
+    photos = []
+
+    try:
+        pks = request.session['photos']
+    except:
+        pks = []
+
+    # Get the photos that belong to this session.
+    for photo_id in pks:
+        try:
+            photo = Photo.objects.get(pk=photo_id)
+            photos.append(photo)
+        except (KeyError, Photo.DoesNotExist):
+            # We can't modify session values directly.
+            ids = request.session['photos']
+            ids.remove(photo_id)
+            request.session['photos'] = ids
+
+    data['photos'] = photos
+    return render_to_response("orchid/my_photos.html", data)

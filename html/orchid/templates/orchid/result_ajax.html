@@ -2,7 +2,7 @@
     <p>There w{{ identities|pluralize:"as,ere" }}  {{ identities|length }} classification{{ identities|pluralize }} made for your photo. If the species was identified, you can click the species name to find the species on ThePlantList.org.</p>
 
     <div class="table-responsive">
-      <table class="table">
+      <table class="table" id="id-result">
         <thead>
             <tr>
                 <th>#</th>
@@ -20,7 +20,7 @@
                 <td><em>{{ id.section|default:"&mdash;" }}</em></td>
                 <td>
                     {% if id.genus and id.species %}
-                        <button class="btn btn-primary" data-container="body" data-toggle="popover" data-placement="bottom" data-content="View <em>{{ id.genus }} {{ id.species }}</em> on <a href='http://www.theplantlist.org/tpl1.1/search?q={{ id.genus }}+{{ id.species }}'>ThePlantList.org</a>"><em>{{ id.genus|first }}. {{ id.species }}</em></button>
+                        <button class="btn btn-success" data-container="body" data-toggle="popover" data-placement="bottom" data-content="View <em>{{ id.genus }} {{ id.species }}</em> on <a href='http://www.theplantlist.org/tpl1.1/search?q={{ id.genus }}+{{ id.species }}'>ThePlantList.org</a>"><em>{{ id.genus|first }}. {{ id.species }}</em></button>
                     {% else %}
                         &mdash;
                     {% endif %}

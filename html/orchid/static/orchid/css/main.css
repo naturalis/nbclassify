@@ -177,7 +177,7 @@ a:hover, a:focus {
     text-decoration: none;
 }
 
-table .btn {
+#id-result .btn {
     font-size: 100%;
     line-height: normal;
     padding: 4px 12px;
@@ -185,6 +185,10 @@ table .btn {
 
 #menuLink {
     box-sizing: content-box;
+}
+
+#my-photos > div.row > div {
+    margin-bottom: 2rem;
 }
 
 /* Override some Font Awesome styles */
