@@ -1,4 +1,5 @@
 {% extends "orchid/base_layout.html" %}
+{% load thumbnail %}
 
 {% block title %}My Photos | OrchiD{% endblock %}
 
@@ -9,8 +10,14 @@
 <div class="container-fluid" id="my-photos">
     <div class="row">
     {% for photo in photos %}
-        <div class="col-sm-4"><a href="{% url 'orchid:result' photo.id %}"><img src="{{ photo.image.url }}" class="img-responsive img-rounded" alt="{{ photo.file_name }}"></a></div>
-        {% if forloop.counter|divisibleby:"3" %}
+        <div class="col-sm-3">
+            <a href="{% url 'orchid:result' photo.id %}">
+                {% thumbnail photo.image "200x200" crop="center" as im %}
+                <img src="{{ im.url }}" class="img-responsive img-rounded" alt="{{ photo.file_name }}">
+                {% endthumbnail %}
+            </a>
+        </div>
+        {% if forloop.counter|divisibleby:"4" %}
     </div>
     <div class="row">
         {% endif %}

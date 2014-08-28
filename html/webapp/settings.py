@@ -36,6 +36,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'sorl.thumbnail',
     'orchid',
 )
 
@@ -95,3 +96,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # configure these files to be served in both development and production.
 # Example: "http://media.example.com/"
 MEDIA_URL = "/media/"
+
+# A dictionary containing the settings for all caches to be used with Django.
+# https://docs.djangoproject.com/en/1.6/ref/settings/#caches
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211',
+    }
+}
