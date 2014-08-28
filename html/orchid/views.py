@@ -53,6 +53,10 @@ def identify(request, photo_id):
     classification is saved as an Identity object in the database, and the
     results are returned in HTML format.
     """
+    # Only allow identifying of own photos.
+    if not session_owns_photo(request, photo_id):
+        raise PermissionDenied
+
     photo = get_object_or_404(Photo, pk=photo_id)
     data = {}
     data.update(csrf(request))
@@ -114,6 +118,10 @@ def identify(request, photo_id):
 
 def photo_identity(request, photo_id):
     """Return the identification result for a photo."""
+    # Only allow viewing of own photos.
+    if not session_owns_photo(request, photo_id):
+        raise PermissionDenied
+
     photo = get_object_or_404(Photo, pk=photo_id)
     ids = photo.identity_set.all()
     data = {'identities': ids}
@@ -156,6 +164,10 @@ def classify_image(classifier, image_path, ann_dir):
 
 def photo(request, photo_id):
     """Display the photo with classification result."""
+    # Only allow viewing of own photos.
+    if not session_owns_photo(request, photo_id):
+        raise PermissionDenied
+
     photo = get_object_or_404(Photo, pk=photo_id)
 
     data = {}
@@ -175,18 +187,13 @@ def photo(request, photo_id):
 
 def delete_photo(request, photo_id):
     """Delete a photo and its related objects."""
+    # Only allow deletion of own photos.
+    if not session_owns_photo(request, photo_id):
+        raise PermissionDenied
+
     data = {}
     data.update(csrf(request))
     photo = get_object_or_404(Photo, pk=photo_id)
-
-    # Only allow deletion of own photos.
-    try:
-        my_photos = request.session['photos']
-    except:
-        my_photos = []
-
-    if int(photo_id) not in my_photos:
-        raise PermissionDenied
 
     if request.method == 'POST':
         # The user confirmed the deletion.
@@ -228,3 +235,13 @@ def my_photos(request):
 
     data['photos'] = photos
     return render(request, "orchid/my_photos.html", data)
+
+def session_owns_photo(request, photo_id):
+    """Test if the current session own photo with ID `photo_id`.
+
+    Returns True if the session owns the photo, False otherwise.
+    """
+    try:
+        return int(photo_id) in request.session['photos']
+    except:
+        return False
