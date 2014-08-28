@@ -11,7 +11,7 @@
     <div class="row">
     {% for photo in photos %}
         <div class="col-sm-3">
-            <a href="{% url 'orchid:result' photo.id %}">
+            <a href="{% url 'orchid:photo' photo.id %}">
                 {% thumbnail photo.image "200x200" crop="center" as im %}
                 <img src="{{ im.url }}" class="img-responsive img-rounded" alt="{{ photo.file_name }}">
                 {% endthumbnail %}

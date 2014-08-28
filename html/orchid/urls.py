@@ -4,7 +4,9 @@ from orchid import views
 
 urlpatterns = patterns('',
     url(r'^$', views.home, name='home'),
-    url(r'^result/(?P<photo_id>\d+)/$', views.result, name='result'),
-    url(r'^identify/(?P<photo_id>\d+)/$', views.identify_ajax, name='identify'),
+    url(r'^photo/(?P<photo_id>\d+)/$', views.photo, name='photo'),
+    url(r'^photo/(?P<photo_id>\d+)/identify/$', views.identify, name='identify'),
+    url(r'^photo/(?P<photo_id>\d+)/identity/$', views.photo_identity, name='identity'),
+    url(r'^photo/(?P<photo_id>\d+)/delete/$', views.delete_photo, name='delete_photo'),
     url(r'^library/$', views.my_photos, name='library'),
 )

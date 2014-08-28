@@ -1,14 +1,12 @@
 import os.path
 
-from sorl.thumbnail import ImageField
-
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch.dispatcher import receiver
 
 class Photo(models.Model):
     """Model for uploaded photos."""
-    image = ImageField(upload_to='orchid/uploads')
+    image = models.ImageField(upload_to='orchid/uploads')
     roi = models.CharField(max_length=30, null=True, blank=True)
 
     def __unicode__(self):
@@ -47,5 +45,5 @@ def photo_delete_hook(sender, instance, **kwargs):
     is removed from the Django Admin.
     """
     # Pass False so ImageField doesn't save the model.
-    if instance.photo:
-        instance.photo.delete(False)
+    if instance.image:
+        instance.image.delete(False)

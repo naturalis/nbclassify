@@ -1,19 +1,9 @@
 {% extends "orchid/base_layout.html" %}
 
-{% block title %}Identify Photo | OrchiD{% endblock %}
+{% block title %}Photo Identity | OrchiD{% endblock %}
 
 {% block content %}
-<h2>Identify Photo</h2>
-
-<p>Select the flower in the photo below. Make sure there's only one flower
-in the selection and keep at least a 5 pixel border around the flower's
-edges. Then click "Identify Photo" to identify the flower.</p>
-
-<form action="{% url 'orchid:identify' photo.id %}" method="post" id="identify_form">
-    {% csrf_token %}
-    <input type="hidden" id="roi" name="roi" value="">
-    <button type="submit" class="pure-button pure-button-primary nbc"><i class="fa fa-search fa-fw"></i> Identify Photo</button>
-</form>
+<h2>Photo Identity</h2>
 
 <p>
     <div id="identity"></div>
@@ -22,46 +12,44 @@ edges. Then click "Identify Photo" to identify the flower.</p>
 <p>
     <img src="{{ photo.image.url }}" id="photo" class="img-responsive img-rounded" alt="Photo">
 </p>
+
+<p>
+    </a><a href="{% url 'orchid:delete_photo' photo.id %}" class="btn btn-danger"><i class="fa fa-trash fa-fw"></i> Delete Photo</a>
+</p>
 {% endblock %}
 
 {% block scripts %}
 <script>
 jQuery(function( $ ) {
-    // Initialize Jcrop.
+    var jcrop_api;
+
+    // Load the photo identities.
+    $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
+    $.ajax({
+        url: "{% url 'orchid:identity' photo.id %}",
+        dataType: "html"
+    }).done(function(data) {
+        // Display the result.
+        $("#identity").html(data);
+
+        // Initialize Bootstrap Popovers.
+        $("button[data-toggle='popover']").popover({
+            html: true,
+            trigger: 'focus'
+        });
+    });
+
+    {% if roi %}
+    // Display the ROI on the photo if any.
     $('#photo').Jcrop({
-        onSelect: setROI,
-        onRelease: clearROI,
-        trueSize: [{{ photo.image.width }}, {{ photo.image.height }}]
-    });
-
-    /* Set the region of interest. */
-    function setROI(c) {
-        $('#roi').val(parseInt(c.y)+','+parseInt(c.y2)+','+parseInt(c.x)+','+parseInt(c.x2));
-    };
-
-    /* Clear the region of interest. */
-    function clearROI() {
-        $('#roi').val('');
-    };
-
-    // Identify Photo button.
-    $('#identify_form button').click(function(event) {
-        $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
-
-        $("#identify_form").ajaxForm({
-            target: '#identity',
-            success: function() {
-                // Initialize Bootstrap Popovers.
-                $("button[data-toggle='popover']").popover({
-                    html: true,
-                    trigger: 'focus'
-                });
-            }
-        }).submit();
-
-        // Prevent normal browser submit and page navigation.
-        return false;
-    });
+            trueSize: [{{ photo.image.width }}, {{ photo.image.height }}]
+        },
+        function() {
+            jcrop_api = this;
+        }
+    );
+    jcrop_api.setSelect([{{roi.x}},{{roi.y}},{{roi.x2}},{{roi.y2}}]);
+    {% endif %}
 });
 </script>
 {% endblock %}

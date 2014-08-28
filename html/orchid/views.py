@@ -1,10 +1,12 @@
 import os
+import json
 
 import nbclassify as nbc
 
-from django.http import HttpResponseRedirect, Http404
+from django.http import HttpResponse, HttpResponseRedirect
 from django.core.urlresolvers import reverse
-from django.shortcuts import render_to_response, get_object_or_404
+from django.core.exceptions import PermissionDenied
+from django.shortcuts import render, get_object_or_404
 from django.core.context_processors import csrf
 from django.conf import settings
 from orchid.forms import UploadPictureForm
@@ -32,35 +34,47 @@ def home(request):
             except:
                 request.session['photos'] = [photo.id]
 
-            data['photo'] = photo
-            return render_to_response("orchid/photo.html", data)
+            return HttpResponseRedirect(reverse('orchid:identify', args=(photo.id,)))
         else:
             data['error_message'] = "Please select a valid image file."
 
     data['form'] = UploadPictureForm()
-    return render_to_response("orchid/home.html", data)
+    return render(request, "orchid/home.html", data)
 
-def identify_ajax(request, photo_id):
-    """Classify photo with ID `photo_id`.
+def identify(request, photo_id):
+    """Photo upload confirmation page.
 
-    Each classification is saved as an Identity object in the database.
-    Return the identities as an HTML table.
+    Display the photo with ID `photo_id`, let the user select the region of
+    interest, if any, and display a button with which to start the
+    identification process.
+
+    If the Identify Photo button is pressed, this view is also loaded in the
+    background via an AJAX call. The photo is then classified, each
+    classification is saved as an Identity object in the database, and the
+    results are returned in HTML format.
     """
     photo = get_object_or_404(Photo, pk=photo_id)
-    ids = photo.identity_set.all()
+    data = {}
+    data.update(csrf(request))
 
-    if not ids:
-        if request.method != 'POST':
-            raise Http404
+    if request.method == 'POST':
+        # The Identify Photo button was pressed. Identify the photo and return
+        # the results in HTML format.
+
+        # Delete any existing identities, if any.
+        Identity.objects.filter(photo=photo).delete()
 
         # Get the region of interest if it was set.
-        roi = request.POST['roi']
+        try:
+            roi = request.POST['roi']
+        except:
+            roi = None
+
         if roi:
             # Set the ROI for the photo.
             photo.roi = roi
             photo.save()
 
-            # Convert to integer list.
             roi = roi.split(',')
             roi = [int(x) for x in roi]
         else:
@@ -88,9 +102,22 @@ def identify_ajax(request, photo_id):
             # Save the identity into the database.
             id_.save()
 
+        ids = photo.identity_set.all()
+        data = {'identities': ids}
+        return render(request, "orchid/result_ajax.html", data)
+    else:
+        # The Identify Photo button was not pressed. So let the user set the
+        # region of interest, if any, and then press that button to start
+        # identification.
+        data['photo'] = photo
+        return render(request, "orchid/identify.html", data)
+
+def photo_identity(request, photo_id):
+    """Return the identification result for a photo."""
+    photo = get_object_or_404(Photo, pk=photo_id)
     ids = photo.identity_set.all()
     data = {'identities': ids}
-    return render_to_response("orchid/result_ajax.html", data)
+    return render(request, "orchid/result_ajax.html", data)
 
 def classify_image(classifier, image_path, ann_dir):
     """Classify an image using a classfication hierarchy,
@@ -127,9 +154,9 @@ def classify_image(classifier, image_path, ann_dir):
 
     return classes
 
-def result(request, photo_id):
-    """Display the classification result for a photo with ID `photo_id`."""
-    photo = Photo.objects.get(pk=photo_id)
+def photo(request, photo_id):
+    """Display the photo with classification result."""
+    photo = get_object_or_404(Photo, pk=photo_id)
 
     data = {}
     data.update(csrf(request))
@@ -144,7 +171,39 @@ def result(request, photo_id):
     # Get the identities from the database.
     data['identities'] = photo.identity_set.all()
 
-    return render_to_response("orchid/result.html", data)
+    return render(request, "orchid/photo.html", data)
+
+def delete_photo(request, photo_id):
+    """Delete a photo and its related objects."""
+    data = {}
+    data.update(csrf(request))
+    photo = get_object_or_404(Photo, pk=photo_id)
+
+    # Only allow deletion of own photos.
+    try:
+        my_photos = request.session['photos']
+    except:
+        my_photos = []
+
+    if int(photo_id) not in my_photos:
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        # The user confirmed the deletion.
+
+        # Delete the photo. Because of the models.photo_delete_hook(), the actual
+        # image file will also be deleted.
+        photo.delete()
+
+        # Return the result.
+        return HttpResponse(json.dumps({'stat': 'success'}),
+            content_type="application/json")
+    else:
+        # The user did not confirmed the deletion.
+
+        # Display a confirmation page.
+        data['photo'] = photo
+        return render(request, "orchid/delete_photo.html", data)
 
 def my_photos(request):
     """Display the photos that were identified in a session."""
@@ -168,4 +227,4 @@ def my_photos(request):
             request.session['photos'] = ids
 
     data['photos'] = photos
-    return render_to_response("orchid/my_photos.html", data)
+    return render(request, "orchid/my_photos.html", data)
