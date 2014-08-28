@@ -10,7 +10,7 @@
 </p>
 
 <p>
-    <img src="{{ photo.photo.url }}" id="photo" class="img-responsive img-rounded" alt="Photo">
+    <img src="{{ photo.image.url }}" id="photo" class="img-responsive img-rounded" alt="Photo">
 </p>
 {% endblock %}
 
@@ -38,7 +38,7 @@ jQuery(function( $ ) {
     {% if roi %}
     // Display the ROI on the photo if any.
     $('#photo').Jcrop({
-            trueSize: [{{ photo.photo.width }}, {{ photo.photo.height }}]
+            trueSize: [{{ photo.image.width }}, {{ photo.image.height }}]
         },
         function() {
             jcrop_api = this;

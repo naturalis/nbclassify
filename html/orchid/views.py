@@ -70,7 +70,7 @@ def identify_ajax(request, photo_id):
         config = open_yaml(ORCHID_CONF)
         classifier = ImageClassifier(config, TAXA_DB)
         classifier.set_roi(roi)
-        classes = classify_image(classifier, photo.photo.path, ANN_DIR)
+        classes = classify_image(classifier, photo.image.path, ANN_DIR)
 
         # Identify this photo.
         for c in classes:

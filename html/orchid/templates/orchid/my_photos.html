@@ -9,7 +9,7 @@
 <div class="container-fluid" id="my-photos">
     <div class="row">
     {% for photo in photos %}
-        <div class="col-sm-4"><a href="{% url 'orchid:result' photo.id %}"><img src="{{ photo.photo.url }}" class="img-responsive img-rounded" alt="{{ photo.file_name }}"></a></div>
+        <div class="col-sm-4"><a href="{% url 'orchid:result' photo.id %}"><img src="{{ photo.image.url }}" class="img-responsive img-rounded" alt="{{ photo.file_name }}"></a></div>
         {% if forloop.counter|divisibleby:"3" %}
     </div>
     <div class="row">

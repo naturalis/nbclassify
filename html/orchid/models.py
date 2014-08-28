@@ -6,18 +6,18 @@ from django.dispatch.dispatcher import receiver
 
 class Photo(models.Model):
     """Model for uploaded photos."""
-    photo = models.ImageField(upload_to='orchid/uploads')
+    image = models.ImageField(upload_to='orchid/uploads')
     roi = models.CharField(max_length=30, null=True, blank=True)
 
     def __unicode__(self):
         return self.file_name()
 
     def file_name(self):
-        return os.path.basename(self.photo.name)
+        return os.path.basename(self.image.name)
 
     def image_tag(self):
-        if self.photo:
-            return u'<img src="%s" width="250px" />' % (self.photo.url)
+        if self.image:
+            return u'<img src="%s" width="250px" />' % (self.image.url)
         else:
             return "(No photo)"
     image_tag.short_description = 'Thumbnail'
