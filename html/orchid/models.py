@@ -1,12 +1,14 @@
 import os.path
 
+from sorl.thumbnail import ImageField
+
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch.dispatcher import receiver
 
 class Photo(models.Model):
     """Model for uploaded photos."""
-    image = models.ImageField(upload_to='orchid/uploads')
+    image = ImageField(upload_to='orchid/uploads')
     roi = models.CharField(max_length=30, null=True, blank=True)
 
     def __unicode__(self):
