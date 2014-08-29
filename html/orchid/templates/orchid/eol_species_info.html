@@ -1,0 +1,39 @@
+{% if scientificName %}
+    <div class="panel panel-default">
+        <div class="panel-heading"><em>{{ canonicalName }}</em> at the <a href="http://eol.org/{{ identifier }}">Encyclopedia of Life</a></div>
+        <div class="panel-body">
+            <div class="container-fluid">
+                <div class="row">
+                {% for object in dataObjects %}
+                    {% if "StillImage" in object.dataType %}
+                    <div class="col-xs-4">
+                        <img src="{{ object.eolThumbnailURL }}" alt="{{ object.title }}" class="img-responsive img-rounded">
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                </div>
+            </div>
+
+            {% for object in dataObjects %}
+                {% if object.title == "IUCNConservationStatus" %}
+                <p>
+                    <div class="alert alert-danger" role="alert">IUCN threat status: <a href="{{ object.source }}" class="alert-link">{{ object.description }}</a></div>
+                </p>
+                {% endif %}
+            {% endfor %}
+
+            {% autoescape off %}
+            {% for object in dataObjects %}
+                {% if "Text" in object.dataType and object.title != "IUCNConservationStatus" and object.vettedStatus != "Unreviewed" %}
+                    <h3>{{ object.title }}</h2>
+                    <p>{{ object.description }}</p>
+                {% endif %}
+            {% endfor %}
+            {% endautoescape %}
+        </div>
+    </div>
+{% else %}
+    <p>
+        <div class="alert alert-info" role="alert">This species was not found on the Encyclopedia of Life.</div>
+    </p>
+{% endif %}

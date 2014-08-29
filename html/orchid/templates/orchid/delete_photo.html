@@ -3,13 +3,14 @@
 {% block title %}Delete Photo | OrchiD{% endblock %}
 
 {% block content %}
-<h2>Delete Photo</h2>
+<h1>Delete Photo</h1>
 
 <p>You are about to delete the following photo from our server. Are you sure?</p>
 
 <form action="{% url 'orchid:delete_photo' photo.id %}" method="post" id="delete_photo_form">
     {% csrf_token %}
     <button type="submit" class="btn btn-danger"><i class="fa fa-trash fa-fw"></i> Yes, I'm sure</button>
+    <a href="{% url 'orchid:photo' photo.id %}" class="btn btn-default">No, keep it</a>
 </form>
 
 <p>

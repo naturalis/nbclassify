@@ -1,9 +1,10 @@
 import os
 import json
+import urllib2
 
 import nbclassify as nbc
 
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.core.urlresolvers import reverse
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import render, get_object_or_404
@@ -253,3 +254,34 @@ def json_get_session_photo_ids(request):
     """Return the photo IDs for the current session in JSON format."""
     return HttpResponse(json.dumps(get_session_photo_ids(request)),
         content_type="application/json")
+
+def eol_orchid_species_info(request, species):
+    """Return species info from EOL.org.
+
+    Searches on species name `species` and returns the first result in HTML
+    format. If no results were found, a HTTP 404 not found error is raised.
+    """
+    species = species.replace(' ', '+')
+
+    # This is the EOL taxon concept ID for Orchids.
+    taxon_concept = 8156
+
+    # Get the first species ID.
+    try:
+        url = "http://eol.org/api/search/1.0.json?filter_by_taxon_concept_id={0}&q={1}".format(taxon_concept, species)
+        data = json.load(urllib2.urlopen(url))
+        uid = data['results'][0]['id']
+    except:
+        raise Http404
+
+    # Get the species info using the ID.
+    try:
+        url = "http://eol.org/api/pages/1.0/{0}.json?images=3&videos=0&sounds=0&maps=0&text=3&iucn=true&subjects=overview&details=true&vetted=2&cache_ttl=300".format(uid)
+        data = json.load(urllib2.urlopen(url))
+    except:
+        raise Http404
+
+    name_parts = data['scientificName'].split()
+    data['canonicalName'] = ' '.join(name_parts[:2])
+    data['describedBy'] = ' '.join(name_parts[2:])
+    return render(request, "orchid/eol_species_info.html", data)

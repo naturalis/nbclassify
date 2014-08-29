@@ -3,11 +3,15 @@
 {% block title %}Photo Identity | OrchiD{% endblock %}
 
 {% block content %}
-<h2>Photo Identity</h2>
+<h1>Photo Identity</h1>
 
 <p>
     <div id="identity"></div>
 </p>
+
+<div id="species-info"></div>
+
+<h2>Photo</h2>
 
 <p>
     <img src="{{ photo.image.url }}" id="photo" class="img-responsive img-rounded" alt="Photo">
@@ -21,21 +25,30 @@
 {% block scripts %}
 <script>
 jQuery(function( $ ) {
-    var jcrop_api;
-
     // Load the photo identities.
     $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
+
     $.ajax({
         url: "{% url 'orchid:identity' photo.id %}",
         dataType: "html"
     }).done(function(data) {
+        var species;
+
         // Display the result.
         $("#identity").html(data);
 
-        // Initialize Bootstrap Popovers.
-        $("button[data-toggle='popover']").popover({
-            html: true,
-            trigger: 'focus'
+        // Set the species button actions.
+        $("button[data-species]").click(function() {
+            $("#species-info").html('<div class="alert alert-info" role="alert">Fetching species info from the Encyclopedia of Life...</div>');
+
+            species = $(this).data("species").replace(' ','+');
+            $.ajax({
+                url: "/orchid/eol_species_info/" + encodeURIComponent(species),
+                dataType: "html",
+                success: function(data) {
+                    $("#species-info").html(data);
+                }
+            });
         });
     });
 
@@ -45,10 +58,9 @@ jQuery(function( $ ) {
             trueSize: [{{ photo.image.width }}, {{ photo.image.height }}]
         },
         function() {
-            jcrop_api = this;
+            this.setSelect([{{roi.x}},{{roi.y}},{{roi.x2}},{{roi.y2}}]);
         }
     );
-    jcrop_api.setSelect([{{roi.x}},{{roi.y}},{{roi.x2}},{{roi.y2}}]);
     {% endif %}
 });
 </script>
