@@ -216,11 +216,7 @@ def my_photos(request):
     """Display the photos that were identified in a session."""
     data = {}
     photos = []
-
-    try:
-        pks = request.session['photos']
-    except:
-        pks = []
+    pks = get_session_photo_ids(request)
 
     # Get the photos that belong to this session.
     for photo_id in sorted(pks, reverse=True):
@@ -245,3 +241,15 @@ def session_owns_photo(request, photo_id):
         return int(photo_id) in request.session['photos']
     except:
         return False
+
+def get_session_photo_ids(request):
+    """Return the photo IDs for the current session."""
+    try:
+        return list(request.session['photos'])
+    except:
+        return []
+
+def json_get_session_photo_ids(request):
+    """Return the photo IDs for the current session in JSON format."""
+    return HttpResponse(json.dumps(get_session_photo_ids(request)),
+        content_type="application/json")

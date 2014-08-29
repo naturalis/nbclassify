@@ -191,6 +191,10 @@ a:hover, a:focus {
     margin-bottom: 2rem;
 }
 
+.badge.pull-right {
+    margin: 0.2rem 0.5rem 0.2rem 0;
+}
+
 /* Override some Font Awesome styles */
 
 .fa-li {

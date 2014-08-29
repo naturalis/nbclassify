@@ -6,4 +6,13 @@ jQuery( document ).ready(function( $ ) {
         $( "#menu" ).toggleClass( "active" );
         $( "#menuLink" ).toggleClass( "active" );
     });
+
+    // Update the badge for the My Photos menu item.
+    $.ajax({
+        url: "/orchid/session_photo_ids.json",
+        dataType: "json",
+        success: function(data) {
+            $("#my-photos-n").text(data.length);
+        }
+    });
 });

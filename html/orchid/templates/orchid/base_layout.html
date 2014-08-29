@@ -33,7 +33,12 @@
                     <a class="pure-menu-heading">OrchiD <i class="fa fa-leaf"></i></a>
                     <ul>
                         <li><a href="{% url 'orchid:home' %}">Identify Photo</a></li>
-                        <li><a href="{% url 'orchid:library' %}">My Photos</a></li>
+                        <li>
+                            <a href="{% url 'orchid:library' %}">
+                                <span class="badge pull-right" id="my-photos-n"></span>
+                                My Photos
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>
