@@ -64,7 +64,7 @@ jQuery(function( $ ) {
                 });
             },
             error: function(xhr, textStatus, errorThrown) {
-                $("#identity").html('<div class="alert alert-danger" role="alert">An error occurred while identifying the photo: ' + xhr.responseText + '.</div>');
+                $("#identity").html('<div class="alert alert-danger" role="alert">Sorry, an error occurred while identifying the photo.</div>');
             }
         }).submit();
 

@@ -75,11 +75,11 @@ def identify(request, photo_id):
         except:
             roi = None
 
-        if roi:
-            # Set the ROI for the photo.
-            photo.roi = roi
-            photo.save()
+        # Set the ROI for the photo.
+        photo.roi = roi
+        photo.save()
 
+        if roi:
             roi = roi.split(',')
             roi = [int(x) for x in roi]
         else:
