@@ -19,6 +19,10 @@ edges. Then click "Identify Photo" to identify the flower.</p>
     <div id="identity"></div>
 </p>
 
+<div id="species-info"></div>
+
+<h2>Photo</h2>
+
 <p>
     <img src="{{ photo.image.url }}" id="photo" class="img-responsive img-rounded" alt="Photo">
 </p>
@@ -45,11 +49,22 @@ jQuery(function( $ ) {
         $("#identify_form").ajaxForm({
             target: '#identity',
             success: function() {
-                // Initialize Bootstrap Popovers.
-                $("button[data-toggle='popover']").popover({
-                    html: true,
-                    trigger: 'focus'
+                // Set the species button actions.
+                $("button[data-species]").click(function() {
+                    $("#species-info").html('<div class="alert alert-info" role="alert">Fetching species info from the Encyclopedia of Life...</div>');
+
+                    species = $(this).data("species").replace(' ','+');
+                    $.ajax({
+                        url: "/orchid/eol_species_info/" + encodeURIComponent(species) + "/",
+                        dataType: "html",
+                        success: function(data) {
+                            $("#species-info").html(data);
+                        }
+                    });
                 });
+            },
+            error: function(xhr, textStatus, errorThrown) {
+                $("#identity").html('<div class="alert alert-danger" role="alert">An error occurred while identifying the photo: ' + xhr.responseText + '.</div>');
             }
         }).submit();
 

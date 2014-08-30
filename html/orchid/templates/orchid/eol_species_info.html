@@ -7,7 +7,7 @@
                 {% for object in dataObjects %}
                     {% if "StillImage" in object.dataType %}
                     <div class="col-xs-4">
-                        <img src="{{ object.eolThumbnailURL }}" alt="{{ object.title }}" class="img-responsive img-rounded">
+                        <a href="{{ object.eolMediaURL }}"><img src="{{ object.eolThumbnailURL }}" alt="{{ object.title }}" class="img-responsive img-rounded"></a>
                     </div>
                     {% endif %}
                 {% endfor %}

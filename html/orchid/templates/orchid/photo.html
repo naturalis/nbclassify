@@ -43,7 +43,7 @@ jQuery(function( $ ) {
 
             species = $(this).data("species").replace(' ','+');
             $.ajax({
-                url: "/orchid/eol_species_info/" + encodeURIComponent(species),
+                url: "/orchid/eol_species_info/" + encodeURIComponent(species) + "/",
                 dataType: "html",
                 success: function(data) {
                     $("#species-info").html(data);

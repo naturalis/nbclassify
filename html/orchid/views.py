@@ -4,7 +4,7 @@ import urllib2
 
 import nbclassify as nbc
 
-from django.http import HttpResponse, HttpResponseRedirect, Http404
+from django.http import HttpResponse, HttpResponseRedirect, Http404, HttpResponseServerError
 from django.core.urlresolvers import reverse
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import render, get_object_or_404
@@ -89,7 +89,11 @@ def identify(request, photo_id):
         config = open_yaml(ORCHID_CONF)
         classifier = ImageClassifier(config, TAXA_DB)
         classifier.set_roi(roi)
-        classes = classify_image(classifier, photo.image.path, ANN_DIR)
+
+        try:
+            classes = classify_image(classifier, photo.image.path, ANN_DIR)
+        except Exception as e:
+            return HttpResponseServerError(e)
 
         # Identify this photo.
         for c in classes:
