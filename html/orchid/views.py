@@ -1,5 +1,7 @@
-import os
 import json
+import os
+import re
+import urllib
 import urllib2
 
 import nbclassify as nbc
@@ -259,33 +261,78 @@ def json_get_session_photo_ids(request):
     return HttpResponse(json.dumps(get_session_photo_ids(request)),
         content_type="application/json")
 
-def eol_orchid_species_info(request, species):
+def query_eol(query, options, taxon_concept=None, exact=False):
+    """Return species info from EOL.org.
+
+    Searches EOL with `query` and returns each result in JSON format. Search
+    results can be filtered by taxon concept ID `taxon_concept`.
+    """
+    params = {
+        'q': query,
+        'exact': 'true' if exact else 'false'
+    }
+    if taxon_concept:
+        params['filter_by_taxon_concept_id'] = taxon_concept
+
+    # Get the first species ID.
+    try:
+        url = "http://eol.org/api/search/1.0.json?{0}".\
+            format(urllib.urlencode(params))
+        rsp = json.load(urllib2.urlopen(url))
+    except:
+        raise StopIteration()
+
+    for result in rsp['results']:
+        url = "http://eol.org/api/pages/1.0/{0}.json?{1}".\
+            format(result['id'], urllib.urlencode(options))
+        yield json.load(urllib2.urlopen(url))
+
+def eol_orchid_species_info(request, query):
     """Return species info from EOL.org.
 
     Searches on species name `species` and returns the first result in HTML
     format. If no results were found, a HTTP 404 not found error is raised.
     """
-    species = species.replace(' ', '+')
+    iucn_status = re.compile(r'\(([A-Z]{2})\)')
 
-    # This is the EOL taxon concept ID for Orchids.
+    options = {
+        'images': 8,
+        'videos': 0,
+        'sounds': 0,
+        'maps': 0,
+        'text': 3,
+        'iucn': 'true',
+        'subjects': 'TaxonBiology|Description|Distribution',
+        'details': 'true',
+        'vetted': 2,
+        'cache_ttl': 300
+    }
+
+    # We're only interested in orchids.
     taxon_concept = 8156
 
-    # Get the first species ID.
     try:
-        url = "http://eol.org/api/search/1.0.json?filter_by_taxon_concept_id={0}&q={1}".format(taxon_concept, species)
-        data = json.load(urllib2.urlopen(url))
-        uid = data['results'][0]['id']
-    except:
+        eol_results = query_eol(query, options, taxon_concept)
+    except Exception:
         raise Http404
 
-    # Get the species info using the ID.
-    try:
-        url = "http://eol.org/api/pages/1.0/{0}.json?images=3&videos=0&sounds=0&maps=0&text=3&iucn=true&subjects=overview&details=true&vetted=2&cache_ttl=300".format(uid)
-        data = json.load(urllib2.urlopen(url))
-    except:
-        raise Http404
+    # Get only the first result.
+    data = eol_results.next()
 
-    name_parts = data['scientificName'].split()
-    data['canonicalName'] = ' '.join(name_parts[:2])
-    data['describedBy'] = ' '.join(name_parts[2:])
+    # Set some extra values.
+    scientificName = data['scientificName'].split()
+    data['canonicalName'] = ' '.join(scientificName[:2])
+    data['describedBy'] = ' '.join(scientificName[2:])
+    data['imageObjects'] = []
+    data['textObjects'] = []
+    data['iucn'] = None
+    for obj in data['dataObjects']:
+        if "StillImage" in obj['dataType']:
+            data['imageObjects'].append(obj)
+        elif obj['title'] == "IUCNConservationStatus":
+            data['iucn'] = obj
+            data['iucn']['danger_status'] = iucn_status.search(obj['description']).group(1) in ('LC','NT','VU','EN','CR','EW')
+        elif "Text" in obj['dataType']:
+            data['textObjects'].append(obj)
+
     return render(request, "orchid/eol_species_info.html", data)

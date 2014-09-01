@@ -185,6 +185,10 @@ h4 {
     -webkit-border-radius: 4px;
 }
 
+#species-info img {
+    margin: 0.3rem 0.3rem 0.3rem 0;
+}
+
 /* Override some Bootstrap styles */
 
 a:hover, a:focus {

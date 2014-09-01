@@ -1,33 +1,27 @@
 {% if scientificName %}
     <div class="panel panel-default">
-        <div class="panel-heading"><em>{{ canonicalName }}</em> at the <a href="http://eol.org/{{ identifier }}">Encyclopedia of Life</a></div>
+        <div class="panel-heading"><strong><em>{{ canonicalName }}</em> {{ describedBy }}</strong> at the <a href="http://eol.org/{{ identifier }}">Encyclopedia of Life</a></div>
         <div class="panel-body">
-            <div class="container-fluid">
-                <div class="row">
-                {% for object in dataObjects %}
-                    {% if "StillImage" in object.dataType %}
-                    <div class="col-xs-4">
-                        <a href="{{ object.eolMediaURL }}"><img src="{{ object.eolThumbnailURL }}" alt="{{ object.title }}" class="img-responsive img-rounded"></a>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                </div>
-            </div>
-
-            {% for object in dataObjects %}
-                {% if object.title == "IUCNConservationStatus" %}
-                <p>
-                    <div class="alert alert-danger" role="alert">IUCN threat status: <a href="{{ object.source }}" class="alert-link">{{ object.description }}</a></div>
-                </p>
+            {% if iucn %}
+                {% if iucn.danger_status %}
+                <div class="alert alert-danger" role="alert">IUCN threat status: <a href="{{ iucn.source }}" class="alert-link">{{ iucn.description }}</a></div>
+                {% else %}
+                <div class="alert alert-info" role="alert">IUCN threat status: <a href="{{ iucn.source }}" class="alert-link">{{ iucn.description }}</a></div>
                 {% endif %}
-            {% endfor %}
+            {% endif %}
+
+            {% if imageObjects %}
+            <div class="container-fluid">
+                {% for im in imageObjects %}
+                <a href="http://eol.org/data_objects/{{ im.dataObjectVersionID }}"><img class="img-rounded" src="{{ im.eolThumbnailURL }}" alt="{{ im.title }}"></a>
+                {% endfor %}
+            </div>
+            {% endif %}
 
             {% autoescape off %}
-            {% for object in dataObjects %}
-                {% if "Text" in object.dataType and object.title != "IUCNConservationStatus" and object.vettedStatus != "Unreviewed" %}
-                    <h3>{{ object.title }}</h2>
-                    <p>{{ object.description }}</p>
-                {% endif %}
+            {% for txt in textObjects %}
+            <h3>{{ txt.title }}</h2>
+            <p>{{ txt.description }}</p>
             {% endfor %}
             {% endautoescape %}
         </div>

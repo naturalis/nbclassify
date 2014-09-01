@@ -41,12 +41,15 @@ jQuery(function( $ ) {
         $("button[data-species]").click(function() {
             $("#species-info").html('<div class="alert alert-info" role="alert">Fetching species info from the Encyclopedia of Life...</div>');
 
-            species = $(this).data("species").replace(' ','+');
+            species = $(this).data("species");
             $.ajax({
-                url: "/orchid/eol_species_info/" + encodeURIComponent(species) + "/",
+                url: "/orchid/eol_species_info/" + species + "/",
                 dataType: "html",
                 success: function(data) {
                     $("#species-info").html(data);
+                },
+                error: function(data) {
+                    $("#species-info").html('<div class="alert alert-danger" role="alert">Failed to obtain species info.</div>');
                 }
             });
         });
