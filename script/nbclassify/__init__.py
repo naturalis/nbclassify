@@ -340,6 +340,7 @@ class Phenotyper(object):
         self.img = None
         self.mask = None
         self.bin_mask = None
+        self.grabcut_roi = None
 
     def set_image(self, path, roi=None):
         """Load the image from path `path`.
@@ -365,6 +366,13 @@ class Phenotyper(object):
         self.bin_mask = None
 
         return self.img
+
+    def set_grabcut_roi(self, roi):
+        """Set the region of interest for the GrabCut algorithm.
+
+        The ROI must be a (x,y,w,h) tuple.
+        """
+        self.grabcut_roi = roi
 
     def set_config(self, config):
         """Set the YAML configurations object."""
@@ -392,6 +400,25 @@ class Phenotyper(object):
         cv2.grabCut(img, mask, rect, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
         return mask
 
+    def grabcut_with_roi(self, img, roi, iters=5):
+        """Segment image into foreground and background pixels.
+
+        Runs the GrabCut algorithm for segmentation. Returns an 8-bit
+        single-channel mask. Its elements may have one of following values:
+            * ``cv2.GC_BGD`` defines an obvious background pixel.
+            * ``cv2.GC_FGD`` defines an obvious foreground pixel.
+            * ``cv2.GC_PR_BGD`` defines a possible background pixel.
+            * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
+
+        The GrabCut algorithm is executed with `iters` iterations. The region
+        of interest `roi` must be a (x,y,w,h) tuple.
+        """
+        mask = np.zeros(img.shape[:2], np.uint8)
+        bgdmodel = np.zeros((1,65), np.float64)
+        fgdmodel = np.zeros((1,65), np.float64)
+        cv2.grabCut(img, mask, roi, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
+        return mask
+
     def __preprocess(self):
         if self.img is None:
             raise RuntimeError("No image is loaded")
@@ -402,6 +429,7 @@ class Phenotyper(object):
         # Scale the image down if its perimeter exceeds the maximum (if set).
         perim = sum(self.img.shape[:2])
         max_perim = getattr(self.config.preprocess, 'maximum_perimeter', None)
+        rf = None
         if max_perim and perim > max_perim:
             logging.info("Scaling down...")
             rf = float(max_perim) / perim
@@ -430,7 +458,16 @@ class Phenotyper(object):
             output_folder = getattr(segmentation, 'output_folder', None)
 
             # Create a binary mask for the largest contour.
-            self.mask = self.grabcut_with_margin(self.img, iterations, margin)
+            if self.grabcut_roi:
+                # Account for the resizing factor when setting the ROI.
+                if rf is not None:
+                    self.grabcut_roi = [int(x*rf) for x in self.grabcut_roi]
+                    self.grabcut_roi = tuple(self.grabcut_roi)
+
+                self.mask = self.grabcut_with_roi(self.img, self.grabcut_roi, iterations)
+            else:
+                self.mask = self.grabcut_with_margin(self.img, iterations, margin)
+
             self.bin_mask = np.where((self.mask==cv2.GC_FGD) + (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
             contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if contour == None:

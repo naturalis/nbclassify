@@ -128,7 +128,10 @@ class ImageClassifier(nbc.Common):
             phenotype = self.cache[hash_]
         else:
             phenotyper = nbc.Phenotyper()
-            phenotyper.set_image(im_path, self.roi)
+            phenotyper.set_image(im_path)
+            if self.roi:
+                y, y2, x, x2 = self.roi
+                phenotyper.set_grabcut_roi((x, y, x2-x, y2-y))
             phenotyper.set_config(config)
             phenotype = phenotyper.make()
 
