@@ -17,9 +17,10 @@
     <img src="{{ photo.image.url }}" id="photo" class="img-responsive img-rounded" alt="Photo">
 </p>
 
-<p>
-    </a><a href="{% url 'orchid:delete_photo' photo.id %}" class="btn btn-danger"><i class="fa fa-trash fa-fw"></i> Delete Photo</a>
-</p>
+<div class="btn-group">
+    <a href="{% url 'orchid:identify' photo.id %}" class="btn btn-default"><i class="fa fa-search fa-fw"></i> Redo Identification</a>
+    <a href="{% url 'orchid:delete_photo' photo.id %}" class="btn btn-default"><i class="fa fa-trash fa-fw"></i> Delete Photo</a>
+</div>
 {% endblock %}
 
 {% block scripts %}
