@@ -1,6 +1,6 @@
 {% if scientificName %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong><em>{{ canonicalName }}</em> {{ describedBy }}</strong> at the <a href="http://eol.org/{{ identifier }}">Encyclopedia of Life</a></div>
+        <div class="panel-heading"><strong><em>{{ canonicalName }}</em> {{ describedBy }}</strong> <span class="pull-right"><a href="http://eol.org/{{ identifier }}">More info on EOL.org</a></span></div>
         <div class="panel-body">
             {% if iucn %}
                 {% if iucn.danger_status %}
@@ -18,12 +18,16 @@
             </div>
             {% endif %}
 
-            {% autoescape off %}
-            {% for txt in textObjects %}
-            <h3>{{ txt.title }}</h2>
-            <p>{{ txt.description }}</p>
-            {% endfor %}
-            {% endautoescape %}
+            {% if textObjects %}
+                {% autoescape off %}
+                {% for txt in textObjects %}
+                <h3>{{ txt.title }}</h2>
+                <p>{{ txt.description }}</p>
+                {% endfor %}
+                {% endautoescape %}
+            {% else %}
+                <p>No summaries found for this species. Refer to <a href="http://eol.org/{{ identifier }}"><em>{{ canonicalName }}</em> on the Encyclopedia of Life</a> for additional information.</p>
+            {% endif %}
         </div>
     </div>
 {% else %}
