@@ -329,11 +329,17 @@ def eol_orchid_species_info(request, query):
     data['textObjects'] = []
     data['iucn'] = None
     for obj in data['dataObjects']:
+        try:
+            if obj['title'] == "IUCNConservationStatus":
+                data['iucn'] = obj
+                data['iucn']['danger_status'] = iucn_status.search(obj['description']).group(1) in ('LC','NT','VU','EN','CR','EW')
+                continue
+        except:
+            pass
+
         if "StillImage" in obj['dataType']:
             data['imageObjects'].append(obj)
-        elif obj['title'] == "IUCNConservationStatus":
-            data['iucn'] = obj
-            data['iucn']['danger_status'] = iucn_status.search(obj['description']).group(1) in ('LC','NT','VU','EN','CR','EW')
+
         elif "Text" in obj['dataType']:
             data['textObjects'].append(obj)
 
