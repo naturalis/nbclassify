@@ -1,5 +1,8 @@
 {% if identities %}
-    <p>The following identification{{ identities|pluralize }} w{{ identities|pluralize:"as,ere" }} made for this photo:</p>
+    <p>The following identification{{identities|pluralize}}
+    w{{identities|pluralize:"as,ere"}} made for this photo. The <abbr
+    title="Mean Square Error">MSE</abbr> value is an indicator for the
+    reliability (lower is better).</p>
 
     <div class="table-responsive">
       <table class="table" id="id-result">
