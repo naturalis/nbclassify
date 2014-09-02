@@ -5,9 +5,11 @@
 {% block content %}
 <h1>Identify Photo</h1>
 
-<p>Select the flower in the photo below. Make sure there's only one flower
-in the selection and keep at least a 5 pixel border around the flower's
-edges. Then click "Identify Photo" to identify the flower.</p>
+<p>Click and drag on the photo below to select the flower if the flower
+doesn't comprise the whole photo, especially if there are branches and such
+surrounding it. Make sure there's only one flower in the selection and keep at
+least a small border around the flower's edges. Then click the "Identify
+Photo" button to start the identification.</p>
 
 <form action="{% url 'orchid:identify' photo.id %}" method="post" id="identify_form">
     {% csrf_token %}
@@ -20,8 +22,6 @@ edges. Then click "Identify Photo" to identify the flower.</p>
 </p>
 
 <div id="species-info"></div>
-
-<h2>Photo</h2>
 
 <p>
     <img src="{{ photo.image.url }}" id="photo" class="img-responsive img-rounded" alt="Photo">
