@@ -18,10 +18,8 @@ start the identification.</p>
 </form>
 
 <p>
-    <div id="identity"></div>
+    <div id="message"></div>
 </p>
-
-<div id="species-info"></div>
 
 <p>
     <img src="{{ photo.image.url }}" id="photo" class="img-responsive img-rounded" alt="Photo">
@@ -31,6 +29,8 @@ start the identification.</p>
 {% block scripts %}
 <script>
 jQuery(function( $ ) {
+    var form;
+
     // Initialize Jcrop.
     $('#photo').Jcrop({
         onSelect: function(c) {
@@ -48,34 +48,25 @@ jQuery(function( $ ) {
         {% endif %}
     });
 
+    // Use an AJAX form.
+    form = $("#identify_form").ajaxForm({
+        success: function() {
+            $("#message").html('<div class="alert alert-info" role="alert"><strong>Done!</strong> Redirecting you to the result now. <a href="{% url 'orchid:photo' photo.id %}">Click here</a> if you are not being redirected.</div>');
+            setTimeout(function() {
+                window.location.href = "{% url 'orchid:photo' photo.id %}";
+            }, 3000);
+        },
+        error: function(xhr, textStatus, errorThrown) {
+            $("#message").html('<div class="alert alert-danger" role="alert">Sorry, an error occurred while identifying the photo.</div>');
+        }
+    });
+
     // Identify Photo button.
     $('#identify_form button').click(function(event) {
-        $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
+        $("#message").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
 
-        $("#identify_form").ajaxForm({
-            target: '#identity',
-            success: function() {
-                // Set the species button actions.
-                $("button[data-species]").click(function() {
-                    $("#species-info").html('<div class="alert alert-info" role="alert">Fetching species info from the Encyclopedia of Life...</div>');
-
-                    species = $(this).data("species");
-                    $.ajax({
-                        url: "/orchid/eol_species_info/" + species + "/",
-                        dataType: "html",
-                        success: function(data) {
-                            $("#species-info").html(data);
-                        },
-                        error: function(data) {
-                            $("#species-info").html('<div class="alert alert-danger" role="alert">Failed to obtain species info.</div>');
-                        }
-                    });
-                });
-            },
-            error: function(xhr, textStatus, errorThrown) {
-                $("#identity").html('<div class="alert alert-danger" role="alert">Sorry, an error occurred while identifying the photo.</div>');
-            }
-        }).submit();
+        // Submit the AjaxForm.
+        form.submit();
 
         // Prevent normal browser submit and page navigation.
         return false;
