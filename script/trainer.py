@@ -70,13 +70,13 @@ def main():
         help="Path to a configurations file with feature extraction parameters.")
     parser_data.add_argument("--db", metavar="DB",
         help="Path to a database file with photo meta data. If omitted " \
-        "this defaults to a file photos.db in the photo's directory.")
+        "this defaults to a file photos.db in the photos directory.")
     parser_data.add_argument("--output", "-o", metavar="FILE", required=True,
         help="Output file name for training data. Any existing file with " \
         "same name will be overwritten.")
     parser_data.add_argument("basepath", metavar="PATH",
-        help="Base directory where to look for photo's. The database file" \
-        "with photo meta data will be used to find photo's in this directory.")
+        help="Base directory where to look for photos. The database file" \
+        "with photo meta data will be used to find photos in this directory.")
 
     # Create an argument parser for sub-command 'batch-data'.
     help_batch_data = """Batch create tab separated files with training
@@ -90,13 +90,13 @@ def main():
         help="Path to a configurations file with feature extraction parameters.")
     parser_batch_data.add_argument("--db", metavar="DB",
         help="Path to a database file with photo meta data. If omitted " \
-        "this defaults to a file photos.db in the photo's directory.")
+        "this defaults to a file photos.db in the photos directory.")
     parser_batch_data.add_argument("--output", "-o", metavar="PATH",
         required=True,
         help="Output directory where training data is stored.")
     parser_batch_data.add_argument("basepath", metavar="PATH",
-        help="Base directory where to look for photo's. The database file" \
-        "with photo meta data will be used to find photo's in this directory.")
+        help="Base directory where to look for photos. The database file" \
+        "with photo meta data will be used to find photos in this directory.")
 
     # Create an argument parser for sub-command 'ann'.
     help_ann = """Train an artificial neural network. Optional training
@@ -166,7 +166,8 @@ def main():
         help="Path to tab separated file containing test data.")
 
     # Create an argument parser for sub-command 'test-ann'.
-    help_test_ann_batch = """Test the artificial neural networks for a classification hierarchy. See trainer.yml for an example."""
+    help_test_ann_batch = """Test the artificial neural networks for a
+    classification hierarchy. See trainer.yml for an example."""
 
     parser_test_ann_batch = subparsers.add_parser('test-ann-batch',
         help=help_test_ann_batch, description=help_test_ann_batch)
