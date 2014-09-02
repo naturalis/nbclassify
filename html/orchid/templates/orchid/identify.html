@@ -40,6 +40,12 @@ jQuery(function( $ ) {
             $('#roi').val('');
         },
         trueSize: [{{ photo.image.width }}, {{ photo.image.height }}]
+    },
+    function() {
+        {% if roi %}
+        // Display the ROI on the photo if one was already made.
+        this.setSelect([{{roi.x}},{{roi.y}},{{roi.x2}},{{roi.y2}}]);
+        {% endif %}
     });
 
     // Identify Photo button.

@@ -14,7 +14,7 @@
 <h2>Photo</h2>
 
 <p>
-    <img src="{{ photo.image.url }}" id="photo" class="img-responsive img-rounded" alt="Photo">
+    <img src="{{ photo.image.url }}" id="photo" class="img-responsive img-rounded" alt="{{ photo.file_name }}">
 </p>
 
 <div class="btn-group">
@@ -55,17 +55,6 @@ jQuery(function( $ ) {
             });
         });
     });
-
-    {% if roi %}
-    // Display the ROI on the photo if any.
-    $('#photo').Jcrop({
-            trueSize: [{{ photo.image.width }}, {{ photo.image.height }}]
-        },
-        function() {
-            this.setSelect([{{roi.x}},{{roi.y}},{{roi.x2}},{{roi.y2}}]);
-        }
-    );
-    {% endif %}
 });
 </script>
 {% endblock %}

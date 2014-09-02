@@ -120,7 +120,15 @@ def identify(request, photo_id):
         # The Identify Photo button was not pressed. So let the user set the
         # region of interest, if any, and then press that button to start
         # identification.
+
         data['photo'] = photo
+        data['roi'] = None
+
+        # Get the ROI.
+        if photo.roi:
+            y,y2,x,x2 = photo.roi.split(",")
+            data['roi'] = {'y':y, 'y2':y2, 'x':x, 'x2':x2}
+
         return render(request, "orchid/identify.html", data)
 
 def photo_identity(request, photo_id):
@@ -180,12 +188,6 @@ def photo(request, photo_id):
     data = {}
     data.update(csrf(request))
     data['photo'] = photo
-    data['roi'] = None
-
-    # Get the ROI.
-    if photo.roi:
-        y,y2,x,x2 = photo.roi.split(",")
-        data['roi'] = {'y':y, 'y2':y2, 'x':x, 'x2':x2}
 
     # Get the identities from the database.
     data['identities'] = photo.identity_set.all()
