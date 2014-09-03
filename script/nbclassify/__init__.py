@@ -410,6 +410,7 @@ class Phenotyper(object):
     """Generate numerical features from a digital photo."""
 
     def __init__(self):
+        """Set default values for variables."""
         self.path = None
         self.config = None
         self.img = None
@@ -445,7 +446,10 @@ class Phenotyper(object):
     def set_grabcut_roi(self, roi):
         """Set the region of interest for the GrabCut algorithm.
 
-        The ROI must be a 4-tuple ``(x,y,w,h)``.
+        If GrabCut is set as the segmentation algorithm, then :meth:`grabcut`
+        is executed with this region of interest.
+
+        The ROI must be a 4-tuple ``(x,y,width,height)``.
         """
         self.grabcut_roi = roi
 
@@ -455,32 +459,11 @@ class Phenotyper(object):
             raise TypeError("Configurations object must be of type Struct, not %s" % type(config))
         self.config = config
 
-    def grabcut_with_margin(self, img, iters=5, margin=5):
-        """Segment image into foreground and background pixels.
+    def grabcut(self, img, iters=5, roi=None, margin=5):
+        """Wrapper for OpenCV's grabCut function.
 
         Runs the GrabCut algorithm for segmentation. Returns an 8-bit
-        single-channel mask. Its elements may have one of following values::
-
-        * ``cv2.GC_BGD`` defines an obvious background pixel.
-        * ``cv2.GC_FGD`` defines an obvious foreground pixel.
-        * ``cv2.GC_PR_BGD`` defines a possible background pixel.
-        * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
-
-        The GrabCut algorithm is executed with `iters` iterations. The ROI is set
-        to the entire image, with a margin of `margin` pixels from the edges.
-        """
-        mask = np.zeros(img.shape[:2], np.uint8)
-        bgdmodel = np.zeros((1,65), np.float64)
-        fgdmodel = np.zeros((1,65), np.float64)
-        rect = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
-        cv2.grabCut(img, mask, rect, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
-        return mask
-
-    def grabcut_with_roi(self, img, roi, iters=5):
-        """Segment image into foreground and background pixels.
-
-        Runs the GrabCut algorithm for segmentation. Returns an 8-bit
-        single-channel mask. Its elements may have one of following values::
+        single-channel mask. Its elements may have the following values:
 
         * ``cv2.GC_BGD`` defines an obvious background pixel.
         * ``cv2.GC_FGD`` defines an obvious foreground pixel.
@@ -488,15 +471,35 @@ class Phenotyper(object):
         * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
 
         The GrabCut algorithm is executed with `iters` iterations. The region
-        of interest `roi` must be a ``(x,y,w,h)`` tuple.
+        of interest `roi` can be a 4-tuple ``(x,y,width,height)``. If the ROI
+        is not set, the ROI is set to the entire image, with a margin of
+        `margin` pixels from the borders.
         """
         mask = np.zeros(img.shape[:2], np.uint8)
         bgdmodel = np.zeros((1,65), np.float64)
         fgdmodel = np.zeros((1,65), np.float64)
+
+        # Use the margin to set the ROI if the ROI was not provided.
+        if not roi:
+            roi = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
+
         cv2.grabCut(img, mask, roi, bgdmodel, fgdmodel, iters, cv2.GC_INIT_WITH_RECT)
         return mask
 
     def __preprocess(self):
+        """Perform preprocessing steps as specified in the configurations.
+
+        Preprocessing steps may be:
+
+        * Resizing
+        * Color correction
+        * Segmentation
+
+        This method is executed by :meth:`make`.
+        """
+        # The resizing factor of the image.
+        rf = 1.0
+
         if self.img is None:
             raise RuntimeError("No image is loaded")
 
@@ -506,7 +509,6 @@ class Phenotyper(object):
         # Scale the image down if its perimeter exceeds the maximum (if set).
         perim = sum(self.img.shape[:2])
         max_perim = getattr(self.config.preprocess, 'maximum_perimeter', None)
-        rf = None
         if max_perim and perim > max_perim:
             logging.info("Scaling down...")
             rf = float(max_perim) / perim
@@ -534,21 +536,18 @@ class Phenotyper(object):
             margin = getattr(segmentation, 'margin', 1)
             output_folder = getattr(segmentation, 'output_folder', None)
 
-            # Create a binary mask for the largest contour.
-            if self.grabcut_roi:
-                # Account for the resizing factor when setting the ROI.
-                if rf is not None:
-                    self.grabcut_roi = [int(x*rf) for x in self.grabcut_roi]
-                    self.grabcut_roi = tuple(self.grabcut_roi)
+            # Account for the resizing factor when setting the ROI.
+            self.grabcut_roi = [int(x*rf) for x in self.grabcut_roi]
+            self.grabcut_roi = tuple(self.grabcut_roi)
 
-                self.mask = self.grabcut_with_roi(self.img, self.grabcut_roi, iterations)
-            else:
-                self.mask = self.grabcut_with_margin(self.img, iterations, margin)
-
+            # Get the main contour.
+            self.mask = self.grabcut(self.img, iterations, self.grabcut_roi, margin)
             self.bin_mask = np.where((self.mask==cv2.GC_FGD) + (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
             contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if contour == None:
+            if contour is None:
                 raise ValueError("No contour found for binary image")
+
+            # Create a binary mask of the main contour.
             self.bin_mask = np.zeros(self.img.shape[:2], dtype=np.uint8)
             cv2.drawContours(self.bin_mask, [contour], 0, 255, -1)
 
@@ -560,10 +559,12 @@ class Phenotyper(object):
                 cv2.imwrite(out_path, img_masked)
 
     def make(self):
+        """Return the phenotype for the loaded image.
+
+        The phenotype is returned as a list of floating point values.
+        """
         if self.img == None:
             raise ValueError("No image loaded")
-
-        #logging.info("Processing %s ..." % self.path)
 
         self.__preprocess()
 
