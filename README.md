@@ -36,7 +36,8 @@ is as follows:
 On Debian (based) systems, most dependencies can be installed from the
 software repository:
 
-    sudo apt-get install libfann2 opencv python python-pyfann python-opencv python-flickrapi python-numpy python-sqlalchemy python-yaml
+    sudo apt-get install libfann2 opencv python python-pyfann python-opencv \
+    python-flickrapi python-numpy python-sqlalchemy python-yaml
 
 More recent versions of some Python packages can be obtained via the Python
 Package Index:
