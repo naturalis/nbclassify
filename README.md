@@ -36,13 +36,13 @@ is as follows:
 On Debian (based) systems, most dependencies can be installed from the
 software repository:
 
-    sudo apt-get install libfann2 opencv python python-pyfann python-opencv python-numpy
+    sudo apt-get install libfann2 opencv python python-pyfann python-opencv python-flickrapi python-numpy python-sqlalchemy python-yaml
 
-It's best to install some Python packages via the Python Package Index in
-order to get the latest versions:
+More recent versions of some Python packages can be obtained via the Python
+Package Index:
 
     sudo apt-get install python-pip
 
-    sudo pip install flickrapi sqlalchemy yaml
+    sudo pip install flickrapi numpy sqlalchemy yaml
 
 [1]: https://github.com/naturalis/feature-extraction "Python package for image feature extraction"
