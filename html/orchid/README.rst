@@ -86,12 +86,12 @@ This setup assumes you have Apache 2.4.
    serve static and user uploaded files. Also make sure that
    ``/path/to/mysite.com/media/`` is writable to Apache.
 
-   If you use an SQLite database, make sure that Apache can write to the
-   database file and to the parent directory of the database.
-
    The corresponding ``settings.py`` for your Django site must have the
    following options set for this to work::
 
       STATIC_URL = '/static/'
       MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
       MEDIA_URL = '/media/'
+
+   If you use an SQLite database, make sure that Apache can write to the
+   database file and to the parent directory of the database.
