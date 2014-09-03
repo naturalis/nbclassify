@@ -7,8 +7,9 @@ slipper orchids.
 
 It implements our "nbclassify" Python package for automated classification of
 images using artificial neural networks. The "nbclassify" Python package
-depends on our Python package for [image feature extraction][1]. They both
-need to be installed for this app to work.
+depends on our Python package for `image feature extraction
+<https://github.com/naturalis/feature-extraction>`_. They both need to be
+installed for this app to work.
 
 Quick start
 -----------
@@ -94,5 +95,3 @@ This setup assumes you have Apache 2.4.
       STATIC_URL = '/static/'
       MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
       MEDIA_URL = '/media/'
-
-[1]: https://github.com/naturalis/feature-extraction "Python package for image feature extraction"
