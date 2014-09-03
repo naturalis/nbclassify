@@ -1,10 +1,14 @@
-=================
-NBClassify OrchiD
-=================
+======
+OrchiD
+======
 
 OrchiD is a proof-of-concept Django app for classifying digital images of
-orchids. It implements the "nbclassify" Python package for automated
-classification of images using artificial neural networks.
+slipper orchids.
+
+It implements our "nbclassify" Python package for automated classification of
+images using artificial neural networks. The "nbclassify" Python package
+depends on our Python package for [image feature extraction][1]. They both
+need to be installed for this app to work.
 
 Quick start
 -----------
@@ -20,7 +24,7 @@ Quick start
 
       url(r'^orchid/', include('orchid.urls')),
 
-3. Run ``python manage.py syncdb`` to create the orchid models.
+3. Run ``python manage.py syncdb`` to create OrchiD's database tables.
 
 4. You may start the development server with ``python manage.py runserver``
    and visit http://127.0.0.1:8000/orchid/ to test the app.
@@ -90,3 +94,5 @@ This setup assumes you have Apache 2.4.
       STATIC_URL = '/static/'
       MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
       MEDIA_URL = '/media/'
+
+[1]: https://github.com/naturalis/feature-extraction "Python package for image feature extraction"
