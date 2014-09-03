@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import argparse
+from argparse import Namespace
 import csv
 import logging
 import os
@@ -11,12 +11,12 @@ import cv2
 import features as ft
 import numpy as np
 from pyfann import libfann
-import sqlalchemy.orm as orm
+from sqlalchemy import orm
 from sqlalchemy.ext.automap import automap_base
 
 from exceptions import *
 
-class Struct(argparse.Namespace):
+class Struct(Namespace):
     """Return a dictionary as an object."""
 
     def __init__(self, d):
@@ -35,11 +35,18 @@ class Struct(argparse.Namespace):
         return str(self) == str(other)
 
 class Common(object):
+    """Collection of common functions.
+
+    This class is used as a super class in several scripts that implement this
+    package. It provides commonly used functions.
+    """
+
     def __init__(self, config):
+        """Set the configurations object."""
         self.set_config(config)
 
     def set_config(self, config):
-        """Set the YAML configurations object."""
+        """Set the configurations object."""
         if not isinstance(config, Struct):
             raise TypeError("Configurations object must be of type Struct, not %s" % type(config))
 
@@ -54,8 +61,16 @@ class Common(object):
         self.config = config
 
     def get_codewords(self, classes, on=1, off=-1):
-        """Return codewords for a list of classes."""
-        n =  len(classes)
+        """Return codewords for a list of classes.
+
+        Takes a list of class names `classes`. The class list is sorted, and a
+        codeword is created for each class. Each codeword is a list of
+        ``len(classes)`` bits, where all bits have an `off` value, except for
+        one, which has an `on` value. Returns a dictionary ``{class: codeword,
+        ..}``. The same set of classes always returns the same codeword for
+        each class.
+        """
+        n = len(classes)
         codewords = {}
         for i, class_ in enumerate(sorted(classes)):
             cw = [off] * n
@@ -73,9 +88,8 @@ class Common(object):
         assigned to the codeword. So it is possible that a codeword is
         assigned to multiple classes.
 
-        The result is returned as a sorted list of 2-tuples ``[(error,
-        class), ..]``. Returns a pair of empty tuples if no classes were
-        found.
+        The result is returned as an error-sorted list of 2-tuples ``[(error,
+        class), ..]``. Returns an empty list if no classes were found.
         """
         if len(codewords) != len(codeword):
             raise ValueError("Lenth of `codewords` must be equal to `codeword` length")
@@ -92,9 +106,10 @@ class Common(object):
     def get_photos_with_class(self, session, metadata, filter_):
         """Return photos with corresponding class from the database.
 
-        Photos obtained from the database are filtered by rules set in the
-        `filter_` parameter. Returned rows are 2-tuples ``(photo_path,
-        class)``.
+        Photos obtained from the photo metadata database are queried by rules
+        set in the classification filter `filter_`. Filters are those as
+        returned by :meth:`classification_hierarchy_filters`. Returned rows
+        are 2-tuples ``(photo_path, class)``.
         """
         if 'class' not in filter_:
             raise ValueError("The filter is missing the 'class' key")
@@ -145,11 +160,13 @@ class Common(object):
     def get_classes_from_filter(self, session, metadata, filter_):
         """Return the classes for a classification filter.
 
-        Requires access to a database via an SQLAlchemy Session and
-        MetaData object.
+        Requires access to a database via an SQLAlchemy Session `session` and
+        MetaData object `metadata`.
 
-        This is a generator that returns one class at a time. The unique
-        set of classes for the classification filter `filter_` are returned.
+        This is a generator that returns one class at a time. The unique set
+        of classes for the classification filter `filter_` are returned.
+        Filters are those as returned by
+        :meth:`classification_hierarchy_filters`.
         """
         if 'class' not in filter_:
             raise ValueError("The filter is missing the 'class' key")
@@ -196,10 +213,14 @@ class Common(object):
             yield class_
 
     def get_taxon_hierarchy(self, session, metadata):
-        """Return the taxanomic hierarchy for photos in the database.
+        """Return the taxanomic hierarchy for photos in the metadata database.
 
         The hierarchy is returned as a dictionary in the format
         ``{genus: {section: [species, ..], ..}, ..}``.
+
+        Returned hierarchies can be used as input for methods like
+        :meth:`classification_hierarchy_filters` and
+        :meth:`get_childs_from_hierarchy`.
         """
         hierarchy = {}
 
@@ -212,9 +233,9 @@ class Common(object):
         return hierarchy
 
     def get_taxa(self, session, metadata):
-        """Return the taxa from the database.
+        """Return the taxa from the photo metadata database.
 
-        Taxa are returned as (genus, section, species) tuples.
+        Taxa are returned as 3-tuples ``(genus, section, species)``.
         """
         Base = automap_base(metadata=metadata)
         Base.prepare()
@@ -250,9 +271,35 @@ class Common(object):
         """Return the classification filter for each path in a hierarchy.
 
         Returns the classification filter for each possible path in the
-        hierarchy `hr`. The name of each level in the hierarchy must be set
-        in the sequence `levels`. The sequence `path` holds the position in
-        the hierarchy. Filters that return no classes are not returned.
+        hierarchy `hr`. The name of each level in the hierarchy must be set in
+        the list `levels`. The list `path` holds the position in the
+        hierarchy. An empty `path` means start at the root of the hierarchy.
+        Filters that return no classes are not returned.
+
+        Example:
+
+            >>> hr = {
+            ...     'Selenipedium': {
+            ...         None: ['palmifolium']
+            ...     },
+            ...     'Phragmipedium': {
+            ...         'Micropetalum': ['andreettae', 'besseae'],
+            ...         'Lorifolia': ['boissierianum', 'brasiliense']
+            ...     }
+            ... }
+            >>> levels = ['genus', 'section', 'species']
+            >>> filters = cmn.classification_hierarchy_filters(levels, hr)
+            >>> for f in filters:
+            ...     print f
+            ...
+            {'where': {}, 'class': 'genus'}
+            {'where': {'section': None, 'genus': 'Selenipedium'}, 'class': 'species'}
+            {'where': {'genus': 'Phragmipedium'}, 'class': 'section'}
+            {'where': {'section': 'Lorifolia', 'genus': 'Phragmipedium'}, 'class': 'species'}
+            {'where': {'section': 'Micropetalum', 'genus': 'Phragmipedium'}, 'class': 'species'}
+
+        These filters are used directly by methods like
+        :meth:`get_photos_with_class` and :meth:`get_classes_from_filter`.
         """
         filter_ = {}
 
@@ -291,12 +338,30 @@ class Common(object):
     def get_childs_from_hierarchy(self, hr, path=[]):
         """Return the child node names for a node in a hierarchy.
 
-        Returns a list of child node names of the hierarchy `hr` at node
-        with the path `path`. The hierarchy `hr` is a nested dictionary,
-        where bottom level nodes are lists. Which node to get the childs
-        from is specified by `path`, which is a list of the node names up
-        to that node. An empty list for `path` means the names of the nodes
-        of the top level are returned.
+        Returns a list of child node names of the hierarchy `hr` at node with
+        the path `path`. The hierarchy `hr` is a nested dictionary, as
+        returned by :meth:`get_taxon_hierarchy`. Which node to get the childs
+        from is specified by `path`, which is a list of the node names up to
+        that node. An empty list for `path` means the names of the nodes of
+        the top level are returned.
+
+        Example:
+
+            >>> hr = {
+            ...     'Phragmipedium': {
+            ...         'Micropetalum': ['andreettae', 'besseae'],
+            ...         'Lorifolia': ['boissierianum', 'brasiliense']
+            ...     },
+            ...     'Selenipedium': {
+            ...         None: ['palmifolium']
+            ...     }
+            ... }
+            >>> cmn.get_childs_from_hierarchy(hr)
+            ['Selenipedium', 'Phragmipedium']
+            >>> cmn.get_childs_from_hierarchy(hr, ['Phragmipedium'])
+            ['Lorifolia', 'Micropetalum']
+            >>> cmn.get_childs_from_hierarchy(hr, ['Phragmipedium','Micropetalum'])
+            ['andreettae', 'besseae']
         """
         nodes = hr.copy()
         try:
@@ -315,7 +380,17 @@ class Common(object):
         return names
 
     def readable_filter(self, filter_):
-        """Return a human-readable description of a classification filter."""
+        """Return a human-readable description of a classification filter.
+
+        Classification filters are those as returned by
+        :meth:`classification_hierarchy_filters`.
+
+        Example:
+
+            >>> cmn.readable_filter({'where': {'section': 'Lorifolia',
+            ... 'genus': 'Phragmipedium'}, 'class': 'species'})
+            'species where section is Lorifolia and genus is Phragmipedium'
+        """
         class_ = filter_.get('class')
         where = filter_.get('where', {})
         where_n = len(where)
@@ -332,7 +407,7 @@ class Common(object):
         return "%s" % class_
 
 class Phenotyper(object):
-    """Generate numerical features from an image."""
+    """Generate numerical features from a digital photo."""
 
     def __init__(self):
         self.path = None
@@ -370,7 +445,7 @@ class Phenotyper(object):
     def set_grabcut_roi(self, roi):
         """Set the region of interest for the GrabCut algorithm.
 
-        The ROI must be a (x,y,w,h) tuple.
+        The ROI must be a 4-tuple ``(x,y,w,h)``.
         """
         self.grabcut_roi = roi
 
@@ -384,11 +459,12 @@ class Phenotyper(object):
         """Segment image into foreground and background pixels.
 
         Runs the GrabCut algorithm for segmentation. Returns an 8-bit
-        single-channel mask. Its elements may have one of following values:
-            * ``cv2.GC_BGD`` defines an obvious background pixel.
-            * ``cv2.GC_FGD`` defines an obvious foreground pixel.
-            * ``cv2.GC_PR_BGD`` defines a possible background pixel.
-            * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
+        single-channel mask. Its elements may have one of following values::
+
+        * ``cv2.GC_BGD`` defines an obvious background pixel.
+        * ``cv2.GC_FGD`` defines an obvious foreground pixel.
+        * ``cv2.GC_PR_BGD`` defines a possible background pixel.
+        * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
 
         The GrabCut algorithm is executed with `iters` iterations. The ROI is set
         to the entire image, with a margin of `margin` pixels from the edges.
@@ -404,14 +480,15 @@ class Phenotyper(object):
         """Segment image into foreground and background pixels.
 
         Runs the GrabCut algorithm for segmentation. Returns an 8-bit
-        single-channel mask. Its elements may have one of following values:
-            * ``cv2.GC_BGD`` defines an obvious background pixel.
-            * ``cv2.GC_FGD`` defines an obvious foreground pixel.
-            * ``cv2.GC_PR_BGD`` defines a possible background pixel.
-            * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
+        single-channel mask. Its elements may have one of following values::
+
+        * ``cv2.GC_BGD`` defines an obvious background pixel.
+        * ``cv2.GC_FGD`` defines an obvious foreground pixel.
+        * ``cv2.GC_PR_BGD`` defines a possible background pixel.
+        * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
 
         The GrabCut algorithm is executed with `iters` iterations. The region
-        of interest `roi` must be a (x,y,w,h) tuple.
+        of interest `roi` must be a ``(x,y,w,h)`` tuple.
         """
         mask = np.zeros(img.shape[:2], np.uint8)
         bgdmodel = np.zeros((1,65), np.float64)
