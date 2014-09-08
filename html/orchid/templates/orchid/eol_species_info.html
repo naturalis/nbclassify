@@ -1,6 +1,7 @@
+{% load staticfiles %}
 {% if scientificName %}
     <div class="panel panel-default">
-        <div class="panel-heading"><strong><em>{{ canonicalName }}</em> {{ describedBy }}</strong> <span class="pull-right"><a href="http://eol.org/{{ identifier }}">More info on EOL.org</a></span></div>
+        <div class="panel-heading clearfix"><strong><em>{{ canonicalName }}</em> {{ describedBy }}</strong> <span class="pull-right"><a href="http://eol.org/{{ identifier }}"><img src="{% static 'orchid/images/eol_logo_100.png' %}" height="25px" title="More info on the Encyclopedia of Life" alt="EOL.org"></a></span></div>
         <div class="panel-body">
             {% if iucn %}
                 {% if iucn.danger_status %}

@@ -185,7 +185,7 @@ h4 {
     -webkit-border-radius: 4px;
 }
 
-#species-info img {
+#species-info .panel-body img {
     margin: 0.3rem 0.3rem 0.3rem 0;
 }
 
