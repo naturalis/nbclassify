@@ -407,10 +407,10 @@ class Common(object):
         return "%s" % class_
 
 class Phenotyper(object):
-    """Generate numerical features from a digital photo."""
+    """Extract features from a digital photo and output a numerical
+    phenotype."""
 
     def __init__(self):
-        """Set default values for variables."""
         self.path = None
         self.config = None
         self.img = None
@@ -421,9 +421,8 @@ class Phenotyper(object):
     def set_image(self, path, roi=None):
         """Load the image from path `path`.
 
-        If a region of interest `roi` was provided, only that region is used
-        for image processing. The ROI must be a ``(y,y2,x,x2)`` coordinates
-        tuple.
+        If a region of interest `roi` is set, only that region is used for
+        image processing. The ROI must be a 4-tuple ``(y,y2,x,x2)`` tuple.
         """
         self.img = cv2.imread(path)
         if self.img == None or self.img.size == 0:
@@ -536,9 +535,10 @@ class Phenotyper(object):
             margin = getattr(segmentation, 'margin', 1)
             output_folder = getattr(segmentation, 'output_folder', None)
 
-            # Account for the resizing factor when setting the ROI.
-            self.grabcut_roi = [int(x*rf) for x in self.grabcut_roi]
-            self.grabcut_roi = tuple(self.grabcut_roi)
+            if self.grabcut_roi:
+                # Account for the resizing factor when setting the ROI.
+                self.grabcut_roi = [int(x*rf) for x in self.grabcut_roi]
+                self.grabcut_roi = tuple(self.grabcut_roi)
 
             # Get the main contour.
             self.mask = self.grabcut(self.img, iterations, self.grabcut_roi, margin)

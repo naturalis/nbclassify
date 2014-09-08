@@ -207,8 +207,8 @@ def delete_photo(request, photo_id):
     if request.method == 'POST':
         # The user confirmed the deletion.
 
-        # Delete the photo. Because of the models.photo_delete_hook(), the actual
-        # image file will also be deleted.
+        # Delete the photo. Because of the models.photo_delete_hook(), the
+        # actual image file will also be deleted.
         photo.delete()
 
         # Return the result.

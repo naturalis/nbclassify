@@ -51,7 +51,7 @@ jQuery(function( $ ) {
     // Use an AJAX form.
     form = $("#identify_form").ajaxForm({
         success: function() {
-            $("#message").html('<div class="alert alert-info" role="alert"><strong>Done!</strong> Redirecting you to the result now. <a href="{% url 'orchid:photo' photo.id %}">Click here</a> if you are not being redirected.</div>');
+            $("#message").html('<div class="alert alert-success" role="alert"><strong>Done!</strong> Redirecting you to the result now. <a href="{% url 'orchid:photo' photo.id %}">Click here</a> if you are not being redirected.</div>');
             setTimeout(function() {
                 window.location.href = "{% url 'orchid:photo' photo.id %}";
             }, 3000);
