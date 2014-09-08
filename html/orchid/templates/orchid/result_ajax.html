@@ -28,7 +28,7 @@
                         &mdash;
                     {% endif %}
                 </td>
-                <td>{{ id.error|floatformat:6 }}</td>
+                <td><span class="{% if id.error <= mse_low %}text-success{% endif %}">{{ id.error|floatformat:6 }}</span></td>
             </tr>
             {% endfor %}
         </tbody>

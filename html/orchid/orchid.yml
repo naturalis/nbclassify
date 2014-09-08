@@ -57,7 +57,7 @@ ann_genus: &ann_genus
     hidden_neurons: 50
     epochs: 100000
     error: 0.00001
-    learning_rate: 0.7.
+    learning_rate: 0.7
     connection_rate: 1
     training_algorithm: TRAIN_RPROP
     activation_function_hidden: SIGMOID_SYMMETRIC

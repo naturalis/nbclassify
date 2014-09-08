@@ -20,6 +20,9 @@ ORCHID_CONF = os.path.join(settings.BASE_DIR, 'orchid', 'orchid.yml')
 TAXA_DB = os.path.join(settings.BASE_DIR, 'orchid', 'taxa.db')
 ANN_DIR = os.path.join(settings.BASE_DIR, 'orchid', 'orchid.ann')
 
+# Threshold for significant MSE values.
+MSE_LOW = 0.0001
+
 def home(request):
     """Display the home page."""
     data = {}
@@ -65,8 +68,7 @@ def identify(request, photo_id):
     data.update(csrf(request))
 
     if request.method == 'POST':
-        # The Identify Photo button was pressed. Identify the photo and return
-        # the results in HTML format.
+        # The Identify Photo button was pressed, so identify the photo.
 
         # Delete any existing identities, if any.
         Identity.objects.filter(photo=photo).delete()
@@ -113,9 +115,8 @@ def identify(request, photo_id):
             # Save the identity into the database.
             id_.save()
 
-        ids = photo.identity_set.all()
-        data = {'identities': ids}
-        return render(request, "orchid/result_ajax.html", data)
+        return HttpResponse(json.dumps({'stat': 'success'}),
+            content_type="application/json")
     else:
         # The Identify Photo button was not pressed. So let the user set the
         # region of interest, if any, and then press that button to start
@@ -139,7 +140,7 @@ def photo_identity(request, photo_id):
 
     photo = get_object_or_404(Photo, pk=photo_id)
     ids = photo.identity_set.all()
-    data = {'identities': ids}
+    data = {'identities': ids, 'mse_low': MSE_LOW}
     return render(request, "orchid/result_ajax.html", data)
 
 def classify_image(classifier, image_path, ann_dir):
