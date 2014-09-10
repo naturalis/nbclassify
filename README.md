@@ -8,6 +8,9 @@ is as follows:
 * `doc/`: Contains documentation.
 * `html/`: Contains a web application for image classification.
 * `script/`: Contains the scripts.
+* `script/docs/`: Contains the API documentation for the `nbclassify` package.
+  You need [Sphinx][1] to build the documentation. Run `make html` to build
+  the HTML documentation.
 * `script/nbclassify/`: A Python package with common code used by the scripts.
 * `script/harvest-images.py`: Image harvester for downloading photos with meta
   data from Flickr.
@@ -30,7 +33,7 @@ is as follows:
   * SQLite (>=3.6.19)
 * Python Flickr API
 * PyYAML
-* Python package for [image feature extraction][1]
+* Python package for [image feature extraction][2]
 * SQLAlchemy
 
 On Debian (based) systems, most dependencies can be installed from the
@@ -46,4 +49,5 @@ Package Index:
 
     sudo pip install flickrapi numpy sqlalchemy yaml
 
-[1]: https://github.com/naturalis/feature-extraction "Python package for image feature extraction"
+[1]: http://sphinx-doc.org/
+[2]: https://github.com/naturalis/feature-extraction "Python package for image feature extraction"
