@@ -1,6 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Common code for classification scripts.
+
+This package contains commmon code used by the training and classification
+scripts. This package depends on Naturalis' `features
+<https://github.com/naturalis/feature-extraction>`_ package for feature
+extraction from digital images.
+"""
+
 from argparse import Namespace
 import csv
 import logging
@@ -16,10 +24,19 @@ from sqlalchemy.ext.automap import automap_base
 
 from exceptions import *
 
+def open_yaml(path):
+    """Read a YAML file and return as a nested :class:`Struct` object."""
+    with open(path, 'r') as f:
+        config = yaml.load(f)
+    return Struct(config)
+
 class Struct(Namespace):
+
     """Return a dictionary as an object."""
 
     def __init__(self, d):
+        if not isinstance(d, dict):
+            raise TypeError("Expected a dictionary, got {0} instead".format(type(d)))
         for key, val in d.iteritems():
             if isinstance(val, (list, tuple)):
                 setattr(self, str(key), [self.__class__(x) if \
@@ -35,6 +52,7 @@ class Struct(Namespace):
         return str(self) == str(other)
 
 class Common(object):
+
     """Collection of common functions.
 
     This class is used as a super class in several scripts that implement this
@@ -42,11 +60,14 @@ class Common(object):
     """
 
     def __init__(self, config):
-        """Set the configurations object."""
+        """Set the configurations object `config`."""
         self.set_config(config)
 
     def set_config(self, config):
-        """Set the configurations object."""
+        """Set the configurations object `config`.
+
+        Expects a configuration object as returned by :meth:`open_yaml`.
+        """
         if not isinstance(config, Struct):
             raise TypeError("Configurations object must be of type Struct, not %s" % type(config))
 
@@ -407,10 +428,18 @@ class Common(object):
         return "%s" % class_
 
 class Phenotyper(object):
-    """Extract features from a digital photo and output a numerical
-    phenotype."""
+    """Extract features from a digital image and return as a phenotype.
+
+    Uses the :mod:`features` package to extract features from the image. Use
+    :meth:`set_image` to load an image and :meth:`set_config` to set a
+    configuration object as returned by :meth:`open_yaml`. Then :meth:`make`
+    can be called to extract the features as specified in the configurations
+    object and return the phenotype. A single phenotypes is returned, which is
+    a list of floating point numbers.
+    """
 
     def __init__(self):
+        """Set the default attributes."""
         self.path = None
         self.config = None
         self.img = None
@@ -422,7 +451,8 @@ class Phenotyper(object):
         """Load the image from path `path`.
 
         If a region of interest `roi` is set, only that region is used for
-        image processing. The ROI must be a 4-tuple ``(y,y2,x,x2)`` tuple.
+        image processing. The ROI must be a 4-tuple ``(y,y2,x,x2)``. Image
+        related attributes are reset. Returns the image object.
         """
         self.img = cv2.imread(path)
         if self.img == None or self.img.size == 0:
@@ -445,34 +475,41 @@ class Phenotyper(object):
     def set_grabcut_roi(self, roi):
         """Set the region of interest for the GrabCut algorithm.
 
-        If GrabCut is set as the segmentation algorithm, then :meth:`grabcut`
-        is executed with this region of interest.
+        If GrabCut is set as the segmentation algorithm, then GrabCut is
+        executed with this region of interest.
 
         The ROI must be a 4-tuple ``(x,y,width,height)``.
         """
+        if len(roi) != 4:
+            raise ValueError("ROI must be a list of four integers")
         self.grabcut_roi = roi
 
     def set_config(self, config):
-        """Set the YAML configurations object."""
+        """Set the configurations object.
+
+        Expects a configuration object as returned by :meth:`open_yaml`.
+        """
         if not isinstance(config, Struct):
-            raise TypeError("Configurations object must be of type Struct, not %s" % type(config))
+            raise TypeError("Expected a Struct instance, got {0} instead".format(type(config)))
         self.config = config
 
-    def grabcut(self, img, iters=5, roi=None, margin=5):
+    def __grabcut(self, img, iters=5, roi=None, margin=5):
         """Wrapper for OpenCV's grabCut function.
 
         Runs the GrabCut algorithm for segmentation. Returns an 8-bit
         single-channel mask. Its elements may have the following values:
 
-        * ``cv2.GC_BGD`` defines an obvious background pixel.
-        * ``cv2.GC_FGD`` defines an obvious foreground pixel.
-        * ``cv2.GC_PR_BGD`` defines a possible background pixel.
-        * ``cv2.GC_PR_FGD`` defines a possible foreground pixel.
+        * ``cv2.GC_BGD`` defines an obvious background pixel
+        * ``cv2.GC_FGD`` defines an obvious foreground pixel
+        * ``cv2.GC_PR_BGD`` defines a possible background pixel
+        * ``cv2.GC_PR_FGD`` defines a possible foreground pixel
 
         The GrabCut algorithm is executed with `iters` iterations. The region
         of interest `roi` can be a 4-tuple ``(x,y,width,height)``. If the ROI
         is not set, the ROI is set to the entire image, with a margin of
         `margin` pixels from the borders.
+
+        This method is indirectly executed by :meth:`make`.
         """
         mask = np.zeros(img.shape[:2], np.uint8)
         bgdmodel = np.zeros((1,65), np.float64)
@@ -496,16 +533,13 @@ class Phenotyper(object):
 
         This method is executed by :meth:`make`.
         """
-        # The resizing factor of the image.
-        rf = 1.0
-
         if self.img is None:
             raise RuntimeError("No image is loaded")
-
         if 'preprocess' not in self.config:
             return
 
         # Scale the image down if its perimeter exceeds the maximum (if set).
+        rf = 1.0
         perim = sum(self.img.shape[:2])
         max_perim = getattr(self.config.preprocess, 'maximum_perimeter', None)
         if max_perim and perim > max_perim:
@@ -521,7 +555,7 @@ class Phenotyper(object):
                     logging.info("Color enhancement...")
                     self.img = ft.naik_murthy_linear(self.img)
                 else:
-                    raise ValueError("Unknown color enhancement method '%s'" % method)
+                    raise ConfigurationError("Unknown color enhancement method '%s'" % method)
 
         # Perform segmentation.
         try:
@@ -541,7 +575,7 @@ class Phenotyper(object):
                 self.grabcut_roi = tuple(self.grabcut_roi)
 
             # Get the main contour.
-            self.mask = self.grabcut(self.img, iterations, self.grabcut_roi, margin)
+            self.mask = self.__grabcut(self.img, iterations, self.grabcut_roi, margin)
             self.bin_mask = np.where((self.mask==cv2.GC_FGD) + (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
             contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if contour is None:
@@ -561,47 +595,52 @@ class Phenotyper(object):
     def make(self):
         """Return the phenotype for the loaded image.
 
-        The phenotype is returned as a list of floating point values.
+        Performs any image preprocessing if necessary and the image features
+        are extracted as specified in the configurations. Finally the
+        phenotype is returned as a list of floating point values.
         """
         if self.img == None:
             raise ValueError("No image loaded")
 
+        # Perform preprocessing.
         self.__preprocess()
 
         logging.info("Extracting features...")
 
-        data_row = []
+        # Construct the phenotype.
+        phenotype = []
 
         if not 'features' in self.config:
-            raise RuntimeError("Features to extract not set. Nothing to do.")
+            raise ConfigurationError("Features to extract not set")
 
         for feature, args in vars(self.config.features).iteritems():
             if feature == 'color_histograms':
                 logging.info("- Running color:histograms...")
-                data = self.get_color_histograms(self.img, args, self.bin_mask)
-                data_row.extend(data)
+                data = self.__get_color_histograms(self.img, args, self.bin_mask)
+                phenotype.extend(data)
 
             elif feature == 'color_bgr_means':
                 logging.info("- Running color:bgr_means...")
-                data = self.get_color_bgr_means(self.img, args, self.bin_mask)
-                data_row.extend(data)
+                data = self.__get_color_bgr_means(self.img, args, self.bin_mask)
+                phenotype.extend(data)
 
             elif feature == 'shape_outline':
                 logging.info("- Running shape:outline...")
-                data = self.get_shape_outline(args, self.bin_mask)
-                data_row.extend(data)
+                data = self.__get_shape_outline(args, self.bin_mask)
+                phenotype.extend(data)
 
             elif feature == 'shape_360':
                 logging.info("- Running shape:360...")
-                data = self.get_shape_360(args, self.bin_mask)
-                data_row.extend(data)
+                data = self.__get_shape_360(args, self.bin_mask)
+                phenotype.extend(data)
 
             else:
                 raise ValueError("Unknown feature '%s'" % feature)
 
-        return data_row
+        return phenotype
 
-    def get_color_histograms(self, src, args, bin_mask=None):
+    def __get_color_histograms(self, src, args, bin_mask=None):
+        """Executes :meth:`features.color_histograms`."""
         histograms = []
         for colorspace, bins in vars(args).iteritems():
             if colorspace.lower() == "bgr":
@@ -623,7 +662,8 @@ class Phenotyper(object):
                 histograms.extend( hist.ravel() )
         return histograms
 
-    def get_color_bgr_means(self, src, args, bin_mask=None):
+    def __get_color_bgr_means(self, src, args, bin_mask=None):
+        """Executes :meth:`features.color_bgr_means`."""
         if self.bin_mask == None:
             raise ValueError("Binary mask cannot be None")
 
@@ -641,7 +681,8 @@ class Phenotyper(object):
         # Normalize data to range -1 .. 1
         return output * 2.0 / 255 - 1
 
-    def get_shape_outline(self, args, bin_mask):
+    def __get_shape_outline(self, args, bin_mask):
+        """Executes :meth:`features.shape_outline`."""
         if self.bin_mask == None:
             raise ValueError("Binary mask cannot be None")
 
@@ -669,7 +710,8 @@ class Phenotyper(object):
 
         return shape.ravel()
 
-    def get_shape_360(self, args, bin_mask):
+    def __get_shape_360(self, args, bin_mask):
+        """Executes :meth:`features.shape_360`."""
         if self.bin_mask == None:
             raise ValueError("Binary mask cannot be None")
 
@@ -750,9 +792,19 @@ class Phenotyper(object):
         return np.append(means_sds, histograms)
 
 class TrainData(object):
-    """Class for storing training data."""
 
-    def __init__(self, num_input = 0, num_output = 0):
+    """Store and retrieve training data."""
+
+    def __init__(self, num_input=0, num_output=0):
+        """Set the number of input and output columns.
+
+        Training data consists of input data columns, and output data columns.
+        The number of input `num_input` and output `num_output` columns must
+        be specified when manually settinf data with :meth:`append`.
+
+        If :meth:`read_from_file` is used to load training data from a file,
+        the number of input and output columns is set for you.
+        """
         self.num_input = num_input
         self.num_output = num_output
         self.labels = []
@@ -761,21 +813,24 @@ class TrainData(object):
         self.counter = 0
 
     def read_from_file(self, path, dependent_prefix="OUT:"):
-        """Reads training data from file.
+        """Load training data from file.
 
-        Data is loaded from TSV file `path`. File must have a header row,
-        and columns with a name starting with `dependent_prefix` are used as
-        classification columns. Optionally, sample labels can be stored in
-        a column with name "ID". All remaining columns are used as predictors.
+        Data is loaded from a tab separated file file `path`. The file must
+        have a header row, and columns with a name starting with
+        `dependent_prefix` are used as output columns. Optionally, labels for
+        the samples can be stored in a column with name "ID". All remaining
+        columns are used as input data.
         """
         with open(path, 'r') as fh:
             reader = csv.reader(fh, delimiter="\t")
 
             # Figure out the format of the data.
-            header = reader.next()
+            self.num_input = 0
+            self.num_output = 0
             input_start = None
             output_start = None
             label_idx = None
+            header = reader.next()
             for i, field in enumerate(header):
                 if field == "ID":
                     label_idx = i
@@ -789,15 +844,15 @@ class TrainData(object):
                     self.num_input += 1
 
             if self.num_input == 0:
-                raise IOError("No input columns found in training data.")
+                raise IOError("No input columns found in training data")
             if self.num_output  == 0:
-                raise IOError("No output columns found in training data.")
+                raise IOError("No output columns found in training data")
 
             input_end = input_start + self.num_input
             output_end = output_start + self.num_output
 
             for row in reader:
-                if label_idx != None:
+                if label_idx is not None:
                     self.labels.append(row[label_idx])
                 else:
                     self.labels.append(None)
@@ -813,6 +868,10 @@ class TrainData(object):
         return self
 
     def next(self):
+        """Return the next sample.
+
+        An instance of this class is iterable.
+        """
         if self.counter >= len(self.input):
             self.counter = 0
             raise StopIteration
@@ -822,6 +881,11 @@ class TrainData(object):
             return (self.labels[i], self.input[i], self.output[i])
 
     def append(self, input, output, label=None):
+        """Add a data row.
+
+        A data row consists of input data `input`, output data `output`, and
+        an optional sample label `label`.
+        """
         if isinstance(self.input, np.ndarray):
             raise ValueError("Cannot add data once finalized")
         if len(input) != self.num_input:
@@ -834,10 +898,15 @@ class TrainData(object):
         self.output.append(output)
 
     def finalize(self):
+        """Transform input and output data to Numpy arrays."""
         self.input = np.array(self.input).astype(float)
         self.output = np.array(self.output).astype(float)
 
     def normalize_input_columns(self, alpha, beta, norm_type=cv2.NORM_MINMAX):
+        """Normalize the input columns using :meth:`cv2.normalize`.
+
+        This method can only be called after :meth:`finalize` was executed.
+        """
         if not isinstance(self.input, np.ndarray):
             raise ValueError("Data must be finalized before running this function")
 
@@ -846,6 +915,10 @@ class TrainData(object):
             self.input[:,col] = tmp[:,0]
 
     def normalize_input_rows(self, alpha, beta, norm_type=cv2.NORM_MINMAX):
+        """Normalize the input rows using :meth:`cv2.normalize`.
+
+        This method can only be called after :meth:`finalize` was executed.
+        """
         if not isinstance(self.input, np.ndarray):
             raise ValueError("Data must be finalized before running this function")
 
@@ -853,18 +926,23 @@ class TrainData(object):
             self.input[i] = cv2.normalize(row, None, alpha, beta, norm_type).reshape(-1)
 
     def round_input(self, decimals=4):
+        """Rounds the input data to `decimals` decimals."""
         self.input = np.around(self.input, decimals)
 
     def get_input(self):
+        """Return the input data."""
         return self.input
 
     def get_output(self):
+        """Return the output data."""
         return self.output
 
 class TrainANN(object):
-    """Train an artificial neural network."""
+
+    """Train artificial neural networks."""
 
     def __init__(self):
+        """Set the default attributes."""
         self.ann = None
         self.connection_rate = 1
         self.learning_rate = 0.7
@@ -880,18 +958,13 @@ class TrainANN(object):
         self.test_data = None
 
     def set_train_data(self, data):
+        """Set the training data on which to train the network on.
+
+        The training data `data` must be an instance of :class:`TrainData`.
+        """
         if not isinstance(data, TrainData):
             raise ValueError("Training data must be an instance of TrainData")
         self.train_data = data
-
-    def set_test_data(self, data):
-        if not isinstance(data, TrainData):
-            raise ValueError("Training data must be an instance of TrainData")
-        if data.num_input != self.train_data.num_input:
-            raise ValueError("Number of inputs of test data must be same as train data")
-        if data.num_output != self.train_data.num_output:
-            raise ValueError("Number of output of test data must be same as train data")
-        self.test_data = data
 
     def train(self, train_data):
         self.set_train_data(train_data)
@@ -923,11 +996,23 @@ class TrainANN(object):
         self.ann.train_on_data(fann_train_data, self.epochs, self.iterations_between_reports, self.desired_error)
         return self.ann
 
-    def test(self, test_data):
-        self.set_test_data(test_data)
+    def test(self, data):
+        """Test the trained neural network.
+
+        Expects an instance of :class:`TrainData`. Returns the mean square
+        error on the test data `data`.
+        """
+        if not isinstance(data, TrainData):
+            raise ValueError("Training data must be an instance of TrainData")
+        if not self.ann:
+            raise ValueError("No neural network was trained yet")
+        if data.num_input != self.train_data.num_input:
+            raise ValueError("Number of inputs of test data must be same as train data")
+        if data.num_output != self.train_data.num_output:
+            raise ValueError("Number of output of test data must be same as train data")
 
         fann_test_data = libfann.training_data()
-        fann_test_data.set_train_data(self.test_data.get_input(), self.test_data.get_output())
+        fann_test_data.set_train_data(data.get_input(), data.get_output())
 
         self.ann.reset_MSE()
         self.ann.test_data(fann_test_data)

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Custom exceptions that may be raised by this package."""
+
 class FileExistsError(Exception):
     """Raised when a new file is going to be created, but the file already
     exists.
