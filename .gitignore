@@ -4,3 +4,6 @@
 
 # Where user uploads are stored.
 html/media/
+
+# Sphinx build directories
+_build/
