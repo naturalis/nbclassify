@@ -9,8 +9,8 @@ is as follows:
 * `html/`: Contains a web application for image classification.
 * `script/`: Contains the scripts.
 * `script/docs/`: Contains the API documentation for the `nbclassify` package.
-  You need [Sphinx][1] to build the documentation. Run `make html` to build
-  the HTML documentation.
+  You need [Sphinx][1] to build the documentation. Run `pip install -r
+  requirements.txt` followed by `make html` to build the documentation.
 * `script/nbclassify/`: A Python package with common code used by the scripts.
 * `script/harvest-images.py`: Image harvester for downloading photos with meta
   data from Flickr.
@@ -47,7 +47,7 @@ Package Index:
 
     sudo apt-get install python-pip
 
-    sudo pip install flickrapi numpy sqlalchemy yaml
+    sudo pip install -r requirements.txt
 
 [1]: http://sphinx-doc.org/
 [2]: https://github.com/naturalis/feature-extraction "Python package for image feature extraction"
