@@ -4,7 +4,6 @@ This repository contains code and examples that demonstrate the ability for
 artificial neural networks to classify images of orchid species. The layout
 is as follows:
 
-* `data/databases/`: Contains schemas of databases used by any of the scripts.
 * `doc/`: Contains documentation.
 * `html/`: Contains a web application for image classification. It implements
   the `nbclassify` package.
