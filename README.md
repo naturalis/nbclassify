@@ -10,6 +10,7 @@ is as follows:
 * `nbclassify/`: A Python package for training artificial neural networks and
    image classification. It implements the [ImgPheno][1] package.
 
+
 ## Dependencies
 
 * FANN (>=2.1.0)
@@ -33,7 +34,7 @@ software repository:
 More recent versions of some Python packages can be obtained via the Python
 Package Index:
 
-    pip install flickrapi numpy sqlalchemy yaml
+    pip install flickrapi numpy sqlalchemy pyyaml
 
 
 [1]: https://github.com/naturalis/feature-extraction
