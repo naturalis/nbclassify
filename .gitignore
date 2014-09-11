@@ -1,11 +1,11 @@
 *.DS_Store
 *.pyc
 *.sqlite3
-html/features
-html/nbclassify
 
 # Where user uploads are stored.
 html/media/
 
-# Sphinx build directories
+# Build directories
 _build/
+dist/
+nbclassify.egg-info/

@@ -1,4 +1,0 @@
-flickrapi
-numpy
-sqlalchemy
-yaml

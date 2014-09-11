@@ -16,7 +16,7 @@ import os
 import sys
 
 import cv2
-import features as ft
+import imgpheno as ft
 import numpy as np
 from pyfann import libfann
 from sqlalchemy import orm

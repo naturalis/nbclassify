@@ -9,10 +9,8 @@ from pyfann import libfann
 import sqlalchemy
 import yaml
 
+import imgpheno as ft
 import nbclassify as nbc
-# Import the feature extraction library.
-# https://github.com/naturalis/feature-extraction
-import features as ft
 
 def get_object(d):
     """Return an object from a dictionary."""

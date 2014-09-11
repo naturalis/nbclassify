@@ -33,15 +33,13 @@ import re
 import sys
 
 import cv2
+import imgpheno as ft
 import numpy as np
 from pyfann import libfann
 import sqlalchemy
 import yaml
 
 import nbclassify as nbc
-# Import the feature extraction library.
-# https://github.com/naturalis/feature-extraction
-import features as ft
 
 OUTPUT_PREFIX = "OUT:"
 
