@@ -53,7 +53,7 @@ def main():
     subparsers = parser.add_subparsers(help="Specify which task to start.",
         dest='task')
 
-    help_harvest = "Harvest images from a Flickr account."
+    help_harvest = "Download images with meta data from a Flickr account."
     parser_harvest = subparsers.add_parser('harvest',
         help=help_harvest, description=help_harvest)
 
@@ -78,9 +78,9 @@ def main():
         "argument is omitted, it defaults to 100. The maximum allowed value " \
         "is 500.")
 
-    help_cleanup = """Remove image files from a local directory and its
-    subdirectories for which the filename is a Flickr photo ID and the
-    photo ID does not exist on the Flickr account."""
+    help_cleanup = """Clean up your local archive of Flickr harvested images.
+    Images that were harvested, but were later removed from Flickr, will also
+    be deleted from your local archive."""
     parser_cleanup = subparsers.add_parser('cleanup',
         help=help_cleanup, description=help_cleanup)
 

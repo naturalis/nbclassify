@@ -3,15 +3,20 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to nbclassify's documentation!
+Welcome to NBClassify's documentation!
 ======================================
+
+NBClassify is a collection of Python scripts for image fingerprinting (using
+the ImgPheno_ package) and recognition via artificial neural networks.
 
 Contents:
 
 .. toctree::
    :maxdepth: 4
 
-   nbclassify
+   installation
+   user_guide
+   api
 
 
 Indices and tables
@@ -21,3 +26,4 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+.. _ImgPheno: https://github.com/naturalis/feature-extraction

@@ -6,7 +6,7 @@ photographs, export these to training data files, and train and test
 artificial neural networks.
 
 This script depends on configurations from a configuration file. See
-trainer.yml for an example configuration file.
+config.yml for an example configuration file.
 
 The script also depends on an SQLite database file with meta data for a
 collection of digital photographs. This database is created by
@@ -60,7 +60,7 @@ def main():
     # Create an argument parser for sub-command 'data'.
     help_data = """Create a tab separated file with training data.
     Preprocessing steps, features to extract, and a classification filter
-    must be set in a configurations file. See trainer.yml for an example."""
+    must be set in a configurations file. See config.yml for an example."""
 
     parser_data = subparsers.add_parser('data',
         help=help_data, description=help_data)
@@ -79,7 +79,7 @@ def main():
     # Create an argument parser for sub-command 'batch-data'.
     help_batch_data = """Batch create tab separated files with training
     data. Preprocessing steps, features to extract, and the classification
-    hierarchy must be set in a configurations file, See trainer.yml for an
+    hierarchy must be set in a configurations file, See config.yml for an
     example."""
 
     parser_batch_data = subparsers.add_parser('batch-data',
@@ -99,7 +99,7 @@ def main():
     # Create an argument parser for sub-command 'ann'.
     help_ann = """Train an artificial neural network. Optional training
     parameters `ann` can be set in a separate configurations file. See
-    trainer.yml for an example."""
+    config.yml for an example."""
 
     parser_ann = subparsers.add_parser('ann',
         help=help_ann, description=help_ann)
@@ -120,7 +120,7 @@ def main():
     help_batch_ann = """Batch train a committee of artificial neural
     networks. The classification hierarchy with optionally neural network
     training parameters for each level must be set in a configurations
-    file. See trainer.yml for an example."""
+    file. See config.yml for an example."""
 
     parser_batch_ann = subparsers.add_parser('batch-ann',
         help=help_batch_ann, description=help_batch_ann)
@@ -141,7 +141,7 @@ def main():
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann = """Test an artificial neural network. If `--output` is
     used, then --db must be set, and the classification filter must be set
-    in the configurations file. See trainer.yml for an example."""
+    in the configurations file. See config.yml for an example."""
 
     parser_test_ann = subparsers.add_parser('test-ann',
         help=help_test_ann, description=help_test_ann)
@@ -165,7 +165,7 @@ def main():
 
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann_batch = """Test the artificial neural networks for a
-    classification hierarchy. See trainer.yml for an example."""
+    classification hierarchy. See config.yml for an example."""
 
     parser_test_ann_batch = subparsers.add_parser('test-ann-batch',
         help=help_test_ann_batch, description=help_test_ann_batch)
@@ -191,7 +191,7 @@ def main():
 
     # Create an argument parser for sub-command 'classify'.
     help_classify = """Classify a digital photo. The classification filter
-    must be set in the configurations file. See trainer.yml for an example."""
+    must be set in the configurations file. See config.yml for an example."""
 
     parser_classify = subparsers.add_parser('classify',
         help=help_classify, description=help_classify)

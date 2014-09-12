@@ -6,7 +6,7 @@
 The photo is classified on different levels in a classification hierarchy,
 for example a taxanomic hierarchy. A different neural network may be used to
 classify at each level in the hierarchy. The classification hierarchy is
-set in a configuration file. See trainer.yml for an example configuration
+set in a configuration file. See config.yml for an example configuration
 file with the classification hierarchy set.
 
 The neural networks on which this script depends are created by a separate
