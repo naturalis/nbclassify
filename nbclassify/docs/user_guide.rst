@@ -36,6 +36,7 @@ explained in the following subsections:
    :maxdepth: 4
 
    scripts
+   config-yml
 
 
 .. _ImgPheno: https://github.com/naturalis/feature-extraction

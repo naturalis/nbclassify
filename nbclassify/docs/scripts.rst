@@ -127,12 +127,9 @@ nbc-trainer.py
 Used to extract fingerprints, or "phenotypes", from digital images, export
 these to training data files, and train and test artificial neural networks.
 
-This script uses a configurations file in the YAML_ format. This
-configurations file specifies what preprocessing needs to be done on images,
-what features need to be extracted from the images, what the classification
-hierarchy looks like, and how the neural networks are trained. See
-:download:`nbclassify/config.yml <../nbclassify/config.yml>` for an example
-configurations file.
+This script uses a configurations file which controls how images are processed
+and how neural networks are trained. See :ref:`config-yml` for detailed
+information.
 
 This script depends on the SQLite database file with meta data for a Flickr
 harvested image collection. This database is created by
@@ -193,84 +190,10 @@ batch-data
 
 In contrast to the ``data`` subcommand, this will automatically create all the
 training data files needed to train neural networks for classification on each
-level in the classification hierarchy. It uses the classification hierarchy
-set in the configurations file to determine which training data files need to
-be created.
-
-A classification hierarchy consists of `levels`, and each level has a name. In
-the case of the slipper orchids, the levels correspond to the taxanomic ranks:
-genus, section, species. In this case, this means that each image can be
-classified on three levels. This subcommand creates all the training data
-files needed to train neural networks for classification on each level. This
-is what a classification hierarchy looks like:
-
-.. code-block:: yaml
-
-    classification:
-        hierarchy:
-            - name: genus
-              preprocess: *preprocess_std
-              features: *features_std
-              ann: *ann_genus
-              train_file: genus.tsv
-              test_file: genus.tsv
-              ann_file: genus.ann
-              max_error: 0.00001
-
-            - name: section
-              preprocess: *preprocess_std
-              features: *features_std
-              ann: *ann_std
-              train_file: __genus__.section.tsv
-              test_file: __genus__.section.tsv
-              ann_file: __genus__.section.ann
-              max_error: 0.0001
-
-            - name: species
-              preprocess: *preprocess_std
-              features: *features_std
-              ann: *ann_std
-              train_file: __genus__.__section__.species.tsv
-              test_file: __genus__.__section__.species.tsv
-              ann_file: __genus__.__section__.species.ann
-              max_error: 0.001
-
-The order of the levels is important. In this example, each image is first
-classified on the genus level. Once the genus is known, it will classify on
-sections within that specific genus. And when the section is know, it will
-classify on species within that section. As you can see, the
-``{train|test|ann}_file`` directives support ``__level__`` wildcards, where
-``level`` is replaced by the corresponding classification in the parent level.
-
-The classification hierarcy supports the following options:
-
-name*
-  The name of the level.
-
-preprocess
-  Image preprocessing options.
-
-features*
-  The features that need to be extracted from the images.
-
-ann*
-  Settings for training the artificial neural networks.
-
-train_file*
-  File name for training data files.
-
-test_file
-  File name for test data files.
-
-ann_file*
-  File name for neural network files.
-
-max_error
-  Mean square error threshold for classification on this level. A
-  classification is only accepted if the mean square error is below this
-  value. A default error threshold can be set with the ``--error`` option.
-
-Options marked with an asterisk (*) are required.
+level in the :ref:`classification hierarchy
+<config-yml-classification-hierarchy>`. It uses the
+:ref:`config-yml-classification-hierarchy` setting in the configurations file
+to determine which training data files need to be created.
 
 Example usage::
 
@@ -284,5 +207,3 @@ nbc-classify.py
 
 TODO
 
-
-.. _YAML: http://yaml.org/
