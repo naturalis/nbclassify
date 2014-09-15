@@ -23,7 +23,7 @@ preprocess: &preprocess_std
     segmentation:
         grabcut:
             # The number of segmentation iterations. Default is 5.
-            iterations: 5
+            iters: 5
             # The margin of the region of interest from the edges of the image.
             # Default is 1.
             margin: 1
@@ -61,26 +61,14 @@ ann: &ann_std
     activation_function_output: SIGMOID_SYMMETRIC
 
 ann_genus: &ann_genus
-    # Number of hidden neuron layers. Default is 1
     hidden_layers: 1
-    # Number of hidden neurons per hidden layer. Default is 8
     hidden_neurons: 50
-    # Maximum number of epochs. Default is 100000
     epochs: 100000
-    # Desired error. Default is 0.00001
     error: 0.00001
-    # Learning rate. Default is 0.7
     learning_rate: 0.7
-    # Connection rate. Default is 1, a fully connected network.
     connection_rate: 1
-    # The training algorithm used for training. Default is TRAIN_RPROP.
-    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_train_enum
     training_algorithm: TRAIN_RPROP
-    # The activation function for the hidden layers. Default is SIGMOID_STEPWISE.
-    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
     activation_function_hidden: SIGMOID_SYMMETRIC
-    # The activation function for the output layer. Default is SIGMOID_STEPWISE.
-    # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
     activation_function_output: SIGMOID_SYMMETRIC
 
 # Configurations for classification.

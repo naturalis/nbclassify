@@ -13,10 +13,11 @@ artificial neural networks (ANNs), to automate image classification. The
 development of a generic Python package called ImgPheno_ was started to
 implement image fingerprinting in Python. The NBClassify package implements
 ImgPheno_ to provide a set of Python scripts for image fingerprinting, neural
-network training, and image classification. As a proof-of-concept, NBClassify
-implements this package to test automated classification of photos of lady's
-slipper orchids, orchids of the subfamily Cypripedioideae_. With this package,
-images can be classified on genus, section, and species level.
+network training, and image classification. As a proof-of-concept,
+NBClassify's scripts implement this package to test automated classification
+of photos of lady's slipper orchids, orchids of the subfamily
+Cypripedioideae_. With this package, images can be classified on genus,
+section, and species level.
 
 In addition to the command-line scripts, NBClassify also comes with a more
 user-friendly web application for image classification called OrchiD. This web
@@ -26,17 +27,13 @@ NBClassify and ImgPheno_ are installed. OrchiD can be easily installed on any
 Django_ website.
 
 
-Using the scripts
-=================
-
-NBClassify comes with several command-line scripts. Usage of these scripts is
-explained in the following subsections:
+Contents:
 
 .. toctree::
    :maxdepth: 4
 
    scripts
-   config-yml
+   config
 
 
 .. _ImgPheno: https://github.com/naturalis/feature-extraction

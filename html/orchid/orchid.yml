@@ -15,7 +15,7 @@ preprocess: &preprocess_std
     segmentation:
         grabcut:
             # The number of segmentation iterations. Default is 5.
-            iterations: 5
+            iters: 5
             # The margin of the region of interest from the edges of the image.
             # Default is 1.
             margin: 1
