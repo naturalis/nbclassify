@@ -227,7 +227,8 @@ class ImageClassifier(nbc.Common):
             hasher.update(buf)
 
         # Create a hash of the feature extraction options.
-        hash_ = "%s.%s.%s" % (hasher.hexdigest(), hash(config.preprocess), hash(config.features))
+        hash_ = "%s.%s.%s" % (hasher.hexdigest(), hash(config.preprocess),
+            hash(config.features))
 
         if hash_ in self.cache:
             phenotype = self.cache[hash_]
