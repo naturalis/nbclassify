@@ -57,6 +57,20 @@ Package Index::
 
 The ImgPheno_ package can be installed from the GitHub repository.
 
+Installation
+============
+
+From the GitHub repository::
+
+    git clone https://github.com/naturalis/img-classify.git
+    cd img-classify/nbclassify/
+    python setup.py install
+
+Or if you have a source archive file::
+
+    pip install nbclassify-0.1.0.tar.gz
+
+
 .. _ImgPheno: https://github.com/naturalis/feature-extraction
 .. _FANN: http://leenissen.dk/fann/wp/
 .. _NumPy: http://www.numpy.org/

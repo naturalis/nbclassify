@@ -7,9 +7,8 @@ is as follows:
 * `doc/`: Contains documentation.
 * `html/`: Contains a web application for image classification. It implements
   the `nbclassify` package.
-* `nbclassify/`: A Python package for training artificial neural networks and
-   image classification. It implements the [ImgPheno][1] package.
-
+* `nbclassify/`: A Python package for image fingerprinting (using   the
+  ImgPheno_ package) and recognition via artificial neural networks.
 
 ## Dependencies
 
