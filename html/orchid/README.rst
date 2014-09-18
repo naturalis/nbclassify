@@ -5,10 +5,9 @@ OrchiD
 OrchiD is a proof-of-concept Django app for classifying digital images of
 slipper orchids.
 
-It implements our "nbclassify" Python package for automated classification of
-images using artificial neural networks. The "nbclassify" Python package
-depends on our Python package for `image feature extraction
-<https://github.com/naturalis/feature-extraction>`_. They both need to be
+It implements the NBClassify Python package for image fingerprinting and
+recognition. NBClassify depends on the `ImgPheno
+<https://github.com/naturalis/imgpheno>`_ package and they both need to be
 installed for this app to work.
 
 Quick start
