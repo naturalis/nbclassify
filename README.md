@@ -1,4 +1,4 @@
-# Image Classification
+# NBClassify
 
 This repository contains code and examples that demonstrate the ability for
 artificial neural networks to classify images of orchid species. The layout
@@ -37,4 +37,4 @@ Package Index:
     pip install flickrapi numpy sqlalchemy pyyaml
 
 
-[1]: https://github.com/naturalis/feature-extraction
+[1]: https://github.com/naturalis/imgpheno
