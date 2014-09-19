@@ -38,8 +38,11 @@ except IndexError:
     pass
 
 # API Key from Offlickr
-FLICKR_API_KEY = '1391fcd0a9780b247cd6a101272acf71'
-FLICKR_API_SECRET = 'fd221d0336de3b6d'
+FLICKR_API_KEY = "1391fcd0a9780b247cd6a101272acf71"
+FLICKR_API_SECRET = "fd221d0336de3b6d"
+
+# File name of the meta data file.
+META_FILE = ".meta.db"
 
 def main():
     # Create argument parser.
@@ -59,10 +62,6 @@ def main():
 
     parser_harvest.add_argument("--output", "-o", metavar="PATH", default=".",
         help="Folder to put harvested photos in. Default is current folder.")
-    parser_harvest.add_argument("--db", metavar="DB",
-        help="Path to photos database file with meta data. If omitted, " \
-        "this defaults to a file photos.db in the output folder. The "\
-        "database file will be created if it doesn't exist.")
     parser_harvest.add_argument("--tags", metavar="TAGS",
         help="A comma-delimited list of tags. Photos with the tags listed " \
         "will be harvested. You can exclude results that match a tag by " \
@@ -84,11 +83,15 @@ def main():
     parser_cleanup = subparsers.add_parser('cleanup',
         help=help_cleanup, description=help_cleanup)
 
-    parser_cleanup.add_argument("--path", metavar="PATH", required=True,
+    parser_cleanup.add_argument(
+        "--path",
+        metavar="PATH",
+        required=True,
         help="Path to a directory containing Flickr photos.")
-    parser_cleanup.add_argument("--db", metavar="DB",
-        help="Path to photos database file with meta data. If omitted, " \
-        "this defaults to a file photos.db in the directory --path.")
+    parser_cleanup.add_argument(
+        "imdir",
+        metavar="PATH",
+        help="Base directory where the Flickr harvested images are stored.")
 
     # Parse arguments.
     args = parser.parse_args()
@@ -103,9 +106,10 @@ def main():
 
     logging.basicConfig(level=log_level, format='%(levelname)s %(message)s')
 
+    # Get path to meta data file.
+    meta_path = os.path.join(args.imdir, META_FILE)
+
     if args.task == 'harvest':
-        if args.db is None:
-            args.db = os.path.join(args.output, "photos.db")
         if not (0 < args.per_page <= 500):
             sys.stderr.write("Incorrect value for option --per-page\n")
             return
@@ -125,7 +129,7 @@ def main():
         if args.per_page is not None: search_options['per_page'] = args.per_page
 
         # Download and organize photos.
-        harvester = ImageHarvester(flickr, args.db)
+        harvester = ImageHarvester(flickr, meta_path)
         n = harvester.archive_taxon_photos(args.output, **search_options)
         if n > 0:
             sys.stderr.write("Finished processing %d photos\n" % n)
@@ -133,16 +137,14 @@ def main():
             sys.stderr.write("No photos were found matching your search criteria\n")
 
     elif args.task == 'cleanup':
-        if args.db is None:
-            args.db = os.path.join(args.path, "photos.db")
-
         flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
-        harvester = ImageHarvester(flickr, args.db)
+        harvester = ImageHarvester(flickr, meta_path)
         sys.stderr.write("Now checking for unknown Flickr photos in `%s` " % args.path)
         n = harvester.remove_unknown_photos(args.path)
         sys.stderr.write("A total of %d photos were deleted\n" % n)
 
 class ImageHarvester(object):
+
     """Harvest images from a Flickr account."""
 
     def __init__(self, flickr, db_file):
@@ -584,6 +586,7 @@ class ImageHarvester(object):
         return n
 
 class FlickrDownloader(object):
+
     """Download photos with metadata from Flickr."""
 
     def __init__(self, key, secret, uid):

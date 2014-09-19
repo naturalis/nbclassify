@@ -62,8 +62,8 @@ Installation
 
 From the GitHub repository::
 
-    git clone https://github.com/naturalis/img-classify.git
-    cd img-classify/nbclassify/
+    git clone https://github.com/naturalis/nbclassify.git
+    cd nbclassify/nbclassify/
     python setup.py install
 
 Or if you have a source archive file::

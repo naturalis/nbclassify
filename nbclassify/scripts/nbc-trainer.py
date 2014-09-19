@@ -16,9 +16,9 @@ digital photographs.
 The following subcommands are available:
 
 * data: Create a tab separated file with training data.
-* batch-data: Batch create tab separated files with training data.
+* data-batch: Batch create tab separated files with training data.
 * ann: Train an artificial neural network.
-* batch-ann: Batch train artificial neural networks.
+* ann-batch: Batch train artificial neural networks.
 * test-ann: Test the performance of an artificial neural network.
 * classify: Classify an image using an artificial neural network.
 
@@ -41,257 +41,346 @@ import yaml
 
 import nbclassify as nbc
 
+# Prefix for output columns in training data.
 OUTPUT_PREFIX = "OUT:"
 
-def main():
-    # Print debug messages if the -d flag is set for the Python interpreter.
-    # Otherwise just show log messages of type INFO.
-    if sys.flags.debug:
-        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s')
-    else:
-        logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
+# File name of the meta data file.
+META_FILE = ".meta.db"
 
+# Force overwrite files. This is used for testing.
+FORCE_OVERWRITE = False
+
+def main():
     # Setup the argument parser.
-    parser = argparse.ArgumentParser(description="Generate training data " \
-        "and train artificial neural networks.")
-    subparsers = parser.add_subparsers(help="Specify which task to start.",
-        dest='task')
+    parser = argparse.ArgumentParser(
+        description="Generate training data and train artificial neural "\
+        "networks."
+    )
+    parser.add_argument(
+        "conf",
+        metavar="CONF_FILE",
+        help="Path to a configurations file.")
+
+    subparsers = parser.add_subparsers(
+        help="Specify which task to start.",
+        dest="task"
+    )
 
     # Create an argument parser for sub-command 'data'.
     help_data = """Create a tab separated file with training data.
     Preprocessing steps, features to extract, and a classification filter
     must be set in a configurations file. See config.yml for an example."""
 
-    parser_data = subparsers.add_parser('data',
-        help=help_data, description=help_data)
-    parser_data.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a configurations file with feature extraction parameters.")
-    parser_data.add_argument("--db", metavar="DB",
-        help="Path to a database file with photo meta data. If omitted " \
-        "this defaults to a file photos.db in the photos directory.")
-    parser_data.add_argument("--output", "-o", metavar="FILE", required=True,
+    parser_data = subparsers.add_parser(
+        "data",
+        help=help_data,
+        description=help_data
+    )
+    parser_data.add_argument(
+        "--output",
+        "-o",
+        metavar="FILE",
+        required=True,
         help="Output file name for training data. Any existing file with " \
         "same name will be overwritten.")
-    parser_data.add_argument("basepath", metavar="PATH",
-        help="Base directory where to look for photos. The database file" \
-        "with photo meta data will be used to find photos in this directory.")
+    parser_data.add_argument(
+        "imdir",
+        metavar="PATH",
+        help="Base directory where Flickr harvested images are stored.")
 
-    # Create an argument parser for sub-command 'batch-data'.
-    help_batch_data = """Batch create tab separated files with training
+    # Create an argument parser for sub-command 'data-batch'.
+    help_data_batch = """Batch create tab separated files with training
     data. Preprocessing steps, features to extract, and the classification
     hierarchy must be set in a configurations file, See config.yml for an
     example."""
 
-    parser_batch_data = subparsers.add_parser('batch-data',
-        help=help_batch_data, description=help_batch_data)
-    parser_batch_data.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a configurations file with feature extraction parameters.")
-    parser_batch_data.add_argument("--db", metavar="DB",
-        help="Path to a database file with photo meta data. If omitted " \
-        "this defaults to a file photos.db in the photos directory.")
-    parser_batch_data.add_argument("--output", "-o", metavar="PATH",
+    parser_data_batch = subparsers.add_parser(
+        "data-batch",
+        help=help_data_batch,
+        description=help_data_batch
+    )
+    parser_data_batch.add_argument(
+        "--output",
+        "-o",
+        metavar="PATH",
         required=True,
         help="Output directory where training data is stored.")
-    parser_batch_data.add_argument("basepath", metavar="PATH",
-        help="Base directory where to look for photos. The database file" \
-        "with photo meta data will be used to find photos in this directory.")
+    parser_data_batch.add_argument(
+        "imdir",
+        metavar="PATH",
+        help="Base directory where Flickr harvested images are stored.")
 
     # Create an argument parser for sub-command 'ann'.
     help_ann = """Train an artificial neural network. Optional training
-    parameters `ann` can be set in a separate configurations file. See
-    config.yml for an example."""
+    parameters `ann` can be set in a configurations file. See config.yml for
+    an example."""
 
-    parser_ann = subparsers.add_parser('ann',
-        help=help_ann, description=help_ann)
-    parser_ann.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a configurations file with ANN training parameters.")
-    parser_ann.add_argument("--epochs", metavar="N", type=float,
+    parser_ann = subparsers.add_parser(
+        "ann",
+        help=help_ann,
+        description=help_ann
+    )
+    parser_ann.add_argument(
+        "--epochs",
+        metavar="N",
+        type=float,
         help="Maximum number of epochs. Overwrites value in --conf.")
-    parser_ann.add_argument("--error", metavar="N", type=float,
+    parser_ann.add_argument(
+        "--error",
+        "-e",
+        metavar="N",
+        type=float,
         help="Desired mean square error on training data. Overwrites value " \
         "in --conf.")
-    parser_ann.add_argument("--output", "-o", metavar="FILE", required=True,
+    parser_ann.add_argument(
+        "--output",
+        "-o",
+        metavar="FILE",
+        required=True,
         help="Output file name for the artificial neural network. Any " \
-        "existing file with same name will be overwritten.")
-    parser_ann.add_argument("data", metavar="TRAIN_DATA",
+        "existing file with the same name will be overwritten.")
+    parser_ann.add_argument(
+        "data",
+        metavar="FILE",
         help="Path to tab separated file with training data.")
 
-    # Create an argument parser for sub-command 'batch-ann'.
-    help_batch_ann = """Batch train a committee of artificial neural
+    # Create an argument parser for sub-command 'ann-batch'.
+    help_ann_batch = """Batch train a committee of artificial neural
     networks. The classification hierarchy with optionally neural network
     training parameters for each level must be set in a configurations
     file. See config.yml for an example."""
 
-    parser_batch_ann = subparsers.add_parser('batch-ann',
-        help=help_batch_ann, description=help_batch_ann)
-    parser_batch_ann.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a configurations file with ANN training parameters.")
-    parser_batch_ann.add_argument("--db", metavar="DB", required=True,
-        help="Path to a database file with photo meta data.")
-    parser_batch_ann.add_argument("--data", metavar="PATH", required=True,
+    parser_ann_batch = subparsers.add_parser(
+        "ann-batch",
+        help=help_ann_batch,
+        description=help_ann_batch
+    )
+    parser_ann_batch.add_argument(
+        "--data",
+        "-d",
+        metavar="PATH",
+        required=True,
         help="Directory where the training data is stored.")
-    parser_batch_ann.add_argument("--epochs", metavar="N", type=float,
+    parser_ann_batch.add_argument(
+        "--epochs",
+        metavar="N",
+        type=float,
         help="Maximum number of epochs. Overwrites value in --conf.")
-    parser_batch_ann.add_argument("--error", metavar="N", type=float,
+    parser_ann_batch.add_argument(
+        "--error",
+        "-e",
+        metavar="N",
+        type=float,
         help="Desired mean square error on training data. Overwrites value " \
         "in --conf.")
-    parser_batch_ann.add_argument("--output", "-o", metavar="PATH", required=True,
-        help="Output directory where the artificial neural networks are stored.")
+    parser_ann_batch.add_argument(
+        "--output",
+        "-o",
+        metavar="PATH",
+        required=True,
+        help="Output directory where the artificial neural networks are " \
+        "stored.")
+    parser_ann_batch.add_argument(
+        "imdir",
+        metavar="PATH",
+        help="Base directory where Flickr harvested images are stored.")
 
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann = """Test an artificial neural network. If `--output` is
     used, then --db must be set, and the classification filter must be set
     in the configurations file. See config.yml for an example."""
 
-    parser_test_ann = subparsers.add_parser('test-ann',
-        help=help_test_ann, description=help_test_ann)
-    parser_test_ann.add_argument("--ann", metavar="FILE", required=True,
+    parser_test_ann = subparsers.add_parser(
+        "test-ann",
+        help=help_test_ann,
+        description=help_test_ann
+    )
+    parser_test_ann.add_argument(
+        "--ann",
+        "-a",
+        metavar="FILE",
+        required=True,
         help="A trained artificial neural network.")
-    parser_test_ann.add_argument("--db", metavar="DB",
-        help="Path to a database file with photo meta data. Must be " \
-        "used together with --output.")
-    parser_test_ann.add_argument("--output", "-o", metavar="FILE",
-        help="Output file name for the test results. Specifying this " \
-        "option will output a table with the classification result for " \
-        "each sample in TEST_DATA.")
-    parser_test_ann.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a configurations file with a classification filter.")
-    parser_test_ann.add_argument("--error", metavar="N", type=float,
+    parser_test_ann.add_argument(
+        "--error",
+        "-e",
+        metavar="N",
+        type=float,
         default=0.00001,
         help="The maximum mean square error for classification. Default " \
         "is 0.00001")
-    parser_test_ann.add_argument("data", metavar="TEST_DATA",
+    parser_test_ann.add_argument(
+        "--output",
+        "-o",
+        metavar="FILE",
+        help="Output file name for the test results. Specifying this " \
+        "option will output a table with the classification result for " \
+        "each sample in TEST_DATA.")
+    parser_test_ann.add_argument(
+        "--test-data",
+        "-t",
+        metavar="FILE",
         help="Path to tab separated file containing test data.")
+    parser_test_ann.add_argument(
+        "imdir",
+        metavar="PATH",
+        help="Base directory where Flickr harvested images are stored.")
 
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann_batch = """Test the artificial neural networks for a
     classification hierarchy. See config.yml for an example."""
 
-    parser_test_ann_batch = subparsers.add_parser('test-ann-batch',
-        help=help_test_ann_batch, description=help_test_ann_batch)
-    parser_test_ann_batch.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a configurations file with a classification filter.")
-    parser_test_ann_batch.add_argument("--db", metavar="DB",
-        help="Path to a database file with photo meta data. Must be " \
-        "used together with --output.")
-    parser_test_ann_batch.add_argument("--test-data", metavar="PATH",
-        required=True,
-        help="Directory where the test data is stored.")
-    parser_test_ann_batch.add_argument("--anns", metavar="PATH",
+    parser_test_ann_batch = subparsers.add_parser(
+        "test-ann-batch",
+        help=help_test_ann_batch,
+        description=help_test_ann_batch
+    )
+    parser_test_ann_batch.add_argument(
+        "--anns",
+        metavar="PATH",
         required=True,
         help="Directory where the artificial neural networks are stored.")
-    parser_test_ann_batch.add_argument("--error", metavar="N", type=float,
+    parser_test_ann_batch.add_argument(
+        "--error",
+        "-e",
+        metavar="N",
+        type=float,
         default=0.00001,
         help="The maximum mean square error for classification. Default " \
         "is 0.00001")
-    parser_test_ann_batch.add_argument("--output", "-o", metavar="FILE",
-        help="Output the test results to FILE. Specifying this " \
-        "option will output a table with the classification result for " \
-        "each sample in the test data.")
+    parser_test_ann_batch.add_argument(
+        "--output",
+        "-o",
+        metavar="FILE",
+        help="Output the test results to FILE. Specifying this option " \
+        "will output a table with the classification result for each " \
+        "sample in the test data.")
+    parser_test_ann_batch.add_argument(
+        "--test-data",
+        "-t",
+        metavar="PATH",
+        required=True,
+        help="Directory where the test data is stored.")
+    parser_test_ann_batch.add_argument(
+        "imdir",
+        metavar="PATH",
+        help="Base directory where Flickr harvested images are stored.")
 
     # Create an argument parser for sub-command 'classify'.
     help_classify = """Classify a digital photo. The classification filter
     must be set in the configurations file. See config.yml for an example."""
 
-    parser_classify = subparsers.add_parser('classify',
-        help=help_classify, description=help_classify)
-    parser_classify.add_argument("--ann", metavar="FILE", required=True,
+    parser_classify = subparsers.add_parser(
+        "classify",
+        help=help_classify,
+        description=help_classify
+    )
+    parser_classify.add_argument(
+        "--ann",
+        "-a",
+        metavar="FILE",
+        required=True,
         help="Path to a trained artificial neural network file.")
-    parser_classify.add_argument("--conf", metavar="FILE", required=True,
-        help="Path to a configurations file with a classification filter set.")
-    parser_classify.add_argument("--db", metavar="DB", required=True,
-        help="Path to a database file with photo meta data.")
-    parser_classify.add_argument("--error", metavar="N", type=float,
+    parser_classify.add_argument(
+        "--error",
+        "-e",
+        metavar="N",
+        type=float,
         default=0.00001,
         help="The maximum error for classification. Default is 0.00001")
-    parser_classify.add_argument("image", metavar="IMAGE",
+    parser_classify.add_argument(
+        "--imdir",
+        metavar="PATH",
+        required=True,
+        help="Base directory where Flickr harvested images are stored.")
+    parser_classify.add_argument(
+        "image",
+        metavar="IMAGE_FILE",
         help="Path to image file to be classified.")
 
     # Parse arguments.
     args = parser.parse_args()
 
+    # Print debug messages if the -d flag is set for the Python interpreter.
+    if sys.flags.debug:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+
+    logging.basicConfig(level=log_level, format='%(levelname)s %(message)s')
+
+    # Get path to meta data file.
+    try:
+        meta_path = os.path.join(args.imdir, META_FILE)
+    except:
+        meta_path = None
+
+    # Load the configurations.
+    config = nbc.open_yaml(args.conf)
+
+    # Start jobs.
     if args.task == 'data':
-        # Set the default database path if not set.
-        if args.db is None:
-            args.db = os.path.join(args.basepath, 'photos.db')
-
-        config = open_yaml(args.conf)
-
         try:
             filter_ = config.classification.filter
         except:
-            logging.error("The configuration file is missing `classification.filter`")
-            return
+            logging.error("The configuration file is missing " \
+                "`classification.filter`")
+            return 1
 
         try:
-            train_data = MakeTrainData(config, args.basepath, args.db)
+            train_data = MakeTrainData(config, args.imdir, meta_path)
             train_data.export(args.output, filter_, config)
-        except Exception as e:
+        except nbc.FileExistsError as e:
             logging.error(e)
-            raise
+            return 1
 
-    if args.task == 'batch-data':
-        # Set the default database path if not set.
-        if args.db is None:
-            args.db = os.path.join(args.basepath, 'photos.db')
-
-        try:
-            config = open_yaml(args.conf)
-            train_data = BatchMakeTrainData(config, args.basepath, args.db)
-            train_data.batch_export(args.output)
-        except Exception as e:
-            logging.error(e)
-            raise
+    if args.task == 'data-batch':
+        train_data = BatchMakeTrainData(config, args.imdir, meta_path)
+        train_data.batch_export(args.output)
 
     elif args.task == 'ann':
         try:
-            config = open_yaml(args.conf)
-            ann_maker = MakeAnn(config, args, config.ann)
+            ann_maker = MakeAnn(config, args)
             ann_maker.train(args.data, args.output)
-        except Exception as e:
+        except nbc.FileExistsError as e:
             logging.error(e)
+            return 1
 
-    elif args.task == 'batch-ann':
-        try:
-            config = open_yaml(args.conf)
-            ann_maker = BatchMakeAnn(config, args.db, args)
-            ann_maker.batch_train(args.data, args.output)
-        except Exception as e:
-            logging.error(e)
-            raise
+    elif args.task == 'ann-batch':
+        ann_maker = BatchMakeAnn(config, meta_path, args)
+        ann_maker.batch_train(args.data, args.output)
 
     elif args.task == 'test-ann':
-        config = open_yaml(args.conf)
         tester = TestAnn(config)
-        tester.test(args.ann, args.data)
-        if args.output:
-            if not args.db:
-                sys.exit("Option --output must be used together with --db")
+        tester.test(args.ann, args.test_data)
 
+        if args.output:
             try:
                 filter_ = config.classification.filter
             except:
-                raise nbc.ConfigurationError("missing `classification.filter`")
+                logging.error("The configuration file is missing " \
+                    "`classification.filter`")
+                return 1
 
-            tester.export_results(args.output, args.db, filter_, args.error)
+            tester.export_results(args.output, meta_path, filter_, args.error)
 
     elif args.task == 'test-ann-batch':
-        config = open_yaml(args.conf)
         tester = TestAnn(config)
-        tester.test_with_hierarchy(args.db, args.test_data, args.anns, args.error)
+        tester.test_with_hierarchy(meta_path, args.test_data, args.anns,
+            args.error)
 
         if args.output:
             total, correct = tester.export_hierarchy_results(args.output)
-            sys.stderr.write("Correctly classified: {0}/{1} ({2:.2%})\n".format(correct, total, float(correct)/total))
+            sys.stderr.write("Correctly classified: {0}/{1} ({2:.2%})\n"
+                .format(correct, total, float(correct)/total))
 
     elif args.task == 'classify':
-        config = open_yaml(args.conf)
-        classifier = ImageClassifier(config, args.ann, args.db)
-        class_ = classifier.classify(args.image, args.error)
-        class_ = [class_ for mse,class_ in class_ann]
+        classifier = ImageClassifier(config, args.ann, meta_path)
+        classification = classifier.classify(args.image, args.error)
+        class_ = [class_ for mse,class_ in classification]
         logging.info("Image is classified as %s" % ", ".join(class_))
 
-    sys.exit()
+    return 0
 
 @contextmanager
 def session_scope(db_path):
@@ -311,19 +400,9 @@ def session_scope(db_path):
     finally:
         session.close()
 
-def get_object(d):
-    """Return an object from a dictionary."""
-    if not isinstance(d, dict):
-        raise TypeError("Argument 'd' is not a dictionary")
-    return nbc.Struct(d)
-
-def open_yaml(path):
-    """Read a YAML file and return as an object."""
-    with open(path, 'r') as f:
-        config = yaml.load(f)
-    return get_object(config)
 
 class MakeTrainData(nbc.Common):
+
     """Generate training data."""
 
     def __init__(self, config, base_path, db_path):
@@ -347,7 +426,7 @@ class MakeTrainData(nbc.Common):
             raise IOError("Cannot open %s (no such file)" % path)
         self.db_path = path
 
-    def export(self, filename, filter_, config, overwrite=False):
+    def export(self, filename, filter_, config):
         """Write the training data to `filename`.
 
         Images to be processed are obtained from the database. Which images
@@ -355,7 +434,7 @@ class MakeTrainData(nbc.Common):
         `filter_`. A configuration object `config` denotes which
         preprocessing steps to take and what features are to be extracted.
         """
-        if not overwrite and os.path.isfile(filename):
+        if not FORCE_OVERWRITE and os.path.isfile(filename):
             raise nbc.FileExistsError("Output file %s already exists." % filename)
 
         # Get list of image paths and corresponding classifications from
@@ -487,6 +566,7 @@ class MakeTrainData(nbc.Common):
         return (data, out)
 
 class BatchMakeTrainData(MakeTrainData):
+
     """Generate training data."""
 
     def __init__(self, config, base_path, db_path):
@@ -533,6 +613,7 @@ class BatchMakeTrainData(MakeTrainData):
                 logging.warning("Skipping: %s" % e)
 
 class MakeAnn(nbc.Common):
+
     """Train an artificial neural network."""
 
     def __init__(self, config, args=None):
@@ -544,7 +625,7 @@ class MakeAnn(nbc.Common):
         super(MakeAnn, self).__init__(config)
         self.args = args
 
-    def train(self, train_file, output_file, config=None, overwrite=False):
+    def train(self, train_file, output_file, config=None):
         """Train an artificial neural network.
 
         Loads training data from a CSV file `train_file`, trains a neural
@@ -553,7 +634,7 @@ class MakeAnn(nbc.Common):
         """
         if not os.path.isfile(train_file):
             raise IOError("Cannot open %s (no such file)" % train_file)
-        if not overwrite and os.path.isfile(output_file):
+        if not FORCE_OVERWRITE and os.path.isfile(output_file):
             raise nbc.FileExistsError("Output file %s already exists." % output_file)
         if config and not isinstance(config, nbc.Struct):
             raise ValueError("Expected an nbclassify.Struct instance for `config`")
@@ -601,6 +682,7 @@ class MakeAnn(nbc.Common):
         logging.info("Mean Square Error on training data: %f" % error)
 
 class BatchMakeAnn(MakeAnn):
+
     """Generate training data."""
 
     def __init__(self, config, db_path, args):
@@ -649,12 +731,13 @@ class BatchMakeAnn(MakeAnn):
             # Train the ANN.
             logging.info("Training network `%s` with training data from `%s` ..." % (ann_file, train_file))
             try:
-                self.train(train_file, ann_file, config, overwrite=False)
+                self.train(train_file, ann_file, config)
             except nbc.FileExistsError as e:
                 # Don't train if the file already exists.
                 logging.warning("Skipping: %s" % e)
 
 class TestAnn(nbc.Common):
+
     """Test an artificial neural network."""
 
     def __init__(self, config):
@@ -937,6 +1020,7 @@ class TestAnn(nbc.Common):
         return (total, correct)
 
 class ImageClassifier(nbc.Common):
+
     """Classify an image."""
 
     def __init__(self, config, ann_file, db_file):

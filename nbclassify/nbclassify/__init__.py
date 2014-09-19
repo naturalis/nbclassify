@@ -21,6 +21,7 @@ import numpy as np
 from pyfann import libfann
 from sqlalchemy import orm
 from sqlalchemy.ext.automap import automap_base
+import yaml
 
 from exceptions import *
 

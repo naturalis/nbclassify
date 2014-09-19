@@ -167,6 +167,7 @@ def open_yaml(path):
     return get_object(config)
 
 class ImageClassifier(nbc.Common):
+
     """Classify an image."""
 
     def __init__(self, config, db_path):

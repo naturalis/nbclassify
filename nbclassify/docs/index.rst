@@ -26,4 +26,4 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. _ImgPheno: https://github.com/naturalis/feature-extraction
+.. _ImgPheno: https://github.com/naturalis/imgpheno

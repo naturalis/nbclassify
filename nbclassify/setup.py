@@ -29,7 +29,7 @@ setup(
         'Programming Language :: Python :: 2.7',
     ],
     keywords='opencv numpy fann image recognition computer vision',
-    packages=find_packages(exclude=['docs']),
+    packages=find_packages(exclude=['docs', 'scripts']),
     install_requires=['flickrapi','imgpheno','numpy','sqlalchemy','pyyaml'],
     package_data={
         'nbclassify': ['config.yml'],

@@ -3,3 +3,5 @@ recursive-include nbclassify *.yml
 recursive-include scripts *.py
 graft docs
 prune docs/_build
+graft tests
+global-exclude *.pyc
