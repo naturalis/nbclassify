@@ -10,6 +10,8 @@ is as follows:
 * `nbclassify/`: A Python package for image fingerprinting (using  the
   [ImgPheno][1] package) and recognition via artificial neural networks.
 
+[![Build Status](https://travis-ci.org/naturalis/nbclassify.svg?branch=master)](https://travis-ci.org/naturalis/nbclassify)
+
 ## Dependencies
 
 * FANN (>=2.1.0)
