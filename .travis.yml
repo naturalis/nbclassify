@@ -4,13 +4,15 @@ python:
   - "2.7"
 
 install:
+  - cd ..
   - sudo apt-get update
-  - sudo apt-get install python-dev python-pip python-numpy libfann2
-    python-pyfann python-numpy python-sqlalchemy libopencv-core2.3 python-opencv
+  - sudo apt-get install python-dev python-numpy libfann2 python-pyfann
+    python-numpy python-sqlalchemy libopencv-core2.3 python-opencv
   - sudo pip install flickrapi pyyaml
   - git clone https://github.com/naturalis/imgpheno.git
   - cd imgpheno/
   - sudo python setup.py install
+  - cd ..
 
 script:
-  - cd nbclassify/tests/; make
+  - cd nbclassify/nbclassify/tests/; make
