@@ -4,6 +4,7 @@ python:
   - "2.7"
 
 install:
+  - sudo apt-get update
   - sudo apt-get install python-dev python-pip python-numpy libfann2
     python-pyfann python-numpy python-sqlalchemy libopencv-core2.3 python-opencv
   - sudo pip install flickrapi pyyaml
