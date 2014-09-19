@@ -27,4 +27,4 @@ before_script:
   - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
 
 script:
-  - cd tests; make
+  - cd nbclassify/tests/; make
