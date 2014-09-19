@@ -15,7 +15,8 @@ install:
   - cd ../nbclassify/
 
 before_script:
-  - locate cv2.so
+  - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
+  - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/dist-packages/
 
 script:
   - cd nbclassify/tests/; make
