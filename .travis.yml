@@ -14,5 +14,8 @@ install:
   - sudo python setup.py install
   - cd ..
 
+before_script:
+  - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
+
 script:
   - cd nbclassify/nbclassify/tests/; make
