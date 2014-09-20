@@ -4,19 +4,25 @@ python:
   - "2.7"
 
 install:
-  - cd ..
+  - wd=`pwd`
+  - cd $wd/../
   - sudo apt-get update
   - sudo apt-get install python-dev python-numpy libfann2 python-pyfann
-    python-numpy python-sqlalchemy python-opencv
-  - sudo pip install flickrapi pyyaml
+    python-numpy python-sqlalchemy python-yaml
+  - sudo pip install flickrapi
+  - wget https://github.com/Itseez/opencv/archive/2.4.9.tar.gz
+  - tar -xzf 2.4.9.tar.gz
+  - cd opencv-2.4.9
+  - mkdir build; cd build
+  - cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+  - make -j6
+  - sudo make install
+  - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
+  - cd $wd/../
   - git clone https://github.com/naturalis/imgpheno.git
   - cd imgpheno/
   - sudo python setup.py install
-  - cd ../nbclassify/
-
-before_script:
-  - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
-  - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/dist-packages/
+  - cd $wd
 
 script:
   - cd nbclassify/tests/; make
