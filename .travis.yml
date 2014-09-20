@@ -19,9 +19,7 @@ install:
   - sudo make install
   - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
   - cd $wd/../
-  - git clone https://github.com/naturalis/imgpheno.git
-  - cd imgpheno/
-  - sudo python setup.py install
+  - sudo pip install https://github.com/naturalis/imgpheno/archive/master.zip
   - cd $wd
 
 script:
