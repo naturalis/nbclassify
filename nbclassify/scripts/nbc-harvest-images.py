@@ -48,46 +48,67 @@ def main():
     # Create argument parser.
     parser = argparse.ArgumentParser(description='Flickr image harvester')
 
-    parser.add_argument("flickr_uid", metavar="FLICKR_UID",
+    parser.add_argument(
+        "flickr_uid",
+        metavar="FLICKR_UID",
         help="The Flickr user ID to harvest photos from (e.g. 123456789@A12)")
-    parser.add_argument("--verbose", "-v", action='store_const',
-        const=True, help="Explain what is being done.")
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action='store_const',
+        const=True,
+        help="Explain what is being done.")
 
-    subparsers = parser.add_subparsers(help="Specify which task to start.",
-        dest='task')
+    subparsers = parser.add_subparsers(
+        help="Specify which task to start.",
+        dest='task'
+    )
 
     help_harvest = "Download images with meta data from a Flickr account."
-    parser_harvest = subparsers.add_parser('harvest',
-        help=help_harvest, description=help_harvest)
-
-    parser_harvest.add_argument("--output", "-o", metavar="PATH", default=".",
-        help="Folder to put harvested photos in. Default is current folder.")
-    parser_harvest.add_argument("--tags", metavar="TAGS",
+    parser_harvest = subparsers.add_parser(
+        'harvest',
+        help=help_harvest,
+        description=help_harvest
+    )
+    parser_harvest.add_argument(
+        "--tags",
+        metavar="TAGS",
         help="A comma-delimited list of tags. Photos with the tags listed " \
         "will be harvested. You can exclude results that match a tag by " \
         "prepending it with a _ character (e.g. \"foo,_bar\").")
-    parser_harvest.add_argument("--tag-mode", metavar="MODE", default='all',
+    parser_harvest.add_argument(
+        "--tag-mode",
+        metavar="MODE",
+        default='all',
         help="Either 'any' for an OR combination of tags, or 'all' for an " \
         "AND combination. Defaults to 'all' if not specified.")
-    parser_harvest.add_argument("--page", metavar="N", default=1, type=int,
+    parser_harvest.add_argument(
+        "--page",
+        metavar="N",
+        default=1,
+        type=int,
         help="The page of results to return. If this argument is omitted, " \
         "it defaults to 1.")
-    parser_harvest.add_argument("--per-page", metavar="N", default=100,
-        type=int, help="Number of photos to return per page. If this " \
-        "argument is omitted, it defaults to 100. The maximum allowed value " \
-        "is 500.")
+    parser_harvest.add_argument(
+        "--per-page",
+        metavar="N",
+        default=100,
+        type=int,
+        help="Number of photos to return per page. If this argument is " \
+        "omitted, it defaults to 100. The maximum allowed value is 500.")
+    parser_harvest.add_argument(
+        "imdir",
+        metavar="PATH",
+        help="Base directory where the Flickr harvested images are stored.")
 
     help_cleanup = """Clean up your local archive of Flickr harvested images.
     Images that were harvested, but were later removed from Flickr, will also
     be deleted from your local archive."""
-    parser_cleanup = subparsers.add_parser('cleanup',
-        help=help_cleanup, description=help_cleanup)
-
-    parser_cleanup.add_argument(
-        "--path",
-        metavar="PATH",
-        required=True,
-        help="Path to a directory containing Flickr photos.")
+    parser_cleanup = subparsers.add_parser(
+        'cleanup',
+        help=help_cleanup,
+        description=help_cleanup
+    )
     parser_cleanup.add_argument(
         "imdir",
         metavar="PATH",
@@ -108,6 +129,9 @@ def main():
 
     # Get path to meta data file.
     meta_path = os.path.join(args.imdir, META_FILE)
+
+    # Make the image directory path absolute.
+    args.imdir = os.path.realpath(args.imdir)
 
     if args.task == 'harvest':
         if not (0 < args.per_page <= 500):
@@ -130,7 +154,7 @@ def main():
 
         # Download and organize photos.
         harvester = ImageHarvester(flickr, meta_path)
-        n = harvester.archive_taxon_photos(args.output, **search_options)
+        n = harvester.archive_taxon_photos(args.imdir, **search_options)
         if n > 0:
             sys.stderr.write("Finished processing %d photos\n" % n)
         else:
@@ -139,8 +163,8 @@ def main():
     elif args.task == 'cleanup':
         flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
         harvester = ImageHarvester(flickr, meta_path)
-        sys.stderr.write("Now checking for unknown Flickr photos in `%s` " % args.path)
-        n = harvester.remove_unknown_photos(args.path)
+        sys.stderr.write("Now checking for unknown Flickr photos in `%s` " % args.imdir)
+        n = harvester.remove_unknown_photos(args.imdir)
         sys.stderr.write("A total of %d photos were deleted\n" % n)
 
 class ImageHarvester(object):
