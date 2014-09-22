@@ -12,6 +12,22 @@ from context import nbc_trainer
 
 CONF_FILE  = "config.yml"
 
+# Disable FileExistsError exceptions.
+nbc_trainer.FORCE_OVERWRITE = True
+
+
+def delete_temp_file(f):
+    """Delete temporary file."""
+    if hasattr(f, 'file') and f.name.startswith(tempfile.gettempdir()):
+        f.close()
+        os.remove(f.name)
+
+def delete_temp_dir(path):
+    """Delete temporary directory with content."""
+    if os.path.isdir(str(path)):
+        if path.startswith(tempfile.gettempdir()):
+            shutil.rmtree(path)
+
 
 class TestTrainer(unittest.TestCase):
 
@@ -19,49 +35,29 @@ class TestTrainer(unittest.TestCase):
 
     def setUp(self):
         """Prepare the testing environment."""
-        self.tmp = {}
-
         # Set the command-line arguments.
         self.argv_pre = ['exec', CONF_FILE]
 
-        # Disable FileExistsError exceptions.
-        nbc_trainer.FORCE_OVERWRITE = True
+    #@unittest.skip("Debugging")
+    def test_simple(self):
+        """Test the `{data|ann|classify|test-ann}` subcommands."""
 
-        # Create temporary files and folders.
-        self.tmp['train_file'] = tempfile.NamedTemporaryFile(
+        train_file = tempfile.NamedTemporaryFile(
             prefix='train_data_',
             delete=False
         )
-        self.tmp['ann_file'] = tempfile.NamedTemporaryFile(
+        ann_file = tempfile.NamedTemporaryFile(
             prefix='Cypripedium_Arietinum_species_',
             delete=False
         )
-        self.tmp['test_result'] = tempfile.NamedTemporaryFile(
+        test_result = tempfile.NamedTemporaryFile(
             prefix='test_result_',
             delete=False
         )
-        self.tmp['train_dir'] = tempfile.mkdtemp(
-            prefix='train_data_'
-        )
-        self.tmp['ann_dir'] = tempfile.mkdtemp(
-            prefix='ann_dir_'
-        )
 
-    def tearDown(self):
-        """Delete temporary files and folders."""
-        for f in self.tmp.values():
-            if hasattr(f, 'file'):
-                f.close()
-                os.remove(f.name)
-            elif os.path.isdir(str(f)):
-                if f.startswith(tempfile.gettempdir()):
-                    shutil.rmtree(f)
-
-    def test_data_ann_classify(self):
-        """Test the `{data|ann|classify|test-ann}` subcommands."""
         sys.argv = self.argv_pre + [
             'data',
-            '-o', self.tmp['train_file'].name,
+            '-o', train_file.name,
             'images/'
         ]
 
@@ -71,8 +67,8 @@ class TestTrainer(unittest.TestCase):
 
         sys.argv = self.argv_pre + [
             'ann',
-            '-o', self.tmp['ann_file'].name,
-            self.tmp['train_file'].name
+            '-o', ann_file.name,
+            train_file.name
         ]
 
         sys.stderr.write("\nRunning: {0}\n".format(' '.join(sys.argv)))
@@ -81,7 +77,7 @@ class TestTrainer(unittest.TestCase):
 
         sys.argv = self.argv_pre + [
             'classify',
-            '--ann', self.tmp['ann_file'].name,
+            '--ann', ann_file.name,
             '--imdir', 'images/',
             "images/Cypripedium/subgenus_null/Arietinum/plectrochilum/14990382409.jpg"
         ]
@@ -92,22 +88,41 @@ class TestTrainer(unittest.TestCase):
 
         sys.argv = self.argv_pre + [
             'test-ann',
-            '--ann', self.tmp['ann_file'].name,
+            '--ann', ann_file.name,
             '--error', '0.001',
-            '-t', self.tmp['train_file'].name,
-            '-o', self.tmp['test_result'].name,
+            '-t', train_file.name,
+            '-o', test_result.name,
             'images/'
         ]
 
         sys.stderr.write("\nRunning: {0}\n".format(' '.join(sys.argv)))
         ret = nbc_trainer.main()
+
+        # Delete temporary files.
+        delete_temp_file(train_file)
+        delete_temp_file(ann_file)
+        delete_temp_file(test_result)
+
         self.assertEqual(ret, 0)
 
+    #@unittest.skip("Debugging")
     def test_batch(self):
         """Test the `{data|ann|classify}-batch` subcommands."""
+
+        train_dir = tempfile.mkdtemp(
+            prefix='train_data_'
+        )
+        ann_dir = tempfile.mkdtemp(
+            prefix='ann_dir_'
+        )
+        test_result = tempfile.NamedTemporaryFile(
+            prefix='test_result_',
+            delete=False
+        )
+
         sys.argv = self.argv_pre + [
             'data-batch',
-            '-o', self.tmp['train_dir'],
+            '-o', train_dir,
             'images/'
         ]
 
@@ -117,8 +132,8 @@ class TestTrainer(unittest.TestCase):
 
         sys.argv = self.argv_pre + [
             'ann-batch',
-            '--data', self.tmp['train_dir'],
-            '-o', self.tmp['ann_dir'],
+            '--data', train_dir,
+            '-o', ann_dir,
             'images/'
         ]
 
@@ -128,14 +143,20 @@ class TestTrainer(unittest.TestCase):
 
         sys.argv = self.argv_pre + [
             'test-ann-batch',
-            '--anns', self.tmp['ann_dir'],
-            '--test-data', self.tmp['train_dir'],
-            '-o', self.tmp['test_result'].name,
+            '--anns', ann_dir,
+            '--test-data', train_dir,
+            '-o', test_result.name,
             'images/'
         ]
 
         sys.stderr.write("\nRunning: {0}\n".format(' '.join(sys.argv)))
         ret = nbc_trainer.main()
+
+        # Delete temporary files and folders.
+        delete_temp_dir(train_dir)
+        delete_temp_dir(ann_dir)
+        delete_temp_file(test_result)
+
         self.assertEqual(ret, 0)
 
 
