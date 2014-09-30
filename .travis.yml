@@ -18,9 +18,10 @@ install:
   - make -j6
   - sudo make install
   - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
-  - cd $wd/../
-  - sudo pip install https://github.com/naturalis/imgpheno/archive/master.zip
   - cd $wd
 
 script:
-  - cd nbclassify/tests/; make
+  - cd nbclassify/tests/
+  - wget https://github.com/naturalis/imgpheno/archive/master.zip
+  - unzip master.zip; ln -s imgpheno-master/imgpheno/
+  - make
