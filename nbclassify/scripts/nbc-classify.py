@@ -79,7 +79,7 @@ def main():
 
     logging.basicConfig(level=log_level, format='%(levelname)s %(message)s')
 
-    config = open_yaml(args.conf)
+    config = nbc.open_config(args.conf)
     classifier = ImageClassifier(config, args.db)
     classifier.set_error(args.error)
 
@@ -154,18 +154,6 @@ def session_scope(db_path):
     finally:
         session.close()
 
-def get_object(d):
-    """Return an object from a dictionary."""
-    if not isinstance(d, dict):
-        raise TypeError("Argument 'd' is not a dictionary")
-    return nbc.Struct(d)
-
-def open_yaml(path):
-    """Read a YAML file and return as an object."""
-    with open(path, 'r') as f:
-        config = yaml.load(f)
-    return get_object(config)
-
 class ImageClassifier(nbc.Common):
 
     """Classify an image."""
@@ -221,15 +209,16 @@ class ImageClassifier(nbc.Common):
         ann = libfann.neural_net()
         ann.create_from_file(str(ann_path))
 
-        # Get the MD5 hash.
+        # Get the MD5 hash for the image.
         hasher = hashlib.md5()
         with open(im_path, 'rb') as fh:
             buf = fh.read()
             hasher.update(buf)
 
-        # Create a hash of the feature extraction options.
-        hash_ = "%s.%s.%s" % (hasher.hexdigest(), hash(config.preprocess),
-            hash(config.features))
+        # Get a hash that that is unique for this image/preprocess/features
+        # combination.
+        hash_ = nbc.combined_hash(hasher.hexdigest(), config.preprocess,
+            config.features)
 
         if hash_ in self.cache:
             phenotype = self.cache[hash_]

@@ -25,11 +25,38 @@ import yaml
 
 from exceptions import *
 
-def open_yaml(path):
-    """Read a YAML file and return as a nested :class:`Struct` object."""
+def open_config(path):
+    """Read a configurations file and return as a nested :class:`Struct` object.
+
+    The configurations file is in the YAML format and is loaded from file path
+    `path`.
+    """
     with open(path, 'r') as f:
         config = yaml.load(f)
     return Struct(config)
+
+def combined_hash(*args):
+    """Create a combined hash from one or more hashable objects.
+
+    Each argument must be an hashable object. Can also be used for configuration
+    objects as returned by :meth:`open_config`. Returned hash is a negative or
+    positive integer.
+
+    Example::
+
+        >>> a = Struct({'a': True})
+        >>> b = Struct({'b': False})
+        >>> combined_hash(a,b)
+        6862151379155462073
+    """
+    hash_ = None
+    for obj in args:
+        if hash_ is None:
+            hash_ = hash(obj)
+        else:
+            hash_ ^= hash(obj)
+    return hash_
+
 
 class Struct(Namespace):
 
@@ -42,6 +69,8 @@ class Struct(Namespace):
             if isinstance(val, (list, tuple)):
                 setattr(self, str(key), [self.__class__(x) if \
                     isinstance(x, dict) else x for x in val])
+            elif isinstance(val, self.__class__):
+                setattr(self, str(key), val)
             else:
                 setattr(self, str(key), self.__class__(val) if \
                     isinstance(val, dict) else val)
@@ -51,6 +80,9 @@ class Struct(Namespace):
 
     def __eq__(self, other):
         return str(self) == str(other)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
 
 class Common(object):
 
@@ -67,7 +99,7 @@ class Common(object):
     def set_config(self, config):
         """Set the configurations object `config`.
 
-        Expects a configuration object as returned by :meth:`open_yaml`.
+        Expects a configuration object as returned by :meth:`open_config`.
         """
         if not isinstance(config, Struct):
             raise TypeError("Configurations object must be of type Struct, not %s" % type(config))
@@ -125,13 +157,24 @@ class Common(object):
                     break
         return sorted(classes)
 
+    def get_photos(self, session, metadata):
+        """Return photos from the database.
+
+        Returns 2-tuples ``(id, path)``.
+        """
+        Base = automap_base(metadata=metadata)
+        Base.prepare()
+        Photos = Base.classes.photos
+        q = session.query(Photos.id, Photos.path)
+        return q
+
     def get_photos_with_class(self, session, metadata, filter_):
         """Return photos with corresponding class from the database.
 
         Photos obtained from the photo metadata database are queried by rules
         set in the classification filter `filter_`. Filters are those as
         returned by :meth:`classification_hierarchy_filters`. Returned rows
-        are 2-tuples ``(photo_path, class)``.
+        are 3-tuples ``(photo_id, photo_path, class)``.
         """
         if 'class' not in filter_:
             raise ValueError("The filter is missing the 'class' key")
@@ -162,7 +205,7 @@ class Common(object):
             filter(Rank.name == 'species').subquery()
 
         # Construct the query.
-        q = session.query(Photos.path, getattr(filter_, 'class')).\
+        q = session.query(Photos.id, Photos.path, getattr(filter_, 'class')).\
             join(stmt1).\
             outerjoin(stmt2).\
             join(stmt3)
@@ -176,6 +219,56 @@ class Common(object):
                     q = q.filter(stmt2.c.section == taxon)
                 elif rank == 'species':
                     q = q.filter(stmt3.c.species == taxon)
+
+        return q
+
+    def get_photo_ids(self, session, metadata):
+        """Return all photo IDs.
+
+        This generator returns integers.
+        """
+        Base = automap_base(metadata=metadata)
+        Base.prepare()
+
+        # Get the table classes.
+        Photos = Base.classes.photos
+
+        # Construct the query.
+        q = session.query(Photos.id)
+
+        for row in q:
+            yield row[0]
+
+    def get_photo_ids_with_genus_section_species(self, session, metadata):
+        """Return photo IDs with genus, section, and species class.
+
+        This generator returns 4-tuples ``(photo_id, genus, section, species)``.
+        """
+        Base = automap_base(metadata=metadata)
+        Base.prepare()
+
+        # Get the table classes.
+        Photos = Base.classes.photos
+        PhotosTaxa = Base.classes.photos_taxa
+        Taxa = Base.classes.taxa
+        Rank = Base.classes.ranks
+
+        # Construct the sub queries.
+        q_genus = session.query(PhotosTaxa.photo_id, Taxa.name.label('genus')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'genus').subquery()
+        q_section = session.query(PhotosTaxa.photo_id, Taxa.name.label('section')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'section').subquery()
+        q_species = session.query(PhotosTaxa.photo_id, Taxa.name.label('species')).\
+            join(Taxa).join(Rank).\
+            filter(Rank.name == 'species').subquery()
+
+        # Construct the query.
+        q = session.query(Photos.id, 'genus', 'section', 'species').\
+            join(q_genus).\
+            outerjoin(q_section).\
+            join(q_species)
 
         return q
 
@@ -198,41 +291,22 @@ class Common(object):
             if key not in ('where', 'class'):
                 raise ValueError("Unknown key '%s' in filter" % key)
 
-        # Poduce a set of mappings from the MetaData.
-        Base = automap_base(metadata=metadata)
-        Base.prepare()
+        levels = ['genus','section','species']
+        path = []
+        if 'where' in filter_:
+            for level in levels:
+                try:
+                    path.append( getattr(filter_.where, level) )
+                except:
+                    if level == getattr(filter_, 'class'):
+                        break
+                    else:
+                        raise ValueError("Incorrect filter: %s" % filter_)
 
-        # Get the table classes.
-        Photos = Base.classes.photos
-        PhotosTaxa = {'class': Base.classes.photos_taxa}
-        Taxa = {'class': Base.classes.taxa}
-        Ranks = {'class': Base.classes.ranks}
+        hr = self.get_taxon_hierarchy(session, metadata)
+        classes = self.get_childs_from_hierarchy(hr, path)
 
-        # Construct the query, ORM style.
-        q = session.query(Photos.id, Taxa['class'].name)
-
-        if 'where' in filter_ and filter_.where:
-            for rank, name in vars(filter_.where).items():
-                PhotosTaxa[rank] = orm.aliased(Base.classes.photos_taxa)
-                Taxa[rank] = orm.aliased(Base.classes.taxa)
-                Ranks[rank] = orm.aliased(Base.classes.ranks)
-
-                q = q.join(PhotosTaxa[rank], PhotosTaxa[rank].photo_id == Photos.id).\
-                    join(Taxa[rank]).join(Ranks[rank]).\
-                    filter(Ranks[rank].name == rank, Taxa[rank].name == name)
-
-        # The classification column.
-        rank = getattr(filter_, 'class')
-        q = q.join(PhotosTaxa['class'], PhotosTaxa['class'].photo_id == Photos.id).\
-            join(Taxa['class']).join(Ranks['class']).\
-            filter(Ranks['class'].name == rank)
-
-        # Order by classification.
-        q = q.group_by(Taxa['class'].name)
-
-        # Return the results.
-        for (_, class_) in q:
-            yield class_
+        return set(classes)
 
     def get_taxon_hierarchy(self, session, metadata):
         """Return the taxanomic hierarchy for photos in the metadata database.
@@ -390,7 +464,8 @@ class Common(object):
             for name in path:
                 nodes = nodes[name]
         except:
-            raise ValueError("No such path `%s` in the hierarchy" % '/'.join(path))
+            raise ValueError("No such path `%s` in the hierarchy" % \
+                '/'.join(path))
 
         if isinstance(nodes, dict):
             names = nodes.keys()
@@ -431,9 +506,9 @@ class Common(object):
 class Phenotyper(object):
     """Extract features from a digital image and return as a phenotype.
 
-    Uses the :mod:`features` package to extract features from the image. Use
+    Uses the :mod:`imgpheno` package to extract features from the image. Use
     :meth:`set_image` to load an image and :meth:`set_config` to set a
-    configuration object as returned by :meth:`open_yaml`. Then :meth:`make`
+    configuration object as returned by :meth:`open_config`. Then :meth:`make`
     can be called to extract the features as specified in the configurations
     object and return the phenotype. A single phenotypes is returned, which is
     a list of floating point numbers.
@@ -456,7 +531,7 @@ class Phenotyper(object):
         related attributes are reset. Returns the image object.
         """
         self.img = cv2.imread(path)
-        if self.img == None or self.img.size == 0:
+        if self.img is None or self.img.size == 0:
             raise IOError("Failed to read image %s" % path)
         if roi and len(roi) != 4:
             raise ValueError("ROI must be a list of four integers")
@@ -488,10 +563,14 @@ class Phenotyper(object):
     def set_config(self, config):
         """Set the configurations object.
 
-        Expects a configuration object as returned by :meth:`open_yaml`.
+        Expects a configuration object as returned by :meth:`open_config`.
         """
         if not isinstance(config, Struct):
-            raise TypeError("Expected a Struct instance, got {0} instead".format(type(config)))
+            raise TypeError("Expected a Struct instance, got {0} instead".\
+                format(type(config)))
+        if not 'features' in config:
+            raise ConfigurationError("Features to extract not set. Missing " \
+                "the `features` setting.")
         self.config = config
 
     def __grabcut(self, img, iters=5, roi=None, margin=5):
@@ -600,8 +679,10 @@ class Phenotyper(object):
         are extracted as specified in the configurations. Finally the
         phenotype is returned as a list of floating point values.
         """
-        if self.img == None:
-            raise ValueError("No image loaded")
+        if self.img is None:
+            raise ValueError("No image was loaded")
+        if self.config is None:
+            raise ValueError("Configurations are not set")
 
         # Perform preprocessing.
         self.__preprocess()
@@ -610,9 +691,6 @@ class Phenotyper(object):
 
         # Construct the phenotype.
         phenotype = []
-
-        if not 'features' in self.config:
-            raise ConfigurationError("Features to extract not set")
 
         for feature, args in vars(self.config.features).iteritems():
             if feature == 'color_histograms':
@@ -890,9 +968,11 @@ class TrainData(object):
         if isinstance(self.input, np.ndarray):
             raise ValueError("Cannot add data once finalized")
         if len(input) != self.num_input:
-            raise ValueError("Incorrect input array length (expected length of %d)" % self.num_input)
+            raise ValueError("Incorrect input array length (expected " \
+                "length of %d)" % self.num_input)
         if len(output) != self.num_output:
-            raise ValueError("Incorrect output array length (expected length of %d)" % self.num_output)
+            raise ValueError("Incorrect output array length (expected " \
+                "length of %d)" % self.num_output)
 
         self.labels.append(label)
         self.input.append(input)
@@ -909,7 +989,8 @@ class TrainData(object):
         This method can only be called after :meth:`finalize` was executed.
         """
         if not isinstance(self.input, np.ndarray):
-            raise ValueError("Data must be finalized before running this function")
+            raise ValueError("Data must be finalized before running this " \
+                "function")
 
         for col in range(self.num_input):
             tmp = cv2.normalize(self.input[:,col], None, alpha, beta, norm_type)
@@ -921,10 +1002,12 @@ class TrainData(object):
         This method can only be called after :meth:`finalize` was executed.
         """
         if not isinstance(self.input, np.ndarray):
-            raise ValueError("Data must be finalized before running this function")
+            raise ValueError("Data must be finalized before running this " \
+                "function")
 
         for i, row in enumerate(self.input):
-            self.input[i] = cv2.normalize(row, None, alpha, beta, norm_type).reshape(-1)
+            self.input[i] = cv2.normalize(row, None, alpha, beta,
+                norm_type).reshape(-1)
 
     def round_input(self, decimals=4):
         """Rounds the input data to `decimals` decimals."""
@@ -980,21 +1063,28 @@ class TrainANN(object):
         sys.stderr.write("* Connection rate: %s\n" % self.connection_rate)
         if self.training_algorithm not in ('FANN_TRAIN_RPROP',):
             sys.stderr.write("* Learning rate: %s\n" % self.learning_rate)
-        sys.stderr.write("* Activation function for the hidden layers: %s\n" % self.activation_function_hidden)
-        sys.stderr.write("* Activation function for the output layer: %s\n" % self.activation_function_output)
+        sys.stderr.write("* Activation function for the hidden layers: %s\n" % \
+            self.activation_function_hidden)
+        sys.stderr.write("* Activation function for the output layer: %s\n" % \
+            self.activation_function_output)
         sys.stderr.write("* Training algorithm: %s\n" % self.training_algorithm)
 
         self.ann = libfann.neural_net()
         self.ann.create_sparse_array(self.connection_rate, layers)
         self.ann.set_learning_rate(self.learning_rate)
-        self.ann.set_activation_function_hidden(getattr(libfann, self.activation_function_hidden))
-        self.ann.set_activation_function_output(getattr(libfann, self.activation_function_output))
-        self.ann.set_training_algorithm(getattr(libfann, self.training_algorithm))
+        self.ann.set_activation_function_hidden(
+            getattr(libfann, self.activation_function_hidden))
+        self.ann.set_activation_function_output(
+            getattr(libfann, self.activation_function_output))
+        self.ann.set_training_algorithm(
+            getattr(libfann, self.training_algorithm))
 
         fann_train_data = libfann.training_data()
-        fann_train_data.set_train_data(self.train_data.get_input(), self.train_data.get_output())
+        fann_train_data.set_train_data(self.train_data.get_input(),
+            self.train_data.get_output())
 
-        self.ann.train_on_data(fann_train_data, self.epochs, self.iterations_between_reports, self.desired_error)
+        self.ann.train_on_data(fann_train_data, self.epochs,
+            self.iterations_between_reports, self.desired_error)
         return self.ann
 
     def test(self, data):
@@ -1008,9 +1098,11 @@ class TrainANN(object):
         if not self.ann:
             raise ValueError("No neural network was trained yet")
         if data.num_input != self.train_data.num_input:
-            raise ValueError("Number of inputs of test data must be same as train data")
+            raise ValueError("Number of inputs of test data must be same as " \
+                "train data")
         if data.num_output != self.train_data.num_output:
-            raise ValueError("Number of output of test data must be same as train data")
+            raise ValueError("Number of output of test data must be same as " \
+                "train data")
 
         fann_test_data = libfann.training_data()
         fann_test_data.set_train_data(data.get_input(), data.get_output())

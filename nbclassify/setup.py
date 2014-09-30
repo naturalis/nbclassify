@@ -37,6 +37,7 @@ setup(
     scripts=[
         'scripts/nbc-classify.py',
         'scripts/nbc-harvest-images.py',
-        'scripts/nbc-trainer.py'
+        'scripts/nbc-trainer.py',
+        'scripts/nbc-validate.py'
     ]
 )

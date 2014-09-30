@@ -50,6 +50,19 @@ META_FILE = ".meta.db"
 # Force overwrite files. This is used for testing.
 FORCE_OVERWRITE = False
 
+# Default settings.
+ANN_DEFAULTS = {
+    'connection_rate': 1,
+    'hidden_layers': 1,
+    'hidden_neurons': 8,
+    'learning_rate': 0.7,
+    'epochs': 100000,
+    'desired_error': 0.00001,
+    'training_algorithm': 'TRAIN_RPROP',
+    'activation_function_hidden': 'SIGMOID_STEPWISE',
+    'activation_function_output': 'SIGMOID_STEPWISE'
+}
+
 def main():
     # Setup the argument parser.
     parser = argparse.ArgumentParser(
@@ -121,18 +134,6 @@ def main():
         description=help_ann
     )
     parser_ann.add_argument(
-        "--epochs",
-        metavar="N",
-        type=float,
-        help="Maximum number of epochs. Overwrites value in --conf.")
-    parser_ann.add_argument(
-        "--error",
-        "-e",
-        metavar="N",
-        type=float,
-        help="Desired mean square error on training data. Overwrites value " \
-        "in --conf.")
-    parser_ann.add_argument(
         "--output",
         "-o",
         metavar="FILE",
@@ -161,18 +162,6 @@ def main():
         metavar="PATH",
         required=True,
         help="Directory where the training data is stored.")
-    parser_ann_batch.add_argument(
-        "--epochs",
-        metavar="N",
-        type=float,
-        help="Maximum number of epochs. Overwrites value in --conf.")
-    parser_ann_batch.add_argument(
-        "--error",
-        "-e",
-        metavar="N",
-        type=float,
-        help="Desired mean square error on training data. Overwrites value " \
-        "in --conf.")
     parser_ann_batch.add_argument(
         "--output",
         "-o",
@@ -316,7 +305,7 @@ def main():
         meta_path = None
 
     # Load the configurations.
-    config = nbc.open_yaml(args.conf)
+    config = nbc.open_config(args.conf)
 
     # Start jobs.
     if args.task == 'data':
@@ -340,14 +329,14 @@ def main():
 
     elif args.task == 'ann':
         try:
-            ann_maker = MakeAnn(config, args)
+            ann_maker = MakeAnn(config)
             ann_maker.train(args.data, args.output)
         except nbc.FileExistsError as e:
             logging.error(e)
             return 1
 
     elif args.task == 'ann-batch':
-        ann_maker = BatchMakeAnn(config, meta_path, args)
+        ann_maker = BatchMakeAnn(config, meta_path)
         ann_maker.batch_train(args.data, args.output)
 
     elif args.task == 'test-ann':
@@ -443,14 +432,15 @@ class MakeTrainData(nbc.Common):
             images = self.get_photos_with_class(session, metadata, filter_)
             images = list(images)
 
-        if len(images) == 0:
+        if not images:
             logging.info("No images found for the filter `%s`" % filter_)
             return
 
         logging.info("Going to process %d photos..." % len(images))
 
-        # Get a unique list of classes.
-        classes = set([x[1] for x in images])
+        # Get the classification categories from the database.
+        with session_scope(self.db_path) as (session, metadata):
+            classes = self.get_classes_from_filter(session, metadata, filter_)
 
         # Make codeword for each class.
         codewords = self.get_codewords(classes)
@@ -468,7 +458,7 @@ class MakeTrainData(nbc.Common):
             training_data = nbc.TrainData(len(header_data), len(classes))
             phenotyper = nbc.Phenotyper()
             failed = []
-            for im_path, im_class in images:
+            for im_id, im_path, im_class in images:
                 logging.info("Processing `%s` of class `%s`..." % (im_path, im_class))
                 im_path_real = os.path.join(self.base_path, im_path)
 
@@ -616,14 +606,13 @@ class MakeAnn(nbc.Common):
 
     """Train an artificial neural network."""
 
-    def __init__(self, config, args=None):
+    def __init__(self, config):
         """Constructor for network trainer.
 
         Expects a configurations object `config`, and optionally the
         script arguments `args`.
         """
         super(MakeAnn, self).__init__(config)
-        self.args = args
 
     def train(self, train_file, output_file, config=None):
         """Train an artificial neural network.
@@ -641,23 +630,10 @@ class MakeAnn(nbc.Common):
 
         # Instantiate the ANN trainer.
         trainer = nbc.TrainANN()
-        if config is not None:
-            trainer.connection_rate = getattr(config, 'connection_rate', 1)
-            trainer.hidden_layers = getattr(config, 'hidden_layers', 1)
-            trainer.hidden_neurons = getattr(config, 'hidden_neurons', 8)
-            trainer.learning_rate = getattr(config, 'learning_rate', 0.7)
-            trainer.epochs = getattr(config, 'epochs', 100000)
-            trainer.desired_error = getattr(config, 'error', 0.00001)
-            trainer.training_algorithm = getattr(config, 'training_algorithm', 'TRAIN_RPROP')
-            trainer.activation_function_hidden = getattr(config, 'activation_function_hidden', 'SIGMOID_STEPWISE')
-            trainer.activation_function_output = getattr(config, 'activation_function_output', 'SIGMOID_STEPWISE')
-
-        # These arguments overwrite parameters in the configurations file.
-        if self.args:
-            if self.args.epochs is not None:
-                trainer.epochs = self.args.epochs
-            if self.args.error is not None:
-                trainer.desired_error = self.args.error
+        for option, value in ANN_DEFAULTS.iteritems():
+            if config:
+                value = getattr(config, option, value)
+            setattr(trainer, option, value)
 
         trainer.iterations_between_reports = trainer.epochs / 100
 
@@ -685,14 +661,14 @@ class BatchMakeAnn(MakeAnn):
 
     """Generate training data."""
 
-    def __init__(self, config, db_path, args):
+    def __init__(self, config, db_path):
         """Constructor for training data generator.
 
         Expects a configurations object `config`, a path to the root
         directory of the photos, and a path to the database file `db_path`
         containing photo meta data.
         """
-        super(BatchMakeAnn, self).__init__(config, args)
+        super(BatchMakeAnn, self).__init__(config)
 
         # Get the taxonomic hierarchy from the database.
         with session_scope(db_path) as (session, metadata):
@@ -794,7 +770,6 @@ class TestAnn(nbc.Common):
         # Get the classification categories from the database.
         with session_scope(db_path) as (session, metadata):
             classes = self.get_classes_from_filter(session, metadata, filter_)
-            classes = list(classes)
 
         # Get the codeword for each class.
         if not classes:
@@ -1035,7 +1010,6 @@ class ImageClassifier(nbc.Common):
                 raise nbc.ConfigurationError("Missing `classification.filter`")
 
             self.classes = self.get_classes_from_filter(session, metadata, filter_)
-            self.classes = list(self.classes)
 
     def set_ann(self, path):
         if not os.path.isfile(path):
