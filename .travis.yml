@@ -18,6 +18,10 @@ install:
   - make -j6
   - sudo make install
   - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/
+  - export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages/
+  - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/dist-packages/
+  - export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/dist-packages/
+  - export PYTHONPATH=$PYTHONPATH:/usr/lib/pymodules/python2.7/
   - cd $wd
 
 script:
