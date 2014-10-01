@@ -42,6 +42,8 @@ This Python package has the following dependencies:
 
 * PyYAML_
 
+* scikit-learn_
+
 * SQLAlchemy_
 
 On Debian (based) systems, most dependencies can be installed from the
@@ -78,4 +80,5 @@ Or if you have a source archive file::
 .. _Python: https://www.python.org/
 .. _`Python Flickr API`: https://pypi.python.org/pypi/flickrapi
 .. _PyYAML: https://pypi.python.org/pypi/PyYAML
+.. _scikit-learn: http://scikit-learn.org
 .. _SQLAlchemy: http://www.sqlalchemy.org/

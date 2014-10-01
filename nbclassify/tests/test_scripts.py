@@ -38,10 +38,14 @@ class TestTrainer(unittest.TestCase):
         # Set the command-line arguments.
         self.argv_pre = ['exec', CONF_FILE]
 
-    #@unittest.skip("Debugging")
-    def test_simple(self):
-        """Test the `{data|ann|classify|test-ann}` subcommands."""
+        # Cache directory.
+        self.cache_dir = os.path.join(tempfile.gettempdir(), 'nbc_cache')
+        if not os.path.isdir(self.cache_dir):
+            os.mkdir(self.cache_dir)
 
+    #@unittest.skip("Debugging")
+    def test_1(self):
+        """Test the `{data|ann|classify|test-ann}` subcommands."""
         train_file = tempfile.NamedTemporaryFile(
             prefix='train_data_',
             delete=False
@@ -57,6 +61,7 @@ class TestTrainer(unittest.TestCase):
 
         sys.argv = self.argv_pre + [
             'data',
+            '--cache-dir', self.cache_dir,
             '-o', train_file.name,
             'images/'
         ]
@@ -106,9 +111,8 @@ class TestTrainer(unittest.TestCase):
         self.assertEqual(ret, 0)
 
     #@unittest.skip("Debugging")
-    def test_batch(self):
+    def test_2(self):
         """Test the `{data|ann|classify}-batch` subcommands."""
-
         train_dir = tempfile.mkdtemp(
             prefix='train_data_'
         )
@@ -122,6 +126,7 @@ class TestTrainer(unittest.TestCase):
 
         sys.argv = self.argv_pre + [
             'data-batch',
+            '--cache-dir', self.cache_dir,
             '-o', train_dir,
             'images/'
         ]
@@ -159,6 +164,22 @@ class TestTrainer(unittest.TestCase):
 
         self.assertEqual(ret, 0)
 
+    #@unittest.skip("Debugging")
+    def test_3(self):
+        """Test the `validate` subcommand."""
+        sys.argv = self.argv_pre + [
+            'validate',
+            '--cache-dir', self.cache_dir,
+            '-k', '3',
+            'images/'
+        ]
+
+        sys.stderr.write("\nRunning: {0}\n".format(' '.join(sys.argv)))
+        ret = nbc_trainer.main()
+        self.assertEqual(ret, 0)
+
+        # Delete temporary files and folders.
+        #delete_temp_dir(self.cache_dir)
 
 if __name__ == '__main__':
     unittest.main()

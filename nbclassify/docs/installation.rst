@@ -26,18 +26,20 @@ NBClassify has the following dependencies:
 
 * PyYAML_
 
+* scikit-learn_
+
 * SQLAlchemy_
 
 On Debian (based) systems, most dependencies can be installed from the
 software repository::
 
     apt-get install libfann2 opencv python python-pyfann python-opencv \
-    python-flickrapi python-numpy python-sqlalchemy python-yaml
+    python-flickrapi python-numpy python-sklearn python-sqlalchemy python-yaml
 
 More recent versions of some Python packages can be obtained via the Python
 Package Index::
 
-    pip install flickrapi numpy sqlalchemy pyyaml
+    pip install flickrapi numpy scikit-learn sqlalchemy pyyaml
 
 The ImgPheno_ package can be installed from the GitHub repository::
 
@@ -66,4 +68,5 @@ Or if you have a source archive file::
 .. _Python: https://www.python.org/
 .. _`Python Flickr API`: https://pypi.python.org/pypi/flickrapi
 .. _PyYAML: https://pypi.python.org/pypi/PyYAML
+.. _scikit-learn: http://scikit-learn.org
 .. _SQLAlchemy: http://www.sqlalchemy.org/

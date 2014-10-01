@@ -30,14 +30,14 @@ setup(
     ],
     keywords='opencv numpy fann image recognition computer vision',
     packages=find_packages(exclude=['docs', 'scripts']),
-    install_requires=['flickrapi','imgpheno','numpy','sqlalchemy','pyyaml'],
+    install_requires=['flickrapi','imgpheno','numpy','scikit-learn',
+        'sqlalchemy','pyyaml'],
     package_data={
         'nbclassify': ['config.yml'],
     },
     scripts=[
         'scripts/nbc-classify.py',
         'scripts/nbc-harvest-images.py',
-        'scripts/nbc-trainer.py',
-        'scripts/nbc-validate.py'
+        'scripts/nbc-trainer.py'
     ]
 )
