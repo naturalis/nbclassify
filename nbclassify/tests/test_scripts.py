@@ -179,7 +179,7 @@ class TestTrainer(unittest.TestCase):
         self.assertEqual(ret, 0)
 
         # Delete temporary files and folders.
-        #delete_temp_dir(self.cache_dir)
+        delete_temp_dir(self.cache_dir)
 
 if __name__ == '__main__':
     unittest.main()
