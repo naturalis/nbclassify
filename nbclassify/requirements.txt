@@ -1,4 +1,5 @@
 flickrapi
 numpy
-'sqlalchemy>=0.9.1'
+scikit-learn
+sqlalchemy>=0.9.1
 pyyaml

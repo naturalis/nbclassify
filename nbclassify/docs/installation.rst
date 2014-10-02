@@ -39,7 +39,7 @@ software repository::
 More recent versions of some Python packages can be obtained via the Python
 Package Index::
 
-    pip install flickrapi numpy scikit-learn sqlalchemy pyyaml
+    pip install -r requirements.txt
 
 The ImgPheno_ package can be installed from the GitHub repository::
 
