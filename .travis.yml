@@ -5,8 +5,8 @@ python:
 
 install:
   - sudo apt-get update
-  - sudo apt-get install libfann2 opencv python-dev python-numpy python-opencv
-    python-pyfann python-sklearn python-sqlalchemy python-yaml
+  - sudo apt-get install python-numpy python-opencv python-pyfann
+    python-sklearn python-sqlalchemy python-yaml
   #- sudo pip install flickrapi
   - pip install https://github.com/naturalis/imgpheno/archive/master.zip
 

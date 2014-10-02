@@ -49,8 +49,8 @@ This Python package has the following dependencies:
 On Debian (based) systems, most dependencies can be installed from the
 software repository::
 
-    apt-get install libfann2 opencv python python-pyfann python-opencv \
-    python-flickrapi python-numpy python-sqlalchemy python-yaml
+    apt-get install python-flickrapi python-numpy python-opencv python-pyfann \
+    python-sklearn python-sqlalchemy python-yaml
 
 More recent versions of some Python packages can be obtained via the Python
 Package Index::
