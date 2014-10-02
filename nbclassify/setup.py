@@ -30,8 +30,14 @@ setup(
     ],
     keywords='opencv numpy fann image recognition computer vision',
     packages=find_packages(exclude=['docs', 'scripts']),
-    install_requires=['flickrapi','imgpheno','numpy','scikit-learn',
-        'sqlalchemy','pyyaml'],
+    install_requires=[
+        'flickrapi',
+        'imgpheno',
+        'numpy',
+        'scikit-learn',
+        'sqlalchemy>=0.9.1',
+        'pyyaml'
+    ],
     package_data={
         'nbclassify': ['config.yml'],
     },

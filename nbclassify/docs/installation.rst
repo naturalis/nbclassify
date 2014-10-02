@@ -28,7 +28,7 @@ NBClassify has the following dependencies:
 
 * scikit-learn_
 
-* SQLAlchemy_
+* SQLAlchemy_ (>=0.9.1)
 
 On Debian (based) systems, most dependencies can be installed from the
 software repository::

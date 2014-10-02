@@ -44,7 +44,7 @@ This Python package has the following dependencies:
 
 * scikit-learn_
 
-* SQLAlchemy_
+* SQLAlchemy_ (>=0.9.1)
 
 On Debian (based) systems, most dependencies can be installed from the
 software repository::
@@ -55,7 +55,7 @@ software repository::
 More recent versions of some Python packages can be obtained via the Python
 Package Index::
 
-    pip install flickrapi numpy sqlalchemy pyyaml
+    pip install -r requirements.txt
 
 The ImgPheno_ package can be installed from the GitHub repository.
 

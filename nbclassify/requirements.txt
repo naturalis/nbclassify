@@ -1,0 +1,4 @@
+flickrapi
+numpy
+'sqlalchemy>=0.9.1'
+pyyaml

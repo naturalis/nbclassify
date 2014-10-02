@@ -9,10 +9,10 @@ virtualenv:
 before_install:
   - sudo apt-get update
   - sudo apt-get install -qq python-numpy python-opencv python-pyfann
-    python-sklearn python-sqlalchemy python-yaml
+    python-sklearn python-yaml
 
 install:
-  - sudo pip install sqlalchemy
+  - pip install 'sqlalchemy>=0.9.1'
   - pip install https://github.com/naturalis/imgpheno/archive/master.zip
 
 script:
