@@ -283,7 +283,7 @@ def query_eol(query, options, taxon_concept=None, exact=False):
             format(urllib.urlencode(params))
         rsp = json.load(urllib2.urlopen(url))
     except:
-        raise StopIteration()
+        return
 
     for result in rsp['results']:
         url = "http://eol.org/api/pages/1.0/{0}.json?{1}".\
@@ -314,13 +314,12 @@ def eol_orchid_species_info(request, query):
     # We're only interested in orchids.
     taxon_concept = 8156
 
-    try:
-        eol_results = query_eol(query, options, taxon_concept)
-    except Exception:
-        raise Http404
-
     # Get only the first result.
-    data = eol_results.next()
+    eol_results = query_eol(query, options, taxon_concept)
+    try:
+        data = eol_results.next()
+    except StopIteration:
+        raise Http404
 
     # Set some extra values.
     scientificName = data['scientificName'].split()
