@@ -49,7 +49,9 @@ OUTPUT_PREFIX = "OUT:"
 # File name of the meta data file.
 META_FILE = ".meta.db"
 
-# Force overwrite files. This is used for testing.
+# Force overwrite of files. If set to False, an nbclassify.FileExistsError is
+# raised when an existing file is encountered. When set to True, any existing
+# files are overwritten without warning.
 FORCE_OVERWRITE = False
 
 # Default settings.
@@ -344,12 +346,12 @@ def main():
     # Load the configurations.
     config = nbc.open_config(args.conf)
 
-    # Load the fingerprint cacher.
+    # Build the fingerprint cache if needed.
     if hasattr(args, 'imdir') and hasattr(args, 'cache_dir'):
         cache = FingerprintCache(config)
         cache.make(args.imdir, args.cache_dir, update=False)
 
-    # Start jobs.
+    # Start selected task.
     if args.task == 'data':
         try:
             filter_ = config.classification.filter
@@ -412,6 +414,9 @@ def main():
         logging.info("Image is classified as %s" % ", ".join(class_))
 
     elif args.task == 'validate':
+        # Any existing training data or neural networks must be regenerated.
+        FORCE_OVERWRITE = True
+
         validator = Validator(config, args.cache_dir, meta_path)
         scores = validator.k_fold_xval_stratified(args.k)
 
@@ -1348,15 +1353,22 @@ class Validator(nbc.Common):
 
         # Get a list of all the photo IDs in the database.
         with session_scope(self.meta_path) as (session, metadata):
-            samples = self.get_photo_ids(session, metadata)
+            samples = self.get_photo_ids_with_genus_section_species(session,
+                metadata)
             samples = np.array(list(samples))
+
+        # Get a list of the photo IDs and a list of the classes. The classes
+        # are needed for the stratified cross validation.
+        photo_ids = samples[:,0]
+        classes = samples[:,1:]
+        classes = ['_'.join(x) for x in classes.astype(str)]
 
         # Train data exporter.
         train_data = BatchMakeTrainData(self.config, self.cache_path,
             self.meta_path)
 
         # Obtain cross validation folds.
-        folds = cross_validation.StratifiedKFold(samples, k, shuffle=True)
+        folds = cross_validation.StratifiedKFold(classes, k, shuffle=True)
         for i, (train_idx, test_idx) in enumerate(folds):
             # Make data directories.
             train_dir = os.path.join(self.cache_path, 'train', str(i))
@@ -1368,12 +1380,12 @@ class Validator(nbc.Common):
                 os.makedirs(test_dir)
 
             # Make train data for this fold.
-            train_samples = samples[train_idx]
+            train_samples = photo_ids[train_idx]
             train_data.set_subset(train_samples)
             train_data.batch_export(train_dir)
 
             # Make test data for this fold.
-            test_samples = samples[test_idx]
+            test_samples = photo_ids[test_idx]
             train_data.set_subset(test_samples)
             train_data.batch_export(test_dir)
 

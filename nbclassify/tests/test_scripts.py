@@ -170,7 +170,7 @@ class TestTrainer(unittest.TestCase):
         sys.argv = self.argv_pre + [
             'validate',
             '--cache-dir', self.cache_dir,
-            '-k', '3',
+            '-k3',
             'images/'
         ]
 

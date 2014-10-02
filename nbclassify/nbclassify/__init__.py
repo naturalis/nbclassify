@@ -872,17 +872,22 @@ class Phenotyper(object):
 
 class TrainData(object):
 
-    """Store and retrieve training data."""
+    """Store and retrieve training data.
+
+    An instance of this class is iterable, which returns 3-tuples ``(label,
+    input_data, output_data)`` per iteration. Data can either be loaded from
+    file with :meth:`read_from_file` or manually appended with :meth:`append`.
+    """
 
     def __init__(self, num_input=0, num_output=0):
         """Set the number of input and output columns.
 
         Training data consists of input data columns, and output data columns.
         The number of input `num_input` and output `num_output` columns must
-        be specified when manually settinf data with :meth:`append`.
+        be specified when manually adding data with :meth:`append`.
 
         If :meth:`read_from_file` is used to load training data from a file,
-        the number of input and output columns is set for you.
+        the number of input and output columns is automatically set.
         """
         self.num_input = num_input
         self.num_output = num_output
@@ -894,11 +899,11 @@ class TrainData(object):
     def read_from_file(self, path, dependent_prefix="OUT:"):
         """Load training data from file.
 
-        Data is loaded from a tab separated file file `path`. The file must
-        have a header row, and columns with a name starting with
-        `dependent_prefix` are used as output columns. Optionally, labels for
-        the samples can be stored in a column with name "ID". All remaining
-        columns are used as input data.
+        Data is loaded from a tab separated file at location `path`. The file
+        must have a header row with column names, and columns with a name
+        starting with `dependent_prefix` are used as output columns. Optionally,
+        labels for the samples can be stored in a column with the name "ID". All
+        remaining columns are used as input data.
         """
         with open(path, 'r') as fh:
             reader = csv.reader(fh, delimiter="\t")
@@ -923,9 +928,9 @@ class TrainData(object):
                     self.num_input += 1
 
             if self.num_input == 0:
-                raise IOError("No input columns found in training data")
+                raise ValueError("No input columns found in training data")
             if self.num_output  == 0:
-                raise IOError("No output columns found in training data")
+                raise ValueError("No output columns found in training data")
 
             input_end = input_start + self.num_input
             output_end = output_start + self.num_output
@@ -947,10 +952,6 @@ class TrainData(object):
         return self
 
     def next(self):
-        """Return the next sample.
-
-        An instance of this class is iterable.
-        """
         if self.counter >= len(self.input):
             self.counter = 0
             raise StopIteration
@@ -960,7 +961,7 @@ class TrainData(object):
             return (self.labels[i], self.input[i], self.output[i])
 
     def append(self, input, output, label=None):
-        """Add a data row.
+        """Append a training data row.
 
         A data row consists of input data `input`, output data `output`, and
         an optional sample label `label`.
@@ -1048,6 +1049,8 @@ class TrainANN(object):
         """
         if not isinstance(data, TrainData):
             raise ValueError("Training data must be an instance of TrainData")
+        if not data:
+            raise ValueError("Train data is empty")
         self.train_data = data
 
     def train(self, train_data):
