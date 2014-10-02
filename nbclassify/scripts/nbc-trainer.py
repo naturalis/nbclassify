@@ -1368,7 +1368,7 @@ class Validator(nbc.Common):
             self.meta_path)
 
         # Obtain cross validation folds.
-        folds = cross_validation.StratifiedKFold(classes, n_folds=k)
+        folds = cross_validation.StratifiedKFold(classes, k)
         for i, (train_idx, test_idx) in enumerate(folds):
             # Make data directories.
             train_dir = os.path.join(self.cache_path, 'train', str(i))
