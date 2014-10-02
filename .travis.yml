@@ -12,7 +12,7 @@ before_install:
     python-sklearn python-sqlalchemy python-yaml
 
 install:
-  #- sudo pip install flickrapi
+  - sudo pip install sqlalchemy
   - pip install https://github.com/naturalis/imgpheno/archive/master.zip
 
 script:
