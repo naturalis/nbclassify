@@ -681,7 +681,12 @@ class MakeTrainData(nbc.Common):
             logging.info("No images found for the filter `%s`" % filter_)
             return
 
-        logging.info("Going to process %d photos..." % len(images))
+        if self.subset:
+            n_images = len(np.intersect1d(images[:,0], self.subset))
+        else:
+            n_images = len(images)
+
+        logging.info("Going to process %d photos..." % n_images)
 
         # Get the classification categories from the database.
         with session_scope(self.meta_path) as (session, metadata):
@@ -707,7 +712,7 @@ class MakeTrainData(nbc.Common):
 
             for photo_id, photo_path, photo_class in images:
                 # Only export the subset if an export subset is set.
-                if self.subset and int(photo_id) not in self.subset:
+                if self.subset and photo_id not in self.subset:
                     continue
 
                 logging.info("Processing `%s` of class `%s`..." % (photo_path,
@@ -941,7 +946,10 @@ class BatchMakeAnn(MakeAnn):
             level = levels.index(filter_['class'])
             train_file = os.path.join(data_dir, self.class_hr[level].train_file)
             ann_file = os.path.join(output_dir, self.class_hr[level].ann_file)
-            config = None if 'ann' not in self.class_hr[level] else self.class_hr[level].ann
+            if 'ann' not in self.class_hr[level]:
+                config = None
+            else:
+                config = self.class_hr[level].ann
 
             # Replace any placeholders in the paths.
             for key, val in filter_['where'].items():
@@ -950,7 +958,8 @@ class BatchMakeAnn(MakeAnn):
                 ann_file = ann_file.replace("__%s__" % key, val)
 
             # Train the ANN.
-            logging.info("Training network `%s` with training data from `%s` ..." % (ann_file, train_file))
+            logging.info("Training network `%s` with training data " \
+                "from `%s` ..." % (ann_file, train_file))
             try:
                 self.train(train_file, ann_file, config)
             except nbc.FileExistsError as e:

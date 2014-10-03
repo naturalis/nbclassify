@@ -423,7 +423,7 @@ class Common(object):
 
         # Stop iteration if the last level was classified.
         if level_no == len(levels) - 1:
-            raise StopIteration()
+            return
 
         # Recurse into lower hierarchy levels.
         for c in classes:
