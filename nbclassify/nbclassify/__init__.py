@@ -19,6 +19,7 @@ import cv2
 import imgpheno as ft
 import numpy as np
 from pyfann import libfann
+from sqlalchemy import func
 from sqlalchemy import orm
 from sqlalchemy.ext.automap import automap_base
 import yaml
@@ -113,6 +114,15 @@ class Common(object):
             raise IOError("Cannot open %s (no such directory)" % path)
 
         self.config = config
+
+    def set_photo_count_min(self, count):
+        """Set a minimum for photos count per species.
+
+        This setting is used by :meth:`get_taxon_hierarchy`. If `count` is a
+        positive integer, only the species with a photo count of at least
+        `photo_count_min` are used to build the taxon hierarchy.
+        """
+        self.photo_count_min = int(count)
 
     def get_codewords(self, classes, on=1, off=-1):
         """Return codewords for a list of classes.
@@ -311,6 +321,9 @@ class Common(object):
     def get_taxon_hierarchy(self, session, metadata):
         """Return the taxanomic hierarchy for photos in the metadata database.
 
+        Requires access to a database via an SQLAlchemy Session `session` and
+        MetaData object `metadata`.
+
         The hierarchy is returned as a dictionary in the format
         ``{genus: {section: [species, ..], ..}, ..}``.
 
@@ -320,7 +333,10 @@ class Common(object):
         """
         hierarchy = {}
 
-        for genus, section, species in  self.get_taxa(session, metadata):
+        for genus, section, species, count in self.get_taxa(session, metadata):
+            if self.photo_count_min > 0 and count < self.photo_count_min:
+                continue
+
             if genus not in hierarchy:
                 hierarchy[genus] = {}
             if section not in hierarchy[genus]:
@@ -331,7 +347,8 @@ class Common(object):
     def get_taxa(self, session, metadata):
         """Return the taxa from the photo metadata database.
 
-        Taxa are returned as 3-tuples ``(genus, section, species)``.
+        Taxa are returned as 4-tuples ``(genus, section, species,
+        photo_count)``.
         """
         Base = automap_base(metadata=metadata)
         Base.prepare()
@@ -354,14 +371,15 @@ class Common(object):
             filter(Rank.name == 'species').subquery()
 
         # Construct the query.
-        q = session.query(Photos.id, 'genus', 'section', 'species').\
+        q = session.query('genus', 'section', 'species',
+                func.count(Photos.id)).\
+            select_from(Photos).\
             join(stmt1).\
             outerjoin(stmt2).\
             join(stmt3).\
             group_by('genus', 'section', 'species')
 
-        for _, genus, section, species in q:
-            yield (genus,section,species)
+        return q
 
     def classification_hierarchy_filters(self, levels, hr, path=[]):
         """Return the classification filter for each path in a hierarchy.

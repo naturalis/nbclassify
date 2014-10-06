@@ -322,6 +322,11 @@ def main():
         default=3,
         help="The number of folds for the K-folds cross validation.")
     parser_validate.add_argument(
+        "--autoskip",
+        action='store_const',
+        const=True,
+        help="Skip the species for which there are not at least `k` photos.")
+    parser_validate.add_argument(
         "imdir",
         metavar="PATH",
         help="Base directory where the Flickr harvested images are stored.")
@@ -418,7 +423,11 @@ def main():
         FORCE_OVERWRITE = True
 
         validator = Validator(config, args.cache_dir, meta_path)
-        scores = validator.k_fold_xval_stratified(args.k)
+        try:
+            scores = validator.k_fold_xval_stratified(args.k, args.autoskip)
+        except Exception as e:
+            logging.error(e)
+            raise
 
         print "Accuracy: {0:.2%} (+/- {1:.2%})".format(
             scores.mean(),
@@ -715,6 +724,11 @@ class MakeTrainData(nbc.Common):
                 if self.subset and photo_id not in self.subset:
                     continue
 
+                # If self.photo_count_min is set, we may encounter some taxa
+                # that were excluded.
+                if self.photo_count_min and photo_class not in codewords:
+                    continue
+
                 logging.info("Processing `%s` of class `%s`..." % (photo_path,
                     photo_class))
 
@@ -812,31 +826,40 @@ class BatchMakeTrainData(MakeTrainData):
     def __init__(self, config, cache_path, meta_path):
         """Constructor for training data generator.
 
-        Expects a configurations object `config`, a path to the root
-        directory of the photos, and a path to the database file `meta_path`
-        containing photo meta data.
+        Expects a configurations object `config`, a path to the root directory
+        of the photos, and a path to the database file `meta_path` containing
+        photo meta data.
         """
         super(BatchMakeTrainData, self).__init__(config, cache_path, meta_path)
 
-        # Get the taxonomic hierarchy from the database.
-        with session_scope(meta_path) as (session, metadata):
-            self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
+        self.taxon_hr = None
 
-        # Get the classification hierarchy from the configurations.
+        # Set the classification hierarchy.
         try:
             self.class_hr = self.config.classification.hierarchy
         except:
-            raise nbc.ConfigurationError("missing `classification.hierarchy`")
+            raise nbc.ConfigurationError("classification hierarchy not set")
+
+    def _load_taxon_hierarchy(self):
+        if not self.taxon_hr:
+            with session_scope(self.meta_path) as (session, metadata):
+                self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
     def batch_export(self, target_dir):
         """Batch export training data to directory `target_dir`."""
+        # Must not be loaded in the constructor, in case set_photo_count_min()
+        # is used.
+        self._load_taxon_hierarchy()
+
         # Get the name of each level in the classification hierarchy.
         levels = [l.name for l in self.class_hr]
 
         # Make training data for each path in the classification hierarchy.
-        for filter_ in self.classification_hierarchy_filters(levels, self.taxon_hr):
+        for filter_ in self.classification_hierarchy_filters(levels,
+                self.taxon_hr):
             level = levels.index(filter_['class'])
-            train_file = os.path.join(target_dir, self.class_hr[level].train_file)
+            train_file = os.path.join(target_dir,
+                self.class_hr[level].train_file)
             config = self.class_hr[level]
 
             # Replace any placeholders in the paths.
@@ -845,7 +868,8 @@ class BatchMakeTrainData(MakeTrainData):
                 train_file = train_file.replace("__%s__" % key, val)
 
             # Generate and export the training data.
-            logging.info("Classifying images on %s" % self.readable_filter(filter_))
+            logging.info("Classifying images on %s" % \
+                self.readable_filter(filter_))
             try:
                 self.export(train_file, filter_, config)
             except nbc.FileExistsError as e:
@@ -914,21 +938,30 @@ class BatchMakeAnn(MakeAnn):
     def __init__(self, config, meta_path):
         """Constructor for training data generator.
 
-        Expects a configurations object `config`, a path to the root
-        directory of the photos, and a path to the database file `meta_path`
-        containing photo meta data.
+        Expects a configurations object `config`, a path to the root directory
+        of the photos, and a path to the database file `meta_path` containing
+        photo meta data.
         """
         super(BatchMakeAnn, self).__init__(config)
 
-        # Get the taxonomic hierarchy from the database.
-        with session_scope(meta_path) as (session, metadata):
-            self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
+        self.set_meta_path(meta_path)
+        self.taxon_hr = None
 
         # Get the taxonomic hierarchy from the configurations.
         try:
             self.class_hr = self.config.classification.hierarchy
         except:
             raise nbc.ConfigurationError("missing `classification.hierarchy`")
+
+    def set_meta_path(self, path):
+        if not os.path.isfile(path):
+            raise IOError("Cannot open %s (no such file)" % path)
+        self.meta_path = path
+
+    def _load_taxon_hierarchy(self):
+        if not self.taxon_hr:
+            with session_scope(self.meta_path) as (session, metadata):
+                self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
     def batch_train(self, data_dir, output_dir):
         """Batch train neural networks.
@@ -938,6 +971,10 @@ class BatchMakeAnn(MakeAnn):
         data to train on is set in the classification hierarchy of the
         configurations.
         """
+        # Must not be loaded in the constructor, in case set_photo_count_min()
+        # is used.
+        self._load_taxon_hierarchy()
+
         # Get the name of each level in the classification hierarchy.
         levels = [l.name for l in self.class_hr]
 
@@ -1351,11 +1388,13 @@ class Validator(nbc.Common):
             raise IOError("Cannot open %s (no such file)" % path)
         self.meta_path = path
 
-    def k_fold_xval_stratified(self, k=3):
+    def k_fold_xval_stratified(self, k=3, autoskip=False):
         """Perform stratified K-folds cross validation.
 
-        Arguments are the `samples` to split in K folds, and the number of folds
-        `k`, which must be at least 2.
+        The number of folds `k` must be at least 2. The minimum number of labels
+        for any class cannot be less than `k`, or a ValueError is raised. If
+        `autoskip` is set to True, only the photos for species with at least `k`
+        photos are used for the cross validation.
         """
         # Will hold the score of each folds.
         scores = []
@@ -1368,13 +1407,28 @@ class Validator(nbc.Common):
 
         # Get a list of the photo IDs and a list of the classes. The classes
         # are needed for the stratified cross validation.
-        photo_ids = samples[:,0]
+        photo_ids = samples[:,0].astype(str)
         classes = samples[:,1:]
         classes = ['_'.join(x) for x in classes.astype(str)]
+
+        # Check the minimum number of labels for each class.
+        if autoskip:
+            photo_count_min = k
+        else:
+            photo_count_min = 0
+
+            for label, count in self._reduce_list(classes).items():
+                if count >= k:
+                    continue
+
+                raise ValueError("Class {0} has only {1} members, which " \
+                    "is too few. The minimum number of labels for any " \
+                    "class cannot be less than k={2}".format(label, count, k))
 
         # Train data exporter.
         train_data = BatchMakeTrainData(self.config, self.cache_path,
             self.meta_path)
+        train_data.set_photo_count_min(photo_count_min)
 
         # Obtain cross validation folds.
         folds = cross_validation.StratifiedKFold(classes, k)
@@ -1400,16 +1454,25 @@ class Validator(nbc.Common):
 
             # Train neural networks on training data.
             trainer = BatchMakeAnn(self.config, self.meta_path)
+            trainer.set_photo_count_min(photo_count_min)
             trainer.batch_train(data_dir=train_dir, output_dir=train_dir)
 
             # Calculate the score for this fold.
             tester = TestAnn(self.config)
+            tester.set_photo_count_min(photo_count_min)
             correct, total = tester.test_with_hierarchy(self.meta_path,
                 test_dir, train_dir)
             score = float(correct) / total
             scores.append(score)
 
         return np.array(scores)
+
+    def _reduce_list(self, l):
+        """Return a dict with the count of each value in list `l`."""
+        count = dict([(x,0) for x in set(l)])
+        for k in l:
+            count[k] += 1
+        return count
 
 if __name__ == "__main__":
     main()
