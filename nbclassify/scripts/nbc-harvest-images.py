@@ -37,9 +37,9 @@ except IndexError:
     # so we need to catch this error.
     pass
 
-# API Key from Offlickr
-FLICKR_API_KEY = "1391fcd0a9780b247cd6a101272acf71"
-FLICKR_API_SECRET = "fd221d0336de3b6d"
+# Flickr API Key for NBClassify.
+FLICKR_API_KEY = "6ad8fc70959e3c50eff8339287dd38bd"
+FLICKR_API_SECRET = "d7e3a0b378034fa6"
 
 # File name of the meta data file.
 META_FILE = ".meta.db"
