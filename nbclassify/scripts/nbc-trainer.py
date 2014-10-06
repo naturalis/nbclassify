@@ -425,7 +425,7 @@ def test_ann_batch(config, meta_path, args):
         args.error)
 
     if args.output:
-        total, correct = tester.export_hierarchy_results(args.output)
+        correct, total = tester.export_hierarchy_results(args.output)
         print "Correctly classified: {0}/{1} ({2:.2%})\n".\
             format(correct, total, float(correct)/total)
 
@@ -1035,6 +1035,16 @@ class TestAnn(nbc.Common):
         self.class_hr = None
         self.taxon_hr = None
 
+    def path_from_filter(self, filter_, levels):
+        """Return the path from a filter."""
+        path = []
+        for name in levels:
+            try:
+                path.append(filter_['where'][name])
+            except:
+                return path
+        return path
+
     def test(self, ann_file, test_file):
         """Test an artificial neural network."""
         if not os.path.isfile(ann_file):
@@ -1143,8 +1153,10 @@ class TestAnn(nbc.Common):
                             max_error=0.001):
         """Test each ANN in a classification hierarchy and export results.
 
-        Returns a 2-tuple ``(total_classified, correctly_classified)``.
+        Returns a 2-tuple ``(correct,total)``.
         """
+        logging.info("Testing the neural networks hierarchy...")
+
         self.classifications = {}
         self.classifications_expected = {}
 
@@ -1191,12 +1203,7 @@ class TestAnn(nbc.Common):
                 ann_file = ann_file.replace("__%s__" % key, val)
 
             # Get the class names for this node in the taxonomic hierarchy.
-            path = []
-            for name in levels:
-                try:
-                    path.append(filter_['where'][name])
-                except:
-                    pass
+            path = self.path_from_filter(filter_, levels)
             classes = self.get_childs_from_hierarchy(self.taxon_hr, path)
 
             # Get the codeword for each class.
@@ -1221,12 +1228,13 @@ class TestAnn(nbc.Common):
 
                 # Obtain the photo ID from the label.
                 if not label:
-                    raise ValueError("Label for test sample not set")
+                    raise ValueError("Test sample is missing a label with " \
+                        "photo ID")
 
                 try:
                     photo_id = self.re_photo_id.search(label).group(1)
                     photo_id = int(photo_id)
-                except IndexError:
+                except:
                     raise RuntimeError("Failed to obtain the photo ID from " \
                         "the sample label")
 
@@ -1236,8 +1244,8 @@ class TestAnn(nbc.Common):
                 class_expected = [class_ for mse,class_ in class_expected]
 
                 assert len(class_expected) == 1, \
-                    "Class codewords can have only one positive bit, found " \
-                    "{0}".format(len(class_expected))
+                    "Class codewords must have one positive bit, found {0}".\
+                    format(len(class_expected))
 
                 # Get the recognized class.
                 codeword = ann.run(input_)
@@ -1252,6 +1260,8 @@ class TestAnn(nbc.Common):
 
                 self.classifications[photo_id][level_name] = class_ann
                 self.classifications_expected[photo_id][level_name] = class_expected
+
+            ann.destroy()
 
         return self.get_correct_count()
 
@@ -1313,7 +1323,7 @@ class TestAnn(nbc.Common):
 
                 total += 1
 
-        return (total, correct)
+        return (correct, total)
 
     def get_correct_count(self):
         """Return number of correctly classified samples.
@@ -1461,15 +1471,17 @@ class Validator(nbc.Common):
 
         # Obtain cross validation folds.
         folds = cross_validation.StratifiedKFold(classes, k)
+        result_dir = os.path.join(self.cache_path, 'results')
         for i, (train_idx, test_idx) in enumerate(folds):
             # Make data directories.
             train_dir = os.path.join(self.cache_path, 'train', str(i))
             test_dir = os.path.join(self.cache_path, 'test', str(i))
+            ann_dir = os.path.join(self.cache_path, 'ann', str(i))
+            test_result = os.path.join(result_dir, '{0}.tsv'.format(i))
 
-            if not os.path.isdir(train_dir):
-                os.makedirs(train_dir)
-            if not os.path.isdir(test_dir):
-                os.makedirs(test_dir)
+            for path in (train_dir,test_dir,ann_dir,result_dir):
+                if not os.path.isdir(path):
+                    os.makedirs(path)
 
             # Make train data for this fold.
             train_samples = photo_ids[train_idx]
@@ -1484,13 +1496,14 @@ class Validator(nbc.Common):
             # Train neural networks on training data.
             trainer = BatchMakeAnn(self.config, self.meta_path)
             trainer.set_photo_count_min(photo_count_min)
-            trainer.batch_train(data_dir=train_dir, output_dir=train_dir)
+            trainer.batch_train(data_dir=train_dir, output_dir=ann_dir)
 
             # Calculate the score for this fold.
             tester = TestAnn(self.config)
             tester.set_photo_count_min(photo_count_min)
             correct, total = tester.test_with_hierarchy(self.meta_path,
-                test_dir, train_dir)
+                test_dir, ann_dir)
+            tester.export_hierarchy_results(test_result)
             score = float(correct) / total
             scores.append(score)
 
