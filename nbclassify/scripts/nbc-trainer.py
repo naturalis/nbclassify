@@ -26,6 +26,7 @@ See the --help option for any of these subcommands for more information.
 """
 
 import argparse
+from collections import Counter
 from contextlib import contextmanager
 import logging
 import os
@@ -68,7 +69,6 @@ ANN_DEFAULTS = {
 }
 
 def main():
-    # Setup the argument parser.
     parser = argparse.ArgumentParser(
         description="Generate training data and train artificial neural "\
         "networks."
@@ -419,22 +419,29 @@ def main():
         logging.info("Image is classified as %s" % ", ".join(class_))
 
     elif args.task == 'validate':
-        # Any existing training data or neural networks must be regenerated.
-        FORCE_OVERWRITE = True
-
-        validator = Validator(config, args.cache_dir, meta_path)
         try:
-            scores = validator.k_fold_xval_stratified(args.k, args.autoskip)
+            validate(config, meta_path, args)
         except Exception as e:
             logging.error(e)
-            raise
-
-        print "Accuracy: {0:.2%} (+/- {1:.2%})".format(
-            scores.mean(),
-            scores.std() * 2
-        )
+            return 1
 
     return 0
+
+def validate(config, meta_path, args):
+    """Start validation routines."""
+    global FORCE_OVERWRITE
+
+    # Any existing training data or neural networks must be regenerated during
+    # the validation process.
+    FORCE_OVERWRITE = True
+
+    validator = Validator(config, args.cache_dir, meta_path)
+    scores = validator.k_fold_xval_stratified(args.k, args.autoskip)
+
+    print "Accuracy: {0:.2%} (+/- {1:.2%})".format(
+        scores.mean(),
+        scores.std() * 2
+    )
 
 @contextmanager
 def session_scope(db_path):
@@ -690,6 +697,11 @@ class MakeTrainData(nbc.Common):
             logging.info("No images found for the filter `%s`" % filter_)
             return
 
+        if self.get_photo_count_min():
+            assert len(images) >= self.get_photo_count_min(), \
+                "Expected to find at least photo_count_min={0} photos, found " \
+                "{1}".format(self.get_photo_count_min(), n_images)
+
         if self.subset:
             n_images = len(np.intersect1d(images[:,0], self.subset))
         else:
@@ -724,11 +736,6 @@ class MakeTrainData(nbc.Common):
                 if self.subset and photo_id not in self.subset:
                     continue
 
-                # If self.photo_count_min is set, we may encounter some taxa
-                # that were excluded.
-                if self.photo_count_min and photo_class not in codewords:
-                    continue
-
                 logging.info("Processing `%s` of class `%s`..." % (photo_path,
                     photo_class))
 
@@ -736,7 +743,9 @@ class MakeTrainData(nbc.Common):
                 phenotype = self.cache.get_phenotype_for_photo(photo_id)
 
                 assert len(phenotype) == len(header_data), \
-                    "Fingerprint length mismatch"
+                    "Fingerprint size mismatch. According to the header " \
+                    "there are {0} data columns, but the fingerprint has " \
+                    "{1}".format(len(header_data), len(phenotype))
 
                 training_data.append(phenotype, codewords[photo_class],
                     label=photo_id)
@@ -1197,8 +1206,9 @@ class TestAnn(nbc.Common):
             # Test each sample in the test data.
             for label, input_, output in test_data:
                 assert len(codewords) == len(output), \
-                    "Codeword length {0} does not match output " \
-                    "length {1}".format(len(codewords), len(output))
+                    "Codeword size mismatch. Codeword has {0} bits, but the " \
+                    "training data has {1} output bits.".\
+                    format(len(codewords), len(output))
 
                 # Obtain the photo ID from the label.
                 if not label:
@@ -1217,7 +1227,8 @@ class TestAnn(nbc.Common):
                 class_expected = [class_ for mse,class_ in class_expected]
 
                 assert len(class_expected) == 1, \
-                    "The codeword for a class can only have one positive value"
+                    "Class codewords can have only one positive bit, found " \
+                    "{0}".format(len(class_expected))
 
                 # Get the recognized class.
                 codeword = ann.run(input_)
@@ -1392,9 +1403,9 @@ class Validator(nbc.Common):
         """Perform stratified K-folds cross validation.
 
         The number of folds `k` must be at least 2. The minimum number of labels
-        for any class cannot be less than `k`, or a ValueError is raised. If
-        `autoskip` is set to True, only the photos for species with at least `k`
-        photos are used for the cross validation.
+        for any class cannot be less than `k`, or an AssertionError is raised.
+        If `autoskip` is set to True, only the photos for species with at least
+        `k` photos are used for the cross validation.
         """
         # Will hold the score of each folds.
         scores = []
@@ -1409,21 +1420,30 @@ class Validator(nbc.Common):
         # are needed for the stratified cross validation.
         photo_ids = samples[:,0].astype(str)
         classes = samples[:,1:]
-        classes = ['_'.join(x) for x in classes.astype(str)]
+        classes = np.array(['_'.join(x) for x in classes.astype(str)])
+        class_counts = Counter(classes)
 
         # Check the minimum number of labels for each class.
+        if autoskip:
+            mask = []
+            for i, c in enumerate(classes):
+                if class_counts[c] >= k:
+                    mask.append(i)
+
+            # Remove the photo IDs that don't have enough members.
+            photo_ids = photo_ids[mask]
+            classes = classes[mask]
+        else:
+            for label, count in class_counts.items():
+                assert count >= k, "Class {0} has only {1} members, which " \
+                    "is too few. The minimum number of labels for any " \
+                    "class cannot be less than k={2}. Use --autoskip to skip " \
+                    "classes with too few members.".format(label, count, k)
+
         if autoskip:
             photo_count_min = k
         else:
             photo_count_min = 0
-
-            for label, count in self._reduce_list(classes).items():
-                if count >= k:
-                    continue
-
-                raise ValueError("Class {0} has only {1} members, which " \
-                    "is too few. The minimum number of labels for any " \
-                    "class cannot be less than k={2}".format(label, count, k))
 
         # Train data exporter.
         train_data = BatchMakeTrainData(self.config, self.cache_path,
@@ -1466,13 +1486,6 @@ class Validator(nbc.Common):
             scores.append(score)
 
         return np.array(scores)
-
-    def _reduce_list(self, l):
-        """Return a dict with the count of each value in list `l`."""
-        count = dict([(x,0) for x in set(l)])
-        for k in l:
-            count[k] += 1
-        return count
 
 if __name__ == "__main__":
     main()

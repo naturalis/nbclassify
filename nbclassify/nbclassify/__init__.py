@@ -96,6 +96,7 @@ class Common(object):
     def __init__(self, config):
         """Set the configurations object `config`."""
         self.set_config(config)
+        self._photo_count_min = 0
 
     def set_config(self, config):
         """Set the configurations object `config`.
@@ -120,9 +121,15 @@ class Common(object):
 
         This setting is used by :meth:`get_taxon_hierarchy`. If `count` is a
         positive integer, only the species with a photo count of at least
-        `photo_count_min` are used to build the taxon hierarchy.
+        `count` are used to build the taxon hierarchy.
         """
-        self.photo_count_min = int(count)
+        if not count >= 0:
+            raise ValueError("Value must be an integer of 0 or more")
+        self._photo_count_min = int(count)
+
+    def get_photo_count_min(self):
+        """Return the minimum for photos count per species."""
+        return self._photo_count_min
 
     def get_codewords(self, classes, on=1, off=-1):
         """Return codewords for a list of classes.
@@ -334,7 +341,7 @@ class Common(object):
         hierarchy = {}
 
         for genus, section, species, count in self.get_taxa(session, metadata):
-            if self.photo_count_min > 0 and count < self.photo_count_min:
+            if self._photo_count_min > 0 and count < self._photo_count_min:
                 continue
 
             if genus not in hierarchy:
