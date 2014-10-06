@@ -325,7 +325,7 @@ def main():
         "--autoskip",
         action='store_const',
         const=True,
-        help="Skip the species for which there are not at least `k` photos.")
+        help="Skip the samples for which there are not at least `k` photos.")
     parser_validate.add_argument(
         "imdir",
         metavar="PATH",
@@ -357,75 +357,84 @@ def main():
         cache.make(args.imdir, args.cache_dir, update=False)
 
     # Start selected task.
-    if args.task == 'data':
+    try:
+        if args.task == 'data':
+            data(config, meta_path, args)
+        if args.task == 'data-batch':
+            data_batch(config, meta_path, args)
+        elif args.task == 'ann':
+            ann(config, args)
+        elif args.task == 'ann-batch':
+            ann_batch(config, meta_path, args)
+        elif args.task == 'test-ann':
+            test_ann(config, meta_path, args)
+        elif args.task == 'test-ann-batch':
+            test_ann_batch(config, meta_path, args)
+        elif args.task == 'classify':
+            classify(config, meta_path, args)
+        elif args.task == 'validate':
+            validate(config, meta_path, args)
+    except Exception as e:
+        logging.error(e)
+        return 1
+
+    return 0
+
+def data(config, meta_path, args):
+    """Start train data routines."""
+    try:
+        filter_ = config.classification.filter
+    except:
+        raise nbc.ConfigurationError("The classification filter is not set")
+
+    train_data = MakeTrainData(config, args.cache_dir, meta_path)
+    train_data.export(args.output, filter_, config)
+
+def data_batch(config, meta_path, args):
+    """Start batch train data routines."""
+    train_data = BatchMakeTrainData(config, args.cache_dir, meta_path)
+    train_data.batch_export(args.output)
+
+def ann(config, args):
+    """Start neural network training routines."""
+    ann_maker = MakeAnn(config)
+    ann_maker.train(args.data, args.output)
+
+def ann_batch(config, meta_path, args):
+    """Start batch neural network training routines."""
+    ann_maker = BatchMakeAnn(config, meta_path)
+    ann_maker.batch_train(args.data, args.output)
+
+def test_ann(config, meta_path, args):
+    """Start neural network testing routines."""
+    tester = TestAnn(config)
+    tester.test(args.ann, args.test_data)
+
+    if args.output:
         try:
             filter_ = config.classification.filter
         except:
-            logging.error("The configuration file is missing " \
-                "`classification.filter`")
-            return 1
+            raise nbc.ConfigurationError("The classification filter is not set")
 
-        try:
-            train_data = MakeTrainData(config, args.cache_dir, meta_path)
-            train_data.export(args.output, filter_, config)
-        except nbc.FileExistsError as e:
-            logging.error(e)
-            return 1
+        tester.export_results(args.output, meta_path, filter_, args.error)
 
-    if args.task == 'data-batch':
-        train_data = BatchMakeTrainData(config, args.cache_dir, meta_path)
-        train_data.batch_export(args.output)
+def test_ann_batch(config, meta_path, args):
+    """Start batch neural network testing routines."""
+    tester = TestAnn(config)
+    tester.test_with_hierarchy(meta_path, args.test_data, args.anns,
+        args.error)
 
-    elif args.task == 'ann':
-        try:
-            ann_maker = MakeAnn(config)
-            ann_maker.train(args.data, args.output)
-        except nbc.FileExistsError as e:
-            logging.error(e)
-            return 1
+    if args.output:
+        total, correct = tester.export_hierarchy_results(args.output)
+        print "Correctly classified: {0}/{1} ({2:.2%})\n".\
+            format(correct, total, float(correct)/total)
 
-    elif args.task == 'ann-batch':
-        ann_maker = BatchMakeAnn(config, meta_path)
-        ann_maker.batch_train(args.data, args.output)
-
-    elif args.task == 'test-ann':
-        tester = TestAnn(config)
-        tester.test(args.ann, args.test_data)
-
-        if args.output:
-            try:
-                filter_ = config.classification.filter
-            except:
-                logging.error("The configuration file is missing " \
-                    "`classification.filter`")
-                return 1
-
-            tester.export_results(args.output, meta_path, filter_, args.error)
-
-    elif args.task == 'test-ann-batch':
-        tester = TestAnn(config)
-        tester.test_with_hierarchy(meta_path, args.test_data, args.anns,
-            args.error)
-
-        if args.output:
-            total, correct = tester.export_hierarchy_results(args.output)
-            sys.stderr.write("Correctly classified: {0}/{1} ({2:.2%})\n"
-                .format(correct, total, float(correct)/total))
-
-    elif args.task == 'classify':
-        classifier = ImageClassifier(config, args.ann, meta_path)
-        classification = classifier.classify(args.image, args.error)
-        class_ = [class_ for mse,class_ in classification]
-        logging.info("Image is classified as %s" % ", ".join(class_))
-
-    elif args.task == 'validate':
-        try:
-            validate(config, meta_path, args)
-        except Exception as e:
-            logging.error(e)
-            return 1
-
-    return 0
+def classify(config, meta_path, args):
+    """Start classification routines."""
+    classifier = ImageClassifier(config, args.ann, meta_path)
+    classification = classifier.classify(args.image, args.error)
+    class_ = [class_ for mse,class_ in classification]
+    print "Image is classified as {0}".format(", ".join(class_))
 
 def validate(config, meta_path, args):
     """Start validation routines."""
