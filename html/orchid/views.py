@@ -202,25 +202,15 @@ def delete_photo(request, photo_id):
         raise PermissionDenied
 
     data = {}
-    data.update(csrf(request))
     photo = get_object_or_404(Photo, pk=photo_id)
 
-    if request.method == 'POST':
-        # The user confirmed the deletion.
+    # Delete the photo. Because of the models.photo_delete_hook(), the
+    # actual image file will also be deleted.
+    photo.delete()
 
-        # Delete the photo. Because of the models.photo_delete_hook(), the
-        # actual image file will also be deleted.
-        photo.delete()
-
-        # Return the result.
-        return HttpResponse(json.dumps({'stat': 'success'}),
-            content_type="application/json")
-    else:
-        # The user did not confirmed the deletion.
-
-        # Display a confirmation page.
-        data['photo'] = photo
-        return render(request, "orchid/delete_photo.html", data)
+    # Return the result.
+    return HttpResponse(json.dumps({'stat': 'success'}),
+        content_type="application/json")
 
 def my_photos(request):
     """Display the photos that were identified in a session."""
@@ -299,6 +289,7 @@ def eol_orchid_species_info(request, query):
     iucn_status = re.compile(r'\(([A-Z]{2})\)')
 
     options = {
+        'images': 8,
         'images': 8,
         'videos': 0,
         'sounds': 0,

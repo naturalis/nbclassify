@@ -15,4 +15,9 @@ jQuery( document ).ready(function( $ ) {
             $("#my-photos-n").text(data.length);
         }
     });
+
+    // Enable linking for buttons with a `data-href` attribute.
+    $('button[data-href]').click(function(event) {
+        window.location.href = $(this).data("href");
+    });
 });

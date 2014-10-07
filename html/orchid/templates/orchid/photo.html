@@ -18,8 +18,30 @@
 </p>
 
 <div class="btn-group">
-    <a href="{% url 'orchid:identify' photo.id %}" class="btn btn-default"><i class="fa fa-search fa-fw"></i> Re-identify</a>
-    <a href="{% url 'orchid:delete_photo' photo.id %}" class="btn btn-default"><i class="fa fa-trash fa-fw"></i> Delete</a>
+    <button class="btn btn-default" data-href="{% url 'orchid:identify' photo.id %}"><i class="fa fa-search fa-fw"></i> Re-identify</button>
+    <button class="btn btn-default" data-toggle="modal" data-target="#delete-modal"><i class="fa fa-trash fa-fw"></i> Delete</button>
+</div>
+
+<!-- Modals -->
+<div class="modal" id="delete-modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title">Delete Photo</h4>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to <strong>permanently</strong> delete this
+        photo? This action cannot be undone.</p>
+
+        <div id="delete-modal-message"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-danger" data-action="delete-photo">Delete</button>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -55,6 +77,23 @@ jQuery(function( $ ) {
             });
         });
     });
+
+    $("button[data-action='delete-photo']").click(function(event) {
+        $.ajax({
+            url: "{% url 'orchid:delete_photo' photo.id %}",
+            dataType: "json",
+            success: function(data) {
+                window.location.href = "{% url 'orchid:library' %}";
+            },
+            error: function(data) {
+                $("#delete-modal-message").html('<p class="text-danger">' +
+                    '<strong>Oops!</strong> An error occurred and the photo ' +
+                    'could not be deleted. Please contact the admin about ' +
+                    'this problem.</p>');
+            }
+        });
+    });
+
 });
 </script>
 {% endblock %}
