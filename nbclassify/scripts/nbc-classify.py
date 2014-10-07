@@ -37,33 +37,60 @@ import yaml
 
 import nbclassify as nbc
 
+# File name of the meta data file.
+META_FILE = ".meta.db"
+
+# ANSI colors.
 GREEN = '\033[32m'
 GREEN_BOLD = '\033[1;32m'
 RED = '\033[31m'
 RED_BOLD = '\033[1;31m'
 
 def main():
-    # Setup the argument parser.
-    parser = argparse.ArgumentParser(description="Classify digital " \
-        "photographs using a committee of artificial neural networks.")
-
-    parser.add_argument("--conf", metavar="FILE", required=True,
+    parser = argparse.ArgumentParser(
+        description="Classify digital photographs using a committee of " \
+        "artificial neural networks."
+    )
+    parser.add_argument(
+        "--conf",
+        metavar="FILE",
+        required=True,
         help="Path to a configurations file with the classification " \
-        "hierarchy set.")
-    parser.add_argument("--db", metavar="DB", required=True,
-        help="Path to a database file with photo meta data.")
-    parser.add_argument("--anns", metavar="PATH", required=True,
-        help="Path to a directory containing the neural networks.")
-    parser.add_argument("--error", metavar="N", type=float, default=0.0001,
+        "hierarchy.")
+    parser.add_argument(
+        "--imdir",
+        metavar="PATH",
+        required=True,
+        help="Base directory where Flickr harvested images are stored.")
+    parser.add_argument(
+        "--anns",
+        metavar="PATH",
+        required=True,
+        help="Path to a directory containing the neural networks for " \
+        "a classification hierarchy.")
+    parser.add_argument(
+        "--error",
+        metavar="N",
+        type=float,
+        default=0.0001,
         help="The maximum error for classification at each level. Default " \
         "is 0.0001. If the maximum error for a level is set in the " \
         "classification hierarchy, then that value is used instead.")
-    parser.add_argument("--verbose", "-v", action='store_const',
-        const=True, help="Explain what is being done.")
-    parser.add_argument("--color", action='store_const',
-        const=True, help="Show colored results. Only works on terminals " \
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action='store_const',
+        const=True,
+        help="Explain what is being done.")
+    parser.add_argument(
+        "--color",
+        action='store_const',
+        const=True,
+        help="Show colored results. Only works on terminals " \
         "that support ANSI escape sequences.")
-    parser.add_argument("images", metavar="PATH", nargs='+',
+    parser.add_argument("images",
+        metavar="PATH",
+        nargs='+',
         help="Path to a digital photograph to be classified.")
 
     # Parse arguments.
@@ -79,8 +106,11 @@ def main():
 
     logging.basicConfig(level=log_level, format='%(levelname)s %(message)s')
 
+    # Get path to meta data file.
+    meta_path = os.path.join(args.imdir, META_FILE)
+
     config = nbc.open_config(args.conf)
-    classifier = ImageClassifier(config, args.db)
+    classifier = ImageClassifier(config, meta_path)
     classifier.set_error(args.error)
 
     for image_path in args.images:

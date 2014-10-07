@@ -163,7 +163,10 @@ class Common(object):
         class), ..]``. Returns an empty list if no classes were found.
         """
         if len(codewords) != len(codeword):
-            raise ValueError("Lenth of `codewords` must be equal to `codeword` length")
+            raise ValueError("Codeword size mismatch. The number of " \
+                "codeword bits does not match the number of classes. " \
+                "The classes in the meta data file must match the classes " \
+                "used to train the neural networks.")
         classes = []
         for class_, word in codewords.items():
             for i, bit in enumerate(word):
@@ -286,6 +289,8 @@ class Common(object):
             join(q_genus).\
             outerjoin(q_section).\
             join(q_species)
+
+        q = q.filter
 
         return q
 

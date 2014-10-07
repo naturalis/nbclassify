@@ -24,6 +24,7 @@ The workflow for the scripts is as follows:
 .. graphviz::
 
    digraph scripts {
+        bgcolor="transparent";
         node [shape=ellipse]; classification;
         node [shape=parallelogram]; Flickr; "new image";
         node [shape=box,style=filled]; "nbc-harvest-images.py"; "nbc-trainer.py"; "nbc-classify.py";
@@ -137,14 +138,15 @@ The following subcommands are available:
 :ref:`nbc-trainer-py-data`
   Create a tab separated file with training data.
 
-:ref:`nbc-trainer-py-batch-data`
-  Batch create tab separated files with training data.
+:ref:`nbc-trainer-py-data-batch`
+  Create tab separated files with training data for a classification
+  hierarchy.
 
 :ref:`nbc-trainer-py-ann`
   Train an artificial neural network.
 
-:ref:`nbc-trainer-py-batch-ann`
-  Batch train artificial neural networks.
+:ref:`nbc-trainer-py-ann-batch`
+  Train artificial neural networks for a classification hierarchy.
 
 :ref:`nbc-trainer-py-test-ann`
   Test an artificial neural network.
@@ -174,12 +176,13 @@ configurations file.
 
 Example usage::
 
-    $ nbc-trainer.py data --conf config.yml -o train_data.tsv images/orchids/
+    $ nbc-trainer.py config.yml data --cache-dir cache/ \
+    > -o train_data.tsv images/orchids/
 
 
-.. _nbc-trainer-py-batch-data:
+.. _nbc-trainer-py-data-batch:
 
-batch-data
+data-batch
 ----------
 
 In contrast to the :ref:`nbc-trainer-py-data` subcommand, this will
@@ -190,44 +193,45 @@ determine which training data files need to be created.
 
 Example usage::
 
-    $ nbc-trainer.py batch-data --conf config.yml -o train_data/ images/orchids/
+    $ nbc-trainer.py config.yml data-batch --cache-dir cache/ \
+    > -o train_data/ images/orchids/
 
 
 .. _nbc-trainer-py-ann:
 
 ann
-----
+---
 
 Train an artificial neural network. Optional training parameters
 :ref:`config-ann` can be set in a configurations file.
 
 Example usage::
 
-    $ nbc-trainer.py ann --conf config.yml -o orchid.ann train_data.tsv
+    $ nbc-trainer.py config.yml ann -o orchid.ann train_data.tsv
 
 
-.. _nbc-trainer-py-batch-ann:
+.. _nbc-trainer-py-ann-batch:
 
-batch-ann
+ann-batch
 ---------
 
 The batch equivalent of the :ref:`nbc-trainer-py-ann` subcommand, and similar
-to the :ref:`nbc-trainer-py-batch-data` subcommand, in that it automatically
+to the :ref:`nbc-trainer-py-data-batch` subcommand, in that it automatically
 creates all the required artificial neural networks needed for classifying an
 image on the levels specified in the :ref:`classification hierarchy
 <config-classification.hierarchy>`. Training data required for this subcommand
-is created with the :ref:`nbc-trainer-py-batch-data` subcommand.
+is created with the :ref:`nbc-trainer-py-data-batch` subcommand.
 
 Example usage::
 
-    $ nbc-trainer.py batch-ann --conf config.yml \
-    >  --db images/orchids/photos.db --data train_data/ -o anns/
+    $ nbc-trainer.py config.yml ann-batch --data train_data/ \
+    > -o anns/ images/orchids/
 
 
 .. _nbc-trainer-py-test-ann:
 
 test-ann
----------
+--------
 
 Test an artificial neural network. If ``--output`` is used, then ``--db`` must
 be set and the :ref:`classification filter <config-classification.filter>`
@@ -240,9 +244,9 @@ must be set in the configurations file.
 
 Example usage::
 
-    $ nbc-trainer.py test-ann --conf config.yml --ann orchid.ann \
-    > --db images/orchids/photos.db -o test-results.tsv --error 0.001 \
-    > test_data.tsv
+    $ nbc-trainer.py config.yml test-ann --ann orchid.ann \
+    > --error 0.001 -t test_data.tsv -o test-results.tsv \
+    > images/orchids/
 
 
 .. _nbc-trainer-py-test-ann-batch:
@@ -255,15 +259,15 @@ Test the artificial neural networks for a :ref:`classification hierarchy
 
 .. note::
 
-   Use the :ref:`nbc-trainer-py-batch-data` subcommand with out-of-sample
+   Use the :ref:`nbc-trainer-py-data-batch` subcommand with out-of-sample
    images to create a directory with test data for a classification
    hierarchy.
 
 Example usage::
 
-    $ nbc-trainer.py test-ann-batch --conf config.yml \
-    > --db images/orchids/photos.db --test-data test_data/ \
-    > --anns neural_networks/ --error 0.001 -o test-results.tsv
+    $ nbc-trainer.py config.yml test-ann-batch \
+    > -t test_data/ --anns neural_networks/ \
+    > -o test-results.tsv images/orchids/
 
 
 .. _nbc-trainer-py-classify:
@@ -276,8 +280,9 @@ filter <config-classification.filter>` must be set in the configurations file.
 
 Example usage::
 
-    $ nbc-trainer.py classify --conf config.yml --ann orchid.ann \
-    > --db images/orchids/photos.db --error 0.001 images/test/14371998807.jpg
+    $ nbc-trainer.py config.yml classify --ann orchid.ann \
+    > --imdir images/orchids/ --error 0.001 \
+    > images/test/14371998807.jpg
 
 
 .. _nbc-classify-py:
@@ -291,8 +296,8 @@ classified on different levels in a :ref:`classification hierarchy
 hierarchy.
 
 The neural networks on which this script depends are created with a separate
-script, :ref:`nbc-trainer-py`. See its :ref:`nbc-trainer-py-batch-data` and
-:ref:`nbc-trainer-py-batch-ann` subcommands for more information.
+script, :ref:`nbc-trainer-py`. See its :ref:`nbc-trainer-py-data-batch` and
+:ref:`nbc-trainer-py-ann-batch` subcommands for more information.
 
 This script depends on the SQLite database file with meta data for a Flickr
 harvested image collection. This database is created by
@@ -303,7 +308,7 @@ See the ``--help`` option for usage information.
 
 Example usage::
 
-    $ nbc-classify.py -v --conf config.yml --db images/orchids/photos.db \
+    $ nbc-classify.py -v --conf config.yml --imdir images/orchids/ \
     > --anns neural_networks/ images/test/14371998807.jpg
     Image: images/test/14371998807.jpg
     INFO Segmenting...
@@ -329,4 +334,4 @@ Example usage::
         Mean square error: 0.000153084416316
 
 
-.. _config.yml: https://github.com/naturalis/img-classify/blob/master/nbclassify/nbclassify/config.yml
+.. _config.yml: https://github.com/naturalis/nbclassify/blob/master/nbclassify/nbclassify/config.yml
