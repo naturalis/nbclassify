@@ -29,10 +29,11 @@ The workflow for the scripts is as follows:
         node [shape=parallelogram]; Flickr; "new image";
         node [shape=box,style=filled]; "nbc-harvest-images.py"; "nbc-trainer.py"; "nbc-classify.py";
 
-        Flickr -> "nbc-harvest-images.py";
+        Flickr -> "nbc-harvest-images.py" [ style=dashed ];
         "new image" -> "nbc-classify.py";
         "nbc-harvest-images.py" -> "nbc-trainer.py" [ label=" images\n meta data" ];
         "nbc-trainer.py" -> "nbc-classify.py" [ label=" neural networks" ];
+        "nbc-trainer.py" -> "nbc-trainer.py" [ label=" training data" ];
         "nbc-classify.py" -> "classification";
    }
 
