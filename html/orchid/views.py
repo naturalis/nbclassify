@@ -201,7 +201,6 @@ def delete_photo(request, photo_id):
     if not session_owns_photo(request, photo_id):
         raise PermissionDenied
 
-    data = {}
     photo = get_object_or_404(Photo, pk=photo_id)
 
     # Delete the photo. Because of the models.photo_delete_hook(), the
@@ -289,7 +288,6 @@ def eol_orchid_species_info(request, query):
     iucn_status = re.compile(r'\(([A-Z]{2})\)')
 
     options = {
-        'images': 8,
         'images': 8,
         'videos': 0,
         'sounds': 0,
