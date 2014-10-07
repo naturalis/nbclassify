@@ -8,7 +8,6 @@ import nbclassify as nbc
 
 from django.http import HttpResponse, HttpResponseRedirect, Http404, HttpResponseServerError
 from django.core.urlresolvers import reverse
-from django.core.exceptions import PermissionDenied
 from django.shortcuts import render, get_object_or_404
 from django.core.context_processors import csrf
 from django.conf import settings
@@ -61,7 +60,7 @@ def identify(request, photo_id):
     """
     # Only allow identifying of own photos.
     if not session_owns_photo(request, photo_id):
-        raise PermissionDenied
+        raise Http404
 
     photo = get_object_or_404(Photo, pk=photo_id)
     data = {}
@@ -136,7 +135,7 @@ def photo_identity(request, photo_id):
     """Return the identification result for a photo."""
     # Only allow viewing of own photos.
     if not session_owns_photo(request, photo_id):
-        raise PermissionDenied
+        raise Http404
 
     photo = get_object_or_404(Photo, pk=photo_id)
     ids = photo.identity_set.all()
@@ -182,7 +181,7 @@ def photo(request, photo_id):
     """Display the photo with classification result."""
     # Only allow viewing of own photos.
     if not session_owns_photo(request, photo_id):
-        raise PermissionDenied
+        raise Http404
 
     photo = get_object_or_404(Photo, pk=photo_id)
 
@@ -199,7 +198,7 @@ def delete_photo(request, photo_id):
     """Delete a photo and its related objects."""
     # Only allow deletion of own photos.
     if not session_owns_photo(request, photo_id):
-        raise PermissionDenied
+        raise Http404
 
     photo = get_object_or_404(Photo, pk=photo_id)
 
