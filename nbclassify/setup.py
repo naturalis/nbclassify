@@ -16,14 +16,14 @@ setup(
     url='https://github.com/naturalis/img-classify',
     author='Naturalis Biodiversity Center',
     author_email='serrano.pereira@naturalis.nl',
-    #license='',
+    license='MIT',
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',
         'Environment :: Console'
         'Topic :: Scientific/Engineering :: Image Recognition',
-        #'License ::',
+        'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
