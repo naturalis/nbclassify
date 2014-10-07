@@ -290,8 +290,6 @@ class Common(object):
             outerjoin(q_section).\
             join(q_species)
 
-        q = q.filter
-
         return q
 
     def get_classes_from_filter(self, session, metadata, filter_):

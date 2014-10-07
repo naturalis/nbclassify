@@ -105,10 +105,12 @@ class TestTrainer(unittest.TestCase):
     def test_2(self):
         """Test the `{data|ann|classify}-batch` subcommands."""
         train_dir = os.path.join(self.temp_dir, 'train_data')
-        os.mkdir(train_dir)
         ann_dir = os.path.join(self.temp_dir, 'ann_dir')
-        os.mkdir(ann_dir)
         test_result = os.path.join(self.temp_dir, 'test_result_batch.tsv')
+
+        for path in (train_dir, ann_dir):
+            if not os.path.isdir(path):
+                os.mkdir(path)
 
         sys.argv = self.argv_pre + [
             'data-batch',
