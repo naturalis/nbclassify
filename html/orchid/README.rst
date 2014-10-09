@@ -55,11 +55,9 @@ This setup assumes you have Apache 2.4.
           ServerName example.com
           ServerAdmin webmaster@example.com
 
-          WSGIDaemonProcess orchid display-name=%{GROUP} python-path=/var/www/orchid:/var/www/orchid/env/lib/python2.7/site-packages
+          WSGIDaemonProcess orchid python-path=/var/www/orchid:/var/www/orchid/env/lib/python2.7/site-packages
           WSGIProcessGroup orchid
           WSGIScriptAlias / /var/www/orchid/webapp/wsgi.py
-
-          DocumentRoot /var/www/html
 
           Alias /media/ /var/www/orchid/media/
           Alias /static/ /var/www/orchid/orchid/static/
