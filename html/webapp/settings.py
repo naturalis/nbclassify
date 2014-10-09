@@ -81,7 +81,8 @@ USE_TZ = True
 # Example: "/static/" or "http://static.example.com/"
 STATIC_URL = '/static/'
 
-# The list of finder backends that know how to find static files in various locations.
+# The list of finder backends that know how to find static files in various
+# locations.
 STATICFILES_FINDERS = (
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder"

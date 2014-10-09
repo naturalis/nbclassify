@@ -42,7 +42,15 @@ The [ImgPheno][1] package can be installed from the GitHub repository.
 
 ## Installation
 
-For installation instructions, see the "orchid" subdirectory.
+In a production environment it is recommended to install Python packages in a
+virtual environment. But since system Python packages are also required (e.g.
+python-opencv), the following could be done:
+
+	cd /var/www/django-site/
+	virtualenv --system-site-packages env
+	env/bin/pip install -r requirements.txt
+
+For further installation instructions, see the "orchid" subdirectory.
 
 
 [1]: https://github.com/naturalis/imgpheno

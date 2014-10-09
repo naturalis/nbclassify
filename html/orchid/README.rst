@@ -41,8 +41,8 @@ This setup assumes you have Apache 2.4.
 
 1. Make sure that mod_wsgi is enabled::
 
-      sudo apt-get install libapache2-mod-wsgi
-      sudo a2enmod wsgi
+      apt-get install libapache2-mod-wsgi
+      a2enmod wsgi
 
 2. Configure Apache and mod_wsgi for hosting a WSGI application (i.e. Django).
    The mod_wsgi documentation is a good place to start:
@@ -52,38 +52,41 @@ This setup assumes you have Apache 2.4.
    could be something like::
 
       <VirtualHost *:80>
-          ServerName mysite.com
-          ServerAdmin webmaster@mysite.com
+          ServerName example.com
+          ServerAdmin webmaster@example.com
 
-          DocumentRoot /usr/local/www/documents
+          WSGIDaemonProcess orchid display-name=%{GROUP} python-path=/var/www/orchid:/var/www/orchid/env/lib/python2.7/site-packages
+          WSGIProcessGroup orchid
+          WSGIScriptAlias / /var/www/orchid/webapp/wsgi.py
 
-          Alias /media/ /usr/local/www/documents/media/
-          Alias /static/ /usr/local/www/documents/static/
+          DocumentRoot /var/www/html
 
-          <Directory /usr/local/www/documents/>
-              Options FollowSymLinks
-              AllowOverride None
+          Alias /media/ /var/www/orchid/media/
+          Alias /static/ /var/www/orchid/orchid/static/
+
+          <Directory /var/www/orchid/media>
               Require all granted
           </Directory>
 
-          WSGIDaemonProcess mysite.com display-name=%{GROUP} python-path=/path/to/mysite.com
-          WSGIProcessGroup mysite.com
+          <Directory /var/www/orchid/orchid/static>
+              Require all granted
+          </Directory>
 
-          WSGIScriptAlias / /path/to/mysite.com/webapp/wsgi.py
-
-          <Directory /path/to/mysite.com/webapp>
+          <Directory /var/www/orchid/webapp>
               <Files wsgi.py>
                   Require all granted
               </Files>
           </Directory>
       </VirtualHost>
 
-   For security reasons, a Django site (i.e. ``/path/to/mysite.com``) must not
-   be in the Apache document root. In this example setup, the paths
-   ``/usr/local/www/documents/{static|media}/`` could be system links to
-   ``/path/to/mysite.com/{orchid/static|media}/``. This way, Apache can still
-   serve static and user uploaded files. Also make sure that
-   ``/path/to/mysite.com/media/`` is writable to Apache.
+   In this example, we added the path ``/var/www/orchid/env/lib/python2.7/site-
+   packages`` which points to a virtualenv directory. This is needed if Python
+   packaged were installed using virtualenv. For security reasons, a Django site
+   (i.e. ``/var/www/orchid/``) must not be in the Apache document root. Notice
+   that we made aliases for the paths
+   ``/var/www/orchid/{orchid/static|media}/``. This way, Apache can still serve
+   static and user uploaded files. Also make sure that
+   ``/var/www/orchid/media/`` is writable to Apache.
 
    The corresponding ``settings.py`` for your Django site must have the
    following options set for this to work::
@@ -91,6 +94,15 @@ This setup assumes you have Apache 2.4.
       STATIC_URL = '/static/'
       MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
       MEDIA_URL = '/media/'
+
+   And if memcached is used for caching::
+
+      CACHES = {
+          'default': {
+              'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+              'LOCATION': '127.0.0.1:11211',
+          }
+      }
 
    If you use an SQLite database, make sure that Apache can write to the
    database file and to the parent directory of the database.
