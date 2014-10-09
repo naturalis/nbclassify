@@ -27,7 +27,7 @@ Quick start
 3. Run ``python manage.py syncdb`` to create OrchiD's database tables.
 
 4. You may start the development server with ``python manage.py runserver``
-   and visit http://127.0.0.1:8000/orchid/ to test the app.
+   and visit http://127.0.0.1:8000/ to test the app.
 
    This app was however designed to be served on a production server (e.g. on
    Apache with mod_wsgi). Some functionality will not work using Django's
