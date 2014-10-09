@@ -260,7 +260,7 @@ def json_get_session_data(request):
 def javascript(request):
     """Return Django parsed JavaScript."""
     data = {}
-    return render(request, "orchid/javascript.html", data,
+    return render(request, "orchid/javascript.js", data,
         content_type="application/javascript")
 
 def query_eol(query, options, taxon_concept=None, exact=False):
