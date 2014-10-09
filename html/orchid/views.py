@@ -15,7 +15,7 @@ from orchid.forms import UploadPictureForm
 from orchid.models import Photo, Identity
 from orchid.classify import ImageClassifier, open_yaml
 
-ORCHID_CONF = os.path.join(settings.BASE_DIR, 'orchid', 'orchid.yml')
+CONFIG_FILE = os.path.join(settings.BASE_DIR, 'orchid', 'config.yml')
 TAXA_DB = os.path.join(settings.BASE_DIR, 'orchid', 'taxa.db')
 ANN_DIR = os.path.join(settings.BASE_DIR, 'orchid', 'orchid.ann')
 
@@ -89,7 +89,7 @@ def identify(request, photo_id):
             roi = None
 
         # Classify the photo.
-        config = open_yaml(ORCHID_CONF)
+        config = open_yaml(CONFIG_FILE)
         classifier = ImageClassifier(config, TAXA_DB)
         classifier.set_roi(roi)
 
