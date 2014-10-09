@@ -24,7 +24,7 @@ On Debian (based) systems, most dependencies can be installed from the
 software repository:
 
     apt-get install memcached python-django python-memcache python-numpy \
-    python-opencv python-pil python-pyfann  python-sorl-thumbnail \
+    python-opencv python-pil python-pyfann python-sorl-thumbnail \
     python-sqlalchemy python-yaml
 
 

@@ -79,14 +79,14 @@ This setup assumes you have Apache 2.4.
           </Directory>
       </VirtualHost>
 
-   In this example, we added the path ``/var/www/orchid/env/lib/python2.7/site-
-   packages`` which points to a virtualenv directory. This is needed if Python
-   packaged were installed using virtualenv. For security reasons, a Django site
-   (i.e. ``/var/www/orchid/``) must not be in the Apache document root. Notice
-   that we made aliases for the paths
-   ``/var/www/orchid/{orchid/static|media}/``. This way, Apache can still serve
-   static and user uploaded files. Also make sure that
-   ``/var/www/orchid/media/`` is writable to Apache.
+   In this example, we added the path
+   ``/var/www/orchid/env/lib/python2.7/site-packages``
+   which points to a virtualenv directory. This is needed if Python packaged
+   were installed using virtualenv. For security reasons, a Django site (i.e.
+   ``/var/www/orchid/``) must not be in the Apache document root. Notice that we
+   made aliases for the paths ``/var/www/orchid/{orchid/static|media}/``. This
+   way, Apache can still serve static and user uploaded files. Also make sure
+   that ``/var/www/orchid/media/`` is writable to Apache.
 
    The corresponding ``settings.py`` for your Django site must have the
    following options set for this to work::
