@@ -1,0 +1,6 @@
+django>=1.6
+numpy
+pillow
+pyyaml
+sorl-thumbnail
+sqlalchemy>=0.9.1

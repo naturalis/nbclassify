@@ -2,29 +2,48 @@
 
 ## Dependencies
 
-This Django app requires all dependencies mentioned in the parent directory,
-and in addition:
+The OrchiD Django app has the following dependencies:
 
-* Django 1.6
+* Django (>=1.6)
+* FANN (>=2.1.0)
+  * Python bindings
+* [ImgPheno][1]
+* memcached
+* NumPy
+* OpenCV (2.4.x)
+  * Python bindings
+* Python (>=2.7 && <2.8)
+  * SQLite (>=3.6.19)
 * Python Imaging Library (PIL) or Pillow
+* Python-memcached
+* PyYAML
 * sorl-thumbnail
+* SQLAlchemy (>=0.9.1)
 
 On Debian (based) systems, most dependencies can be installed from the
 software repository:
 
-    sudo apt-get install python-django python-pil python-sorl-thumbnail
+    apt-get install memcached python-django python-memcache python-numpy \
+    python-opencv python-pil python-pyfann  python-sorl-thumbnail \
+    python-sqlalchemy python-yaml
 
-More recent versions of Python packages can be obtained via the Python Package
-Index:
 
-    sudo apt-get install python-pip
+More recent versions of some Python packages can be obtained via the Python
+Package Index:
 
-    sudo pip install django pillow sorl-thumbnail
+    apt-get install python-pip
 
-Follow the installation and setup instructions for [sorl-thumbnail][1].
+    pip install -r requirements.txt
+
+Follow the setup instructions for [sorl-thumbnail][2].
+
+The [ImgPheno][1] package can be installed from the GitHub repository.
+
 
 ## Installation
 
 For installation instructions, see the "orchid" subdirectory.
 
-[1]: http://sorl-thumbnail.readthedocs.org/en/latest/installation.html
+
+[1]: https://github.com/naturalis/imgpheno
+[2]: http://sorl-thumbnail.readthedocs.org/en/latest/installation.html

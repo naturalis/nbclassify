@@ -73,7 +73,7 @@ Or if you have a source archive file::
     pip install nbclassify-0.1.0.tar.gz
 
 
-.. _ImgPheno: https://github.com/naturalis/feature-extraction
+.. _ImgPheno: https://github.com/naturalis/imgpheno
 .. _FANN: http://leenissen.dk/fann/wp/
 .. _NumPy: http://www.numpy.org/
 .. _OpenCV: http://opencv.org/
