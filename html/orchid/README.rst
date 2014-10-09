@@ -60,9 +60,14 @@ This setup assumes you have Apache 2.4.
           WSGIScriptAlias / /var/www/orchid/webapp/wsgi.py
 
           Alias /media/ /var/www/orchid/media/
+          Alias /static/admin/ /var/www/orchid/webapp/static/admin/
           Alias /static/ /var/www/orchid/orchid/static/
 
           <Directory /var/www/orchid/media>
+              Require all granted
+          </Directory>
+
+          <Directory /var/www/orchid/webapp/static/admin>
               Require all granted
           </Directory>
 
@@ -84,7 +89,16 @@ This setup assumes you have Apache 2.4.
    ``/var/www/orchid/``) must not be in the Apache document root. Notice that we
    made aliases for the paths ``/var/www/orchid/{orchid/static|media}/``. This
    way, Apache can still serve static and user uploaded files. Also make sure
-   that ``/var/www/orchid/media/`` is writable to Apache.
+   that ``/var/www/orchid/media/`` is writable to Apache. Another alias was
+   created for ``/static/admin/``, which is needed for the admin panel. The path
+   could be a system link to ``/<django-source-path>/contrib/admin/static/``.
+   Find out where the Django source path is by running::
+
+      python -c "
+      import sys
+      sys.path = sys.path[1:]
+      import django
+      print(django.__path__)"
 
    The corresponding ``settings.py`` for your Django site must have the
    following options set for this to work::
