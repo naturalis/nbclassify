@@ -247,10 +247,21 @@ def get_session_photo_ids(request):
     except:
         return []
 
-def json_get_session_photo_ids(request):
-    """Return the photo IDs for the current session in JSON format."""
-    return HttpResponse(json.dumps(get_session_photo_ids(request)),
-        content_type="application/json")
+def json_get_session_data(request):
+    """Return data for the current user session.
+
+    Data contains the photo IDs for the current user. Data is returned in JSON
+    format.
+    """
+    data = {}
+    data['photos'] = get_session_photo_ids(request)
+    return HttpResponse(json.dumps(data), content_type="application/json")
+
+def javascript(request):
+    """Return Django parsed JavaScript."""
+    data = {}
+    return render(request, "orchid/javascript.html", data,
+        content_type="application/javascript")
 
 def query_eol(query, options, taxon_concept=None, exact=False):
     """Return species info from EOL.org.

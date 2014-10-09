@@ -7,15 +7,6 @@ jQuery( document ).ready(function( $ ) {
         $( "#menuLink" ).toggleClass( "active" );
     });
 
-    // Update the badge for the My Photos menu item.
-    $.ajax({
-        url: "/orchid/session_photo_ids.json",
-        dataType: "json",
-        success: function(data) {
-            $("#my-photos-n").text(data.length);
-        }
-    });
-
     // Enable linking for buttons with a `data-href` attribute.
     $('button[data-href]').click(function(event) {
         window.location.href = $(this).data("href");

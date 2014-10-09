@@ -5,8 +5,9 @@ from django.contrib import admin
 admin.autodiscover()
 
 urlpatterns = patterns('',
-    url(r'^$', 'orchid.views.home'),
-    url(r'^orchid/', include('orchid.urls', namespace="orchid")),
+    #url(r'^$', 'orchid.views.home'),
+    #url(r'^orchid/', include('orchid.urls', namespace="orchid")),
+    url(r'^', include('orchid.urls', namespace="orchid")),
     url(r'^admin/', include(admin.site.urls)),
 )
 
