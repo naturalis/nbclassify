@@ -85,8 +85,10 @@ def main():
 
     # Create an argument parser for sub-command 'data'.
     help_data = """Create a tab separated file with training data.
+
     Preprocessing steps, features to extract, and a classification filter
-    must be set in a configurations file. See config.yml for an example."""
+    must be set in the configurations file.
+    """
 
     parser_data = subparsers.add_parser(
         "data",
@@ -111,10 +113,11 @@ def main():
         help="Base directory where Flickr harvested images are stored.")
 
     # Create an argument parser for sub-command 'data-batch'.
-    help_data_batch = """Batch create tab separated files with training
-    data. Preprocessing steps, features to extract, and the classification
-    hierarchy must be set in a configurations file, See config.yml for an
-    example."""
+    help_data_batch = """Create training data for a classification hierarchy.
+
+    Preprocessing steps, features to extract, and the classification
+    hierarchy must be set in the configurations file.
+    """
 
     parser_data_batch = subparsers.add_parser(
         "data-batch",
@@ -138,9 +141,10 @@ def main():
         help="Base directory where Flickr harvested images are stored.")
 
     # Create an argument parser for sub-command 'ann'.
-    help_ann = """Train an artificial neural network. Optional training
-    parameters `ann` can be set in a configurations file. See config.yml for
-    an example."""
+    help_ann = """Train an artificial neural network.
+
+    Optional training parameters can be set in a configurations file.
+    """
 
     parser_ann = subparsers.add_parser(
         "ann",
@@ -160,10 +164,11 @@ def main():
         help="Path to tab separated file with training data.")
 
     # Create an argument parser for sub-command 'ann-batch'.
-    help_ann_batch = """Batch train a committee of artificial neural
-    networks. The classification hierarchy with optionally neural network
-    training parameters for each level must be set in a configurations
-    file. See config.yml for an example."""
+    help_ann_batch = """Train neural networks for a classification hierarchy.
+
+    The classification hierarchy with optionally neural network training
+    parameters for each level must be set in the configurations file.
+    """
 
     parser_ann_batch = subparsers.add_parser(
         "ann-batch",
@@ -189,9 +194,7 @@ def main():
         help="Base directory where Flickr harvested images are stored.")
 
     # Create an argument parser for sub-command 'test-ann'.
-    help_test_ann = """Test an artificial neural network. If `--output` is
-    used, then --db must be set, and the classification filter must be set
-    in the configurations file. See config.yml for an example."""
+    help_test_ann = "Test an artificial neural network."
 
     parser_test_ann = subparsers.add_parser(
         "test-ann",
@@ -230,8 +233,8 @@ def main():
         help="Base directory where Flickr harvested images are stored.")
 
     # Create an argument parser for sub-command 'test-ann'.
-    help_test_ann_batch = """Test the artificial neural networks for a
-    classification hierarchy. See config.yml for an example."""
+    help_test_ann_batch = "Test the neural networks for a classification " \
+    "hierarchy."
 
     parser_test_ann_batch = subparsers.add_parser(
         "test-ann-batch",
@@ -270,8 +273,10 @@ def main():
         help="Base directory where Flickr harvested images are stored.")
 
     # Create an argument parser for sub-command 'classify'.
-    help_classify = """Classify a digital photo. The classification filter
-    must be set in the configurations file. See config.yml for an example."""
+    help_classify = """Classify a digital photo.
+
+    The classification filter must be set in the configurations file.
+    """
 
     parser_classify = subparsers.add_parser(
         "classify",
@@ -302,8 +307,10 @@ def main():
         help="Path to image file to be classified.")
 
     # Create an argument parser for sub-command 'classify'.
-    help_validate = """Test the performance of trained artificial neural
-    networks."""
+    help_validate = """Test the performance of trained neural networks.
+
+    Performs stratified K-fold cross validation.
+    """
 
     parser_validate = subparsers.add_parser(
         "validate",
