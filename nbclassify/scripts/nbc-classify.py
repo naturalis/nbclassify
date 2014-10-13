@@ -36,6 +36,7 @@ import sqlalchemy
 import yaml
 
 import nbclassify as nbc
+from nbclassify.db import session_scope
 
 # File name of the meta data file.
 META_FILE = ".meta.db"
@@ -165,24 +166,6 @@ def ansi_colored(s, color, raw=False):
         's': s
     }
     return "{color}{s}{reset}".format(**replace)
-
-@contextmanager
-def session_scope(db_path):
-    """Provide a transactional scope around a series of operations."""
-    engine = sqlalchemy.create_engine('sqlite:///%s' % os.path.abspath(db_path),
-        echo=sys.flags.debug)
-    Session = sqlalchemy.orm.sessionmaker(bind=engine)
-    session = Session()
-    metadata = sqlalchemy.MetaData()
-    metadata.reflect(bind=engine)
-    try:
-        yield (session, metadata)
-        session.commit()
-    except:
-        session.rollback()
-        raise
-    finally:
-        session.close()
 
 class ImageClassifier(nbc.Common):
 

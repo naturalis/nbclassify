@@ -43,6 +43,7 @@ import sqlalchemy
 import yaml
 
 import nbclassify as nbc
+from nbclassify.db import session_scope
 
 # Prefix for output columns in training data.
 OUTPUT_PREFIX = "OUT:"
@@ -365,6 +366,8 @@ def main():
 
     # Start selected task.
     try:
+        if args.meta == 'meta':
+            meta(config, meta_path, args)
         if args.task == 'data':
             data(config, meta_path, args)
         if args.task == 'data-batch':
@@ -458,24 +461,6 @@ def validate(config, meta_path, args):
         scores.mean(),
         scores.std() * 2
     )
-
-@contextmanager
-def session_scope(db_path):
-    """Provide a transactional scope around a series of operations."""
-    engine = sqlalchemy.create_engine('sqlite:///%s' % os.path.abspath(db_path),
-        echo=sys.flags.debug)
-    Session = sqlalchemy.orm.sessionmaker(bind=engine)
-    session = Session()
-    metadata = sqlalchemy.MetaData()
-    metadata.reflect(bind=engine)
-    try:
-        yield (session, metadata)
-        session.commit()
-    except:
-        session.rollback()
-        raise
-    finally:
-        session.close()
 
 class FingerprintCache(nbc.Common):
 
@@ -654,6 +639,65 @@ class FingerprintCache(nbc.Common):
             phenotype.extend(self._cache[k][str(photo_id)])
 
         return phenotype
+
+class MakeMeta(nbc.Common):
+
+    """Create a meta data database for an image directory.
+
+    The images in the image directory must be stored in a directory hierarchy
+    which corresponds to the directory hierarchy set in the configurations
+    file.
+    """
+
+    def __init__(self, config, image_dir):
+        """Create a meta data database for an image directory.
+
+        Expects a configurations object `config`, and a path to the directory
+        containing the images.
+        """
+        super(MakeTrainData, self).__init__(config)
+        self.set_image_dir(image_dir)
+
+        try:
+            self.ranks = list(config.directory_hierarchy)
+        except:
+            raise nbc.ConfigurationError("directory hierarchy is not set")
+
+    def set_image_dir(self, path):
+        """Set the image directory."""
+        if not os.path.isdir(path):
+            raise IOError("Cannot open %s (no such directory)" % path)
+        self.image_dir = path
+
+    def make(self, meta_path):
+        """Create the meta database file `meta_path`."""
+
+
+        for image, classes in self.get_image_files(self.image_dir, self.ranks):
+            pass
+
+    def get_image_files(self, root, ranks, classes=[]):
+        """Return image paths and their classes.
+
+        Images are returned as 2-tuples ``(path, {rank: class, ...})`` where
+        each class is the directory name for each rank in `ranks`, a list of
+        ranks. List `classes` is used internally to keep track of the classes.
+        """
+        if len(classes) > len(ranks):
+            return
+
+        for item in os.listdir(root):
+            path = os.path.join(root, item)
+            if os.path.isdir(path):
+                # The current directory name is the class name.
+                class_ = os.path.basename(path.strip(os.sep))
+                if class_ in ("None", "NULL", "_"):
+                    class_ = None
+                for image in self.get_image_files(path, ranks, classes+[class_]):
+                    yield image
+            elif os.path.isfile(path) and classes:
+                yield [path, dict(zip(ranks, classes))]
+
 
 class MakeTrainData(nbc.Common):
 
@@ -1077,7 +1121,8 @@ class TestAnn(nbc.Common):
 
         logging.info("Testing the neural network...")
         fann_test_data = libfann.training_data()
-        fann_test_data.set_train_data(self.test_data.get_input(), self.test_data.get_output())
+        fann_test_data.set_train_data(self.test_data.get_input(),
+            self.test_data.get_output())
 
         self.ann.test_data(fann_test_data)
 
