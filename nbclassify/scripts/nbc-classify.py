@@ -22,7 +22,6 @@ See the --help option for more information.
 """
 
 import argparse
-from contextlib import contextmanager
 import hashlib
 import logging
 import os

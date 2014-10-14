@@ -27,7 +27,6 @@ See the --help option for any of these subcommands for more information.
 
 import argparse
 from collections import Counter
-from contextlib import contextmanager
 import logging
 import os
 import re
@@ -83,6 +82,24 @@ def main():
         help="Specify which task to start.",
         dest="task"
     )
+
+    # Create an argument parser for sub-command 'meta'.
+    help_meta = """Construct a meta data file for a directory of images.
+
+    Images must be stored in a directory hierarchy, which is described in the
+    configurations file. The meta data file is saved in the image directory.
+    """
+
+    parser_meta = subparsers.add_parser(
+        "meta",
+        help=help_meta,
+        description=help_meta
+    )
+    parser_meta.add_argument(
+        "imdir",
+        metavar="PATH",
+        help="Top most directory where images are stored in a directory " \
+        "hierarchy.")
 
     # Create an argument parser for sub-command 'data'.
     help_data = """Create a tab separated file with training data.
@@ -366,7 +383,7 @@ def main():
 
     # Start selected task.
     try:
-        if args.meta == 'meta':
+        if args.task == 'meta':
             meta(config, meta_path, args)
         if args.task == 'data':
             data(config, meta_path, args)
@@ -389,6 +406,11 @@ def main():
         return 1
 
     return 0
+
+def meta(config, meta_path, args):
+    """Make meta data file for an image directory."""
+    mkmeta = MakeMeta(config, args.imdir)
+    mkmeta.make(meta_path)
 
 def data(config, meta_path, args):
     """Start train data routines."""
@@ -645,15 +667,14 @@ class MakeMeta(nbc.Common):
     """Create a meta data database for an image directory.
 
     The images in the image directory must be stored in a directory hierarchy
-    which corresponds to the directory hierarchy set in the configurations
-    file.
+    which corresponds to the directory hierarchy set in the configurations.
+    The meta data is created in the same directory. If a meta data file already
+    exists, a FileExistsError is raised.
     """
 
     def __init__(self, config, image_dir):
-        """Create a meta data database for an image directory.
-
-        Expects a configurations object `config`, and a path to the directory
-        containing the images.
+        """Expects a configurations object `config` and a path to the directory
+        containing the images `image_dir`.
         """
         super(MakeTrainData, self).__init__(config)
         self.set_image_dir(image_dir)
@@ -670,9 +691,7 @@ class MakeMeta(nbc.Common):
         self.image_dir = path
 
     def make(self, meta_path):
-        """Create the meta database file `meta_path`."""
-
-
+        """Create the meta data database file `meta_path`."""
         for image, classes in self.get_image_files(self.image_dir, self.ranks):
             pass
 
