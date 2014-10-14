@@ -42,7 +42,7 @@ import sqlalchemy
 import yaml
 
 import nbclassify as nbc
-from nbclassify.db import session_scope
+import nbclassify.db as db
 
 # Prefix for output columns in training data.
 OUTPUT_PREFIX = "OUT:"
@@ -401,8 +401,11 @@ def main():
             classify(config, meta_path, args)
         elif args.task == 'validate':
             validate(config, meta_path, args)
-    except Exception as e:
-        logging.error(e)
+    except nbc.ConfigurationError as e:
+        logging.error("A configurational error was detected: %s", e)
+        return 1
+    except nbc.FileExistsError as e:
+        logging.error("An output file already exists: %s", e)
         return 1
 
     return 0
@@ -530,7 +533,7 @@ class FingerprintCache(nbc.Common):
         meta_path = os.path.join(image_dir, META_FILE)
 
         # Get a list of all the photos in the database.
-        with session_scope(meta_path) as (session, metadata):
+        with db.session_scope(meta_path) as (session, metadata):
             images = self.get_photos(session, metadata)
             images = list(images)
 
@@ -676,24 +679,26 @@ class MakeMeta(nbc.Common):
         """Expects a configurations object `config` and a path to the directory
         containing the images `image_dir`.
         """
-        super(MakeTrainData, self).__init__(config)
+        super(MakeMeta, self).__init__(config)
         self.set_image_dir(image_dir)
 
         try:
-            self.ranks = list(config.directory_hierarchy)
+            directory_hierarchy = list(config.directory_hierarchy)
         except:
             raise nbc.ConfigurationError("directory hierarchy is not set")
+
+        # Set the ranks.
+        self.ranks = []
+        for rank in directory_hierarchy:
+            if rank == "__ignore__":
+                rank = None
+            self.ranks.append(rank)
 
     def set_image_dir(self, path):
         """Set the image directory."""
         if not os.path.isdir(path):
             raise IOError("Cannot open %s (no such directory)" % path)
-        self.image_dir = path
-
-    def make(self, meta_path):
-        """Create the meta data database file `meta_path`."""
-        for image, classes in self.get_image_files(self.image_dir, self.ranks):
-            pass
+        self.image_dir = os.path.abspath(path)
 
     def get_image_files(self, root, ranks, classes=[]):
         """Return image paths and their classes.
@@ -715,8 +720,28 @@ class MakeMeta(nbc.Common):
                 for image in self.get_image_files(path, ranks, classes+[class_]):
                     yield image
             elif os.path.isfile(path) and classes:
-                yield [path, dict(zip(ranks, classes))]
+                yield (path, dict(zip(ranks, classes)))
 
+    def make(self, filename):
+        """Create the meta data database file `meta_path`."""
+        sys.stdout.write("Initializing database...\n")
+        db.make_meta_db(filename)
+
+        sys.stdout.write("Saving meta data for images...\n")
+        with db.session_scope(filename) as (session, metadata):
+            for path, classes in self.get_image_files(self.image_dir, self.ranks):
+                # Get the path relative to self.image_dir
+                path_rel = re.sub(self.image_dir, "", path)
+                if path_rel.startswith(os.sep):
+                    path_rel = path_rel[1:]
+
+                # Save the meta data.
+                db.insert_new_photo(session, metadata,
+                    root=self.image_dir,
+                    path=path_rel,
+                    taxa=classes)
+
+        sys.stdout.write("Done\n")
 
 class MakeTrainData(nbc.Common):
 
@@ -764,11 +789,11 @@ class MakeTrainData(nbc.Common):
         configuration `config`.
         """
         if not FORCE_OVERWRITE and os.path.isfile(filename):
-            raise nbc.FileExistsError("Output file %s already exists." % filename)
+            raise nbc.FileExistsError(filename)
 
         # Get list of image paths and corresponding classifications from the
         # meta data database.
-        with session_scope(self.meta_path) as (session, metadata):
+        with db.session_scope(self.meta_path) as (session, metadata):
             images = self.get_photos_with_class(session, metadata, filter_)
             images = np.array(list(images))
 
@@ -789,7 +814,7 @@ class MakeTrainData(nbc.Common):
         logging.info("Going to process %d photos..." % n_images)
 
         # Get the classification categories from the database.
-        with session_scope(self.meta_path) as (session, metadata):
+        with db.session_scope(self.meta_path) as (session, metadata):
             classes = self.get_classes_from_filter(session, metadata, filter_)
 
         # Make a codeword for each class.
@@ -930,7 +955,7 @@ class BatchMakeTrainData(MakeTrainData):
 
     def _load_taxon_hierarchy(self):
         if not self.taxon_hr:
-            with session_scope(self.meta_path) as (session, metadata):
+            with db.session_scope(self.meta_path) as (session, metadata):
                 self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
     def batch_export(self, target_dir):
@@ -986,7 +1011,7 @@ class MakeAnn(nbc.Common):
         if not os.path.isfile(train_file):
             raise IOError("Cannot open %s (no such file)" % train_file)
         if not FORCE_OVERWRITE and os.path.isfile(output_file):
-            raise nbc.FileExistsError("Output file %s already exists." % output_file)
+            raise nbc.FileExistsError(output_file)
         if config and not isinstance(config, nbc.Struct):
             raise ValueError("Expected an nbclassify.Struct instance for `config`")
 
@@ -1048,7 +1073,7 @@ class BatchMakeAnn(MakeAnn):
 
     def _load_taxon_hierarchy(self):
         if not self.taxon_hr:
-            with session_scope(self.meta_path) as (session, metadata):
+            with db.session_scope(self.meta_path) as (session, metadata):
                 self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
     def batch_train(self, data_dir, output_dir):
@@ -1160,7 +1185,7 @@ class TestAnn(nbc.Common):
             raise RuntimeError("Test data is not set")
 
         # Get the classification categories from the database.
-        with session_scope(db_path) as (session, metadata):
+        with db.session_scope(db_path) as (session, metadata):
             classes = self.get_classes_from_filter(session, metadata, filter_)
 
         # Get the codeword for each class.
@@ -1232,7 +1257,7 @@ class TestAnn(nbc.Common):
         self.classifications_expected = {}
 
         # Get the taxonomic hierarchy from the database.
-        with session_scope(db_path) as (session, metadata):
+        with db.session_scope(db_path) as (session, metadata):
             self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
         # Get the classification hierarchy from the configurations.
@@ -1436,7 +1461,7 @@ class ImageClassifier(nbc.Common):
         self.set_ann(ann_file)
 
         # Get the classification categories from the database.
-        with session_scope(db_file) as (session, metadata):
+        with db.session_scope(db_file) as (session, metadata):
             try:
                 filter_ = self.config.classification.filter
             except:
@@ -1501,7 +1526,7 @@ class Validator(nbc.Common):
         scores = []
 
         # Get a list of all the photo IDs in the database.
-        with session_scope(self.meta_path) as (session, metadata):
+        with db.session_scope(self.meta_path) as (session, metadata):
             samples = self.get_photo_ids_with_genus_section_species(session,
                 metadata)
             samples = np.array(list(samples))
