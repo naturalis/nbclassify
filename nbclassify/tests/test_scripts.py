@@ -201,9 +201,10 @@ class TestTrainer(unittest.TestCase):
 
         sys.stderr.write("\nRunning: {0}\n".format(' '.join(sys.argv)))
 
-        # Should fail because of no data.
+        # Should fail because of no data. Note: different scikit-learn versions
+        # raise different exception types.
         self.assertRaisesRegexp(
-            ValueError,
+            (AssertionError, ValueError),
             "Cannot have number of folds .* greater than the number of samples",
             nbc_trainer.main
         )
