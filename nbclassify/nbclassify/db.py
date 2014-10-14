@@ -7,7 +7,7 @@ import sqlalchemy
 from sqlalchemy import Column, ForeignKey, Integer, Sequence, String, \
     UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.automap import automap_base
 
@@ -152,9 +152,6 @@ def make_meta_db(db_path):
 
         UniqueConstraint('rank_id', 'name')
 
-        rank = relationship("Rank", backref=backref(__tablename__,
-            order_by=id))
-
         def __repr__(self):
            return "<{class}(id={id}, rank='{rank}', name='{name}')>".\
                 format({
@@ -172,12 +169,10 @@ def make_meta_db(db_path):
 
             CREATE TABLE photos_taxa
             (
-                id INTEGER,
                 photo_id INTEGER NOT NULL,
                 taxon_id INTEGER NOT NULL,
 
-                PRIMARY KEY (id),
-                UNIQUE (photo_id, taxon_id),
+                PRIMARY KEY (photo_id, taxon_id),
                 FOREIGN KEY (photo_id) REFERENCES photos (id) ON DELETE CASCADE,
                 FOREIGN KEY (taxon_id) REFERENCES taxa (id) ON DELETE RESTRICT
             );
@@ -185,26 +180,17 @@ def make_meta_db(db_path):
 
         __tablename__ = 'photos_taxa'
 
-        id = Column(Integer, Sequence("photos_taxa_id_seq"), primary_key=True)
         photo_id = Column(Integer, ForeignKey('photos.id', ondelete="CASCADE"),
-            nullable=False)
+            primary_key=True, nullable=False)
         taxon_id = Column(Integer, ForeignKey('taxa.id', ondelete="RESTRICT"),
-            nullable=False)
-
-        UniqueConstraint('photo_id', 'taxon_id')
-
-        photo = relationship("Photo", backref=backref(__tablename__,
-            order_by=id))
-        taxon = relationship("Taxon", backref=backref(__tablename__,
-            order_by=id))
+            primary_key=True, nullable=False)
 
         def __repr__(self):
-           return "<{class}(id='{1}', photo='{photo}', taxon='{taxon}')>".\
+           return "<{class}(photo='{photo}', taxon='{taxon}')>".\
                 format({
                     'class': self.__class__,
-                    'id': self.id,
-                    'photo': self.photo,
-                    'taxon': self.taxon
+                    'photo': self.photo_id,
+                    'taxon': self.taxon_id
                 })
 
     class Tag(Base):
@@ -244,12 +230,10 @@ def make_meta_db(db_path):
 
             CREATE TABLE photos_tags
             (
-                id INTEGER,
                 photo_id INTEGER NOT NULL,
                 tag_id INTEGER NOT NULL,
 
-                PRIMARY KEY (id),
-                UNIQUE (photo_id, tag_id),
+                PRIMARY KEY (photo_id, tag_id),
                 FOREIGN KEY (photo_id) REFERENCES photos (id) ON DELETE CASCADE,
                 FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE RESTRICT
             );
@@ -257,26 +241,17 @@ def make_meta_db(db_path):
 
         __tablename__ = 'photos_tags'
 
-        id = Column(Integer, Sequence("photos_tags_id_seq"), primary_key=True)
         photo_id = Column(Integer, ForeignKey('photos.id', ondelete="CASCADE"),
-            nullable=False)
+            primary_key=True, nullable=False)
         tag_id = Column(Integer, ForeignKey('tags.id', ondelete="RESTRICT"),
-            nullable=False)
-
-        UniqueConstraint('photo_id', 'tag_id')
-
-        photo = relationship("Photo", backref=backref(__tablename__,
-            order_by=id))
-        tag = relationship("Tag", backref=backref(__tablename__,
-            order_by=id))
+            primary_key=True, nullable=False)
 
         def __repr__(self):
-           return "<{class}(id='{1}', photo='{photo}', tag='{tag}')>".\
+           return "<{class}(photo='{photo}', tag='{tag}')>".\
                 format({
                     'class': self.__class__,
-                    'id': self.id,
-                    'photo': self.photo,
-                    'tag': self.tag
+                    'photo': self.photo_id,
+                    'tag': self.tag_id
                 })
 
     # Create the database.
@@ -324,9 +299,7 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
     Photo = Base.classes.photos
     Rank = Base.classes.ranks
     Taxon = Base.classes.taxa
-    PhotoTaxon = Base.classes.photos_taxa
     Tag = Base.classes.tags
-    PhotoTag = Base.classes.photos_tags
 
     # Get the MD5 hash.
     hasher = hashlib.md5()
@@ -351,8 +324,6 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
         title=title,
         description=description
     )
-    session.add(photo)
-    session.commit()
 
     # Save photo's taxa to the database.
     processed_ranks = []
@@ -365,29 +336,23 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
         if not taxon_name:
             continue
 
-        # Check if the rank exists in the database. If not, create it.
+        # Get a rank instance.
         try:
             rank = session.query(Rank).\
                 filter(Rank.name == rank_name).one()
         except NoResultFound:
             rank = Rank(name=rank_name)
-            session.add(rank)
-            session.commit()
 
-        # Check if the taxon exists in the database. If not, create it.
+        # Get a taxon instance.
         try:
             taxon = session.query(Taxon).\
-                filter(Taxon.rank_id == rank.id,
+                filter(Taxon.ranks == rank,
                        Taxon.name == taxon_name).one()
         except NoResultFound:
-            taxon = Taxon(name=taxon_name, rank_id=rank.id)
-            session.add(taxon)
-            session.commit()
+            taxon = Taxon(name=taxon_name, ranks=rank)
 
-        # Connect the photo to this taxon.
-        photo_taxon = PhotoTaxon(photo_id=photo.id, taxon_id=taxon.id)
-        session.add(photo_taxon)
-        session.commit()
+        # Add this taxon to the photo.
+        photo.taxa_collection.append(taxon)
 
         # Keep track of processed ranks.
         processed_ranks.append(rank.name)
@@ -402,16 +367,15 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
         if not tag_name:
             continue
 
-        # Check if the tag exists in the database. If not, create it.
+        # Get a tag instance.
         try:
             tag = session.query(Tag).\
                 filter(Tag.name == tag_name).one()
         except NoResultFound:
             tag = Tag(name=tag_name)
-            session.add(tag)
-            session.commit()
 
-        # Connect the photo to this tag.
-        photo_tag = PhotoTag(photo_id=photo.id, tag_id=tag.id)
-        session.add(photo_tag)
-        session.commit()
+        # Add this tag to the photo.
+        photo.tags_collection.append(tag)
+
+    # Add photo to session.
+    session.add(photo)
