@@ -1,6 +1,17 @@
 ---
 # This is an example configurations file for trainer.py and classify.py.
 
+# The directory hierarchy describes how images are organized on the local
+# hard drive. Each item in the list corresponds to a rank name in the database.
+# The directory name will be stored as the taxonomic name for that rank.
+# A directory with the name "None" will be saved with no value in the database.
+# Directory levels can be ignored by setting the corresponding rank in the
+# directory hierarchy to "__ignore__".
+directory_hierarchy:
+    - genus
+    - section
+    - species
+
 # Describe training data format.
 data:
     # Prefix of classification columns. When generating training data, this

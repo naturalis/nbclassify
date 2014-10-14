@@ -45,11 +45,32 @@ class TestTrainer(unittest.TestCase):
 
     #@unittest.skip("Debugging")
     def test_1(self):
-        """Test the `{data|ann|classify|test-ann}` subcommands."""
+        """Test the `{meta|data|ann|classify|test-ann}` subcommands."""
         train_file = os.path.join(self.temp_dir, 'train_data.tsv')
         ann_file = os.path.join(self.temp_dir, 'Arietinum_species.ann')
         test_result = os.path.join(self.temp_dir, 'test_result.tsv')
 
+        # Create an empty temporary directory.
+        delete_temp_dir(self.temp_dir, recursive=True)
+        if not os.path.isdir(self.temp_dir):
+            os.mkdir(self.temp_dir)
+
+        # Delete the meta data file if it exists.
+        meta_file = os.path.join('images', '.meta.db')
+        if os.path.isfile(meta_file):
+            os.remove(meta_file)
+
+        # Test subcommand `meta`.
+        sys.argv = self.argv_pre + [
+            'meta',
+            'images/'
+        ]
+
+        sys.stderr.write("\nRunning : {0}\n".format(' '.join(sys.argv)))
+        ret = nbc_trainer.main()
+        self.assertEqual(ret, 0)
+
+        # Test subcommand `data`.
         sys.argv = self.argv_pre + [
             'data',
             '--cache-dir', self.temp_dir,
@@ -57,15 +78,11 @@ class TestTrainer(unittest.TestCase):
             'images/'
         ]
 
-        # Create an empty temporary directory.
-        delete_temp_dir(self.temp_dir, recursive=True)
-        if not os.path.isdir(self.temp_dir):
-            os.mkdir(self.temp_dir)
-
         sys.stderr.write("\nRunning : {0}\n".format(' '.join(sys.argv)))
         ret = nbc_trainer.main()
         self.assertEqual(ret, 0)
 
+        # Test subcommand `ann`.
         sys.argv = self.argv_pre + [
             'ann',
             '-o', ann_file,
@@ -76,17 +93,19 @@ class TestTrainer(unittest.TestCase):
         ret = nbc_trainer.main()
         self.assertEqual(ret, 0)
 
+        # Test subcommand `classify`.
         sys.argv = self.argv_pre + [
             'classify',
             '--ann', ann_file,
             '--imdir', 'images/',
-            "images/Cypripedium/subgenus_null/Arietinum/plectrochilum/14990382409.jpg"
+            "images/Cypripedium/Arietinum/plectrochilum/14990382409.jpg"
         ]
 
         sys.stderr.write("\nRunning: {0}\n".format(' '.join(sys.argv)))
         ret = nbc_trainer.main()
         self.assertEqual(ret, 0)
 
+        # Test subcommand `test-ann`.
         sys.argv = self.argv_pre + [
             'test-ann',
             '--ann', ann_file,
@@ -112,6 +131,7 @@ class TestTrainer(unittest.TestCase):
             if not os.path.isdir(path):
                 os.mkdir(path)
 
+        # Test subcommand `data-batch`.
         sys.argv = self.argv_pre + [
             'data-batch',
             '--cache-dir', self.temp_dir,
@@ -123,6 +143,7 @@ class TestTrainer(unittest.TestCase):
         ret = nbc_trainer.main()
         self.assertEqual(ret, 0)
 
+        # Test subcommand `ann-batch`.
         sys.argv = self.argv_pre + [
             'ann-batch',
             '--data', train_dir,
@@ -134,6 +155,7 @@ class TestTrainer(unittest.TestCase):
         ret = nbc_trainer.main()
         self.assertEqual(ret, 0)
 
+        # Test subcommand `test-ann-batch`.
         sys.argv = self.argv_pre + [
             'test-ann-batch',
             '--anns', ann_dir,
@@ -150,6 +172,8 @@ class TestTrainer(unittest.TestCase):
     #@unittest.skip("Debugging")
     def test_3(self):
         """Test the `validate` subcommand."""
+
+        # Test subcommand `validate`.
         sys.argv = self.argv_pre + [
             'validate',
             '--cache-dir', self.temp_dir,
@@ -158,11 +182,15 @@ class TestTrainer(unittest.TestCase):
         ]
 
         sys.stderr.write("\nRunning: {0}\n".format(' '.join(sys.argv)))
-        ret = nbc_trainer.main()
 
         # Should fail because of not enough members per class.
-        self.assertEqual(ret, 1)
+        self.assertRaisesRegexp(
+            AssertionError,
+            "The minimum number of labels for any class cannot be less than k",
+            nbc_trainer.main
+        )
 
+        # Test subcommand `validate`.
         sys.argv = self.argv_pre + [
             'validate',
             '--cache-dir', self.temp_dir,
@@ -172,11 +200,15 @@ class TestTrainer(unittest.TestCase):
         ]
 
         sys.stderr.write("\nRunning: {0}\n".format(' '.join(sys.argv)))
-        ret = nbc_trainer.main()
 
         # Should fail because of no data.
-        self.assertEqual(ret, 1)
+        self.assertRaisesRegexp(
+            ValueError,
+            "Cannot have number of folds .* greater than the number of samples",
+            nbc_trainer.main
+        )
 
+        # Test subcommand `validate`.
         sys.argv = self.argv_pre + [
             'validate',
             '--cache-dir', self.temp_dir,
