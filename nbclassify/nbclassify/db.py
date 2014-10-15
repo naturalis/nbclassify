@@ -379,3 +379,63 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
 
     # Add photo to session.
     session.add(photo)
+
+def get_photos(session, metadata):
+    """Return photo records from the database."""
+    Base = automap_base(metadata=metadata)
+    Base.prepare()
+    Photo = Base.classes.photos
+    photos = session.query(Photo)
+    return photos
+
+def get_filtered_photos_with_taxon(session, metadata, filter_):
+    """Return photos with corresponding class for a filter.
+
+    Returns all photos with corresponding taxon, as filterd by `filter_`. The
+    taxon returned per photo is defined by the `class` attribute of the filter.
+    Taxa to filter photos by is set in the `where` attribute of the filter.
+    Filters are those as returned by :meth:`classification_hierarchy_filters`.
+    Returned rows are 2-tuples ``(photo, taxon_name)``.
+
+    Note that only the photos for which there is the rank `filter_.class` set in
+    the meta data are returned.
+    """
+    if 'class' not in filter_:
+        raise ValueError("The filter is missing the 'class' key")
+    for key in vars(filter_):
+        if key not in ('where', 'class'):
+            raise ValueError("Unknown key '%s' in filter" % key)
+
+    Base = automap_base(metadata=metadata)
+    Base.prepare()
+
+    # Get the table classes.
+    Photo = Base.classes.photos
+    Taxon = Base.classes.taxa
+    Rank = Base.classes.ranks
+
+    # Construct the main query.
+    q = session.query(Photo, Taxon.name).\
+        join('taxa_collection', 'ranks').\
+        filter(Rank.name==getattr(filter_, 'class'))
+
+    # Apply taxon filters.
+    try:
+        where = vars(filter_.where)
+    except:
+        where = {}
+    for rank_name, taxon_name in where.items():
+        if not taxon_name:
+            continue
+        try:
+            taxon = session.query(Taxon).join('ranks').\
+                filter(Taxon.name == taxon_name,
+                       Rank.name == rank_name).one()
+        except NoResultFound:
+            raise ValueError("No such taxon %s in rank %s" % \
+                (taxon_name, rank_name))
+
+        # Filter on this taxon.
+        q = q.filter(Photo.taxa_collection.contains(taxon))
+
+    return q
