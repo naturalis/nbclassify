@@ -6,10 +6,11 @@ from contextlib import contextmanager
 import sqlalchemy
 from sqlalchemy import Column, ForeignKey, Integer, Sequence, String, \
     UniqueConstraint
+from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.sql import exists
 
 from exceptions import *
 
@@ -405,7 +406,6 @@ def get_filtered_photos_with_taxon(session, metadata, filter_):
     for key in vars(filter_):
         if key not in ('where', 'class'):
             raise ValueError("Unknown key '%s' in filter" % key)
-
     Base = automap_base(metadata=metadata)
     Base.prepare()
 
@@ -414,28 +414,84 @@ def get_filtered_photos_with_taxon(session, metadata, filter_):
     Taxon = Base.classes.taxa
     Rank = Base.classes.ranks
 
-    # Construct the main query.
-    q = session.query(Photo, Taxon.name).\
+    # Use a subquery because we want photos to be returned even if the don't
+    # have a taxa for the given class.
+    class_ = getattr(filter_, 'class')
+    stmt_genus = session.query(Photo.id, Taxon.name.label('genus')).\
         join('taxa_collection', 'ranks').\
-        filter(Rank.name==getattr(filter_, 'class'))
+        filter(Rank.name == 'genus').subquery()
+    stmt_section = session.query(Photo.id, Taxon.name.label('section')).\
+        join('taxa_collection', 'ranks').\
+        filter(Rank.name == 'section').subquery()
+    stmt_species = session.query(Photo.id, Taxon.name.label('species')).\
+        join('taxa_collection', 'ranks').\
+        filter(Rank.name == 'species').subquery()
 
-    # Apply taxon filters.
+    # Construct the main query.
+    q = session.query(Photo, class_).\
+        join(stmt_genus, stmt_genus.c.id == Photo.id).\
+        outerjoin(stmt_section, stmt_section.c.id == Photo.id).\
+        join(stmt_species, stmt_species.c.id == Photo.id)
+
+    # Filter on each taxon in the where attribute of the filter.
     try:
         where = vars(filter_.where)
     except:
         where = {}
+
     for rank_name, taxon_name in where.items():
-        if not taxon_name:
+        # Handle filters where a taxon must be NULL.
+        if taxon_name is None:
+            if rank_name == 'genus':
+                q = q.filter(stmt_genus.c.genus == None)
+            elif rank_name == 'section':
+                q = q.filter(stmt_section.c.section == None)
+            elif rank_name == 'species':
+                q = q.filter(stmt_species.c.species == None)
             continue
+
+        # Add a filter on an existing taxon.
         try:
             taxon = session.query(Taxon).join('ranks').\
                 filter(Taxon.name == taxon_name,
                        Rank.name == rank_name).one()
         except NoResultFound:
-            raise ValueError("No such taxon %s in rank %s" % \
+            raise ValueError("The taxon %s in rank %s is unknown" % \
                 (taxon_name, rank_name))
 
-        # Filter on this taxon.
         q = q.filter(Photo.taxa_collection.contains(taxon))
+
+    return q
+
+def get_taxa_photo_count(session, metadata):
+    """Return the photo count for each (genus, section, species) combination.
+
+    Taxa are returned as 4-tuples ``(genus, section, species, photo_count)``.
+    """
+    Base = automap_base(metadata=metadata)
+    Base.prepare()
+
+    Photos = Base.classes.photos
+    Taxa = Base.classes.taxa
+    Rank = Base.classes.ranks
+
+    stmt_genus = session.query(Photo.id, Taxon.name.label('genus')).\
+        join('taxa_collection', 'ranks').\
+        filter(Rank.name == 'genus').subquery()
+
+    stmt_section = session.query(Photo.id, Taxon.name.label('section')).\
+        join('taxa_collection', 'ranks').\
+        filter(Rank.name == 'section').subquery()
+
+    stmt_species = session.query(Photo.id, Taxon.name.label('species')).\
+        join('taxa_collection', 'ranks').\
+        filter(Rank.name == 'species').subquery()
+
+    q = session.query('genus', 'section', 'species', func.count(Photo.id)).\
+        join(stmt_genus, stmt_genus.c.id == Photo.id).\
+        outerjoin(stmt_section, stmt_section.c.id == Photo.id).\
+        join(stmt_species, stmt_species.c.id == Photo.id).\
+        group_by('genus', 'section', 'species').\
+        all()
 
     return q
