@@ -534,8 +534,7 @@ class FingerprintCache(nbc.Common):
 
         # Get a list of all the photos in the database.
         with db.session_scope(meta_path) as (session, metadata):
-            images = self.get_photos(session, metadata)
-            images = list(images)
+            photos = db.get_photos(session, metadata)
 
         # Get the classification hierarchy.
         try:
@@ -556,15 +555,13 @@ class FingerprintCache(nbc.Common):
             cache = shelve.open(cache_path)
 
             # Cache the fingerprint for each photo.
-            for im_id, im_path in images:
-                im_id = str(im_id)
-
+            for photo in photos:
                 # Skip fingerprinting if the fingerprint already exists, unless
                 # update is set to True.
-                if not update and im_id in cache:
+                if not update and str(photo.md5sum) in cache:
                     continue
 
-                logging.info("Processing photo `%s`..." % im_id)
+                logging.info("Processing photo `%s`..." % photo.md5sum)
 
                 # Construct a new configuration object with a single feature
                 # which we can pass to Phenotyper().
@@ -574,10 +571,10 @@ class FingerprintCache(nbc.Common):
                 })
 
                 # Create a fingerprint and cache it.
-                im_path = os.path.join(image_dir, im_path)
+                im_path = os.path.join(image_dir, photo.path)
                 phenotyper.set_image(im_path)
                 phenotyper.set_config(config)
-                cache[im_id] = phenotyper.make()
+                cache[str(photo.md5sum)] = phenotyper.make()
 
             cache.close()
 
@@ -651,17 +648,18 @@ class FingerprintCache(nbc.Common):
                 raise ValueError("Cache for hash {0} not found".format(hash_))
             self._cache[f_name] = cache
 
-    def get_phenotype_for_photo(self, photo_id):
-        """Return the phenotype for a photo with ID `photo_id`.
+    def get_phenotype(self, key):
+        """Return the phenotype for key `key`.
 
-        Method :meth:`load_cache` must be called before calling this method.
+        The `key` is whatever was used as a key for storing the cache. Method
+        :meth:`load_cache` must be called before calling this method.
         """
         if not self._cache:
             raise ValueError("Cache is not loaded")
 
         phenotype = []
         for k in sorted(self._cache.keys()):
-            phenotype.extend(self._cache[k][str(photo_id)])
+            phenotype.extend(self._cache[k][str(key)])
 
         return phenotype
 
@@ -791,80 +789,81 @@ class MakeTrainData(nbc.Common):
         if not FORCE_OVERWRITE and os.path.isfile(filename):
             raise nbc.FileExistsError(filename)
 
-        # Get list of image paths and corresponding classifications from the
-        # meta data database.
+        # Get the photos and corresponding classification using the filter.
         with db.session_scope(self.meta_path) as (session, metadata):
-            images = self.get_photos_with_class(session, metadata, filter_)
-            images = np.array(list(images))
+            images = db.get_filtered_photos_with_taxon(session, metadata, filter_)
+            images = images.all()
 
-        if len(images) == 0:
-            logging.info("No images found for the filter `%s`" % filter_)
-            return
+            if not images:
+                logging.info("No images found for the filter `%s`" % filter_)
+                return
 
-        if self.get_photo_count_min():
-            assert len(images) >= self.get_photo_count_min(), \
-                "Expected to find at least photo_count_min={0} photos, found " \
-                "{1}".format(self.get_photo_count_min(), n_images)
+            if self.get_photo_count_min():
+                assert len(images) >= self.get_photo_count_min(), \
+                    "Expected to find at least photo_count_min={0} photos, found " \
+                    "{1}".format(self.get_photo_count_min(), len(images))
 
-        if self.subset:
-            n_images = len(np.intersect1d(images[:,0], self.subset))
-        else:
-            n_images = len(images)
+            # Calculate the number of images that will be processed, taking into
+            # account the subset.
+            photo_ids = np.array([photo.id for photo, _ in images])
+            if self.subset:
+                n_images = len(np.intersect1d(photo_ids, self.subset))
+            else:
+                n_images = len(images)
 
-        logging.info("Going to process %d photos..." % n_images)
+            logging.info("Going to process %d photos..." % n_images)
 
-        # Get the classification categories from the database.
-        with db.session_scope(self.meta_path) as (session, metadata):
+            # Get the classification categories from the database.
             classes = self.get_classes_from_filter(session, metadata, filter_)
 
-        # Make a codeword for each class.
-        codewords = self.get_codewords(classes)
+            # Make a codeword for each class.
+            codewords = self.get_codewords(classes)
 
-        # Construct the header.
-        header_data, header_out = self.__make_header(len(classes))
-        header = ["ID"] + header_data + header_out
+            # Construct the header.
+            header_data, header_out = self.__make_header(len(classes))
+            header = ["ID"] + header_data + header_out
 
-        # Open the fingerprint cache.
-        self.cache.load_cache(self.cache_path, config)
+            # Load the fingerprint cache.
+            self.cache.load_cache(self.cache_path, config)
 
-        # Generate the training data.
-        with open(filename, 'w') as fh:
-            # Write the header.
-            fh.write( "%s\n" % "\t".join(header) )
+            # Generate the training data.
+            with open(filename, 'w') as fh:
+                # Write the header.
+                fh.write( "%s\n" % "\t".join(header) )
 
-            # Set the training data.
-            training_data = nbc.TrainData(len(header_data), len(classes))
+                # Set the training data.
+                training_data = nbc.TrainData(len(header_data), len(classes))
 
-            for photo_id, photo_path, photo_class in images:
-                # Only export the subset if an export subset is set.
-                if self.subset and photo_id not in self.subset:
-                    continue
+                for photo, class_ in images:
+                    # Only export the subset if an export subset is set.
+                    if self.subset and photo.id not in self.subset:
+                        continue
 
-                logging.info("Processing `%s` of class `%s`..." % (photo_path,
-                    photo_class))
+                    logging.info("Processing `%s` of class `%s`..." % (photo.path,
+                        class_))
 
-                # Create a phenotype from the image.
-                phenotype = self.cache.get_phenotype_for_photo(photo_id)
+                    # Get phenotype for this image from the cache.
+                    phenotype = self.cache.get_phenotype(photo.md5sum)
 
-                assert len(phenotype) == len(header_data), \
-                    "Fingerprint size mismatch. According to the header " \
-                    "there are {0} data columns, but the fingerprint has " \
-                    "{1}".format(len(header_data), len(phenotype))
+                    assert len(phenotype) == len(header_data), \
+                        "Fingerprint size mismatch. According to the header " \
+                        "there are {0} data columns, but the fingerprint has " \
+                        "{1}".format(len(header_data), len(phenotype))
 
-                training_data.append(phenotype, codewords[photo_class],
-                    label=photo_id)
+                    training_data.append(phenotype, codewords[class_],
+                        label=photo.id)
 
-            training_data.finalize()
+                training_data.finalize()
 
-            # Round feature data.
-            training_data.round_input(6)
+                # Round feature data.
+                training_data.round_input(6)
 
-            # Write data rows.
-            for photo_id, input_, output in training_data:
-                row = [str(photo_id)]
-                row.extend(input_.astype(str))
-                row.extend(output.astype(str))
-                fh.write("%s\n" % "\t".join(row))
+                # Write data rows.
+                for photo_id, input_, output in training_data:
+                    row = [str(photo_id)]
+                    row.extend(input_.astype(str))
+                    row.extend(output.astype(str))
+                    fh.write("%s\n" % "\t".join(row))
 
         logging.info("Training data written to %s" % filename)
 
@@ -1527,25 +1526,31 @@ class Validator(nbc.Common):
 
         # Get a list of all the photo IDs in the database.
         with db.session_scope(self.meta_path) as (session, metadata):
-            samples = self.get_photo_ids_with_genus_section_species(session,
-                metadata)
-            samples = np.array(list(samples))
+            samples = db.get_photos_with_taxa(session, metadata)
 
-        # Get a list of the photo IDs and a list of the classes. The classes
-        # are needed for the stratified cross validation.
-        photo_ids = samples[:,0].astype(str)
-        classes = samples[:,1:]
-        classes = np.array(['_'.join(x) for x in classes.astype(str)])
+            # Get a list of the photo IDs and a list of the classes. The classes
+            # are needed for the stratified cross validation.
+            photo_ids = []
+            classes = []
+            for x in samples:
+                photo_ids.append(str(x[0].id))
+                classes.append('_'.join(x[1:]))
+
+        # Numpy features are needed for these.
+        photo_ids = np.array(photo_ids)
+        classes = np.array(classes)
+
+        # Count the number of each class.
         class_counts = Counter(classes)
 
-        # Check the minimum number of labels for each class.
         if autoskip:
+            # Create a mask for the classes that have enough members and remove
+            # the photo IDs that don't have enough members.
             mask = []
             for i, c in enumerate(classes):
                 if class_counts[c] >= k:
                     mask.append(i)
 
-            # Remove the photo IDs that don't have enough members.
             photo_ids = photo_ids[mask]
             classes = classes[mask]
         else:

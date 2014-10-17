@@ -58,6 +58,18 @@ def combined_hash(*args):
             hash_ ^= hash(obj)
     return hash_
 
+def test_classification_filter(f):
+    """Test the validity of the classification filter `f`.
+
+    Raises a ValueError if the filter is not valid.
+    """
+    if isinstance(f, dict):
+        f = Struct(f)
+    if 'class' not in f:
+        raise ValueError("Attribute `class` not set")
+    for key in vars(f):
+        if key not in ('where', 'class'):
+            raise ValueError("Unknown key `%s` in filter" % key)
 
 class Struct(Namespace):
 
@@ -177,121 +189,6 @@ class Common(object):
                     break
         return sorted(classes)
 
-    def get_photos(self, session, metadata):
-        """Return photos from the database.
-
-        Returns 2-tuples ``(id, path)``.
-        """
-        Base = automap_base(metadata=metadata)
-        Base.prepare()
-        Photos = Base.classes.photos
-        q = session.query(Photos.id, Photos.path)
-        return q
-
-    def get_photos_with_class(self, session, metadata, filter_):
-        """Return photos with corresponding class from the database.
-
-        Photos obtained from the photo metadata database are queried by rules
-        set in the classification filter `filter_`. Filters are those as
-        returned by :meth:`classification_hierarchy_filters`. Returned rows
-        are 3-tuples ``(photo_id, photo_path, class)``.
-        """
-        if 'class' not in filter_:
-            raise ValueError("The filter is missing the 'class' key")
-        if isinstance(filter_, dict):
-            filter_ = Struct(filter_)
-        for key in vars(filter_):
-            if key not in ('where', 'class'):
-                raise ValueError("Unknown key '%s' in filter" % key)
-
-        Base = automap_base(metadata=metadata)
-        Base.prepare()
-
-        # Get the table classes.
-        Photos = Base.classes.photos
-        PhotosTaxa = Base.classes.photos_taxa
-        Taxa = Base.classes.taxa
-        Rank = Base.classes.ranks
-
-        # Construct the sub queries.
-        stmt1 = session.query(PhotosTaxa.photo_id, Taxa.name.label('genus')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'genus').subquery()
-        stmt2 = session.query(PhotosTaxa.photo_id, Taxa.name.label('section')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'section').subquery()
-        stmt3 = session.query(PhotosTaxa.photo_id, Taxa.name.label('species')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'species').subquery()
-
-        # Construct the query.
-        q = session.query(Photos.id, Photos.path, getattr(filter_, 'class')).\
-            join(stmt1).\
-            outerjoin(stmt2).\
-            join(stmt3)
-
-        # Add the WHERE clauses to the query.
-        if 'where' in filter_:
-            for rank, taxon in vars(filter_.where).items():
-                if rank == 'genus':
-                    q = q.filter(stmt1.c.genus == taxon)
-                elif rank == 'section':
-                    q = q.filter(stmt2.c.section == taxon)
-                elif rank == 'species':
-                    q = q.filter(stmt3.c.species == taxon)
-
-        return q
-
-    def get_photo_ids(self, session, metadata):
-        """Return all photo IDs.
-
-        This generator returns integers.
-        """
-        Base = automap_base(metadata=metadata)
-        Base.prepare()
-
-        # Get the table classes.
-        Photos = Base.classes.photos
-
-        # Construct the query.
-        q = session.query(Photos.id)
-
-        for row in q:
-            yield row[0]
-
-    def get_photo_ids_with_genus_section_species(self, session, metadata):
-        """Return photo IDs with genus, section, and species class.
-
-        This generator returns 4-tuples ``(photo_id, genus, section, species)``.
-        """
-        Base = automap_base(metadata=metadata)
-        Base.prepare()
-
-        # Get the table classes.
-        Photos = Base.classes.photos
-        PhotosTaxa = Base.classes.photos_taxa
-        Taxa = Base.classes.taxa
-        Rank = Base.classes.ranks
-
-        # Construct the sub queries.
-        q_genus = session.query(PhotosTaxa.photo_id, Taxa.name.label('genus')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'genus').subquery()
-        q_section = session.query(PhotosTaxa.photo_id, Taxa.name.label('section')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'section').subquery()
-        q_species = session.query(PhotosTaxa.photo_id, Taxa.name.label('species')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'species').subquery()
-
-        # Construct the query.
-        q = session.query(Photos.id, 'genus', 'section', 'species').\
-            join(q_genus).\
-            outerjoin(q_section).\
-            join(q_species)
-
-        return q
-
     def get_classes_from_filter(self, session, metadata, filter_):
         """Return the classes for a classification filter.
 
@@ -303,13 +200,7 @@ class Common(object):
         Filters are those as returned by
         :meth:`classification_hierarchy_filters`.
         """
-        if 'class' not in filter_:
-            raise ValueError("The filter is missing the 'class' key")
-        if isinstance(filter_, dict):
-            filter_ = Struct(filter_)
-        for key in vars(filter_):
-            if key not in ('where', 'class'):
-                raise ValueError("Unknown key '%s' in filter" % key)
+        test_classification_filter(filter_)
 
         levels = ['genus','section','species']
         path = []
@@ -343,7 +234,7 @@ class Common(object):
         """
         hierarchy = {}
 
-        for genus, section, species, count in self.get_taxa(session, metadata):
+        for genus, section, species, count in db.get_taxa_photo_count(session, metadata):
             if self._photo_count_min > 0 and count < self._photo_count_min:
                 continue
 
@@ -353,43 +244,6 @@ class Common(object):
                 hierarchy[genus][section] = []
             hierarchy[genus][section].append(species)
         return hierarchy
-
-    def get_taxa(self, session, metadata):
-        """Return the taxa from the photo metadata database.
-
-        Taxa are returned as 4-tuples ``(genus, section, species,
-        photo_count)``.
-        """
-        Base = automap_base(metadata=metadata)
-        Base.prepare()
-
-        # Get the table classes.
-        Photos = Base.classes.photos
-        PhotosTaxa = Base.classes.photos_taxa
-        Taxa = Base.classes.taxa
-        Rank = Base.classes.ranks
-
-        # Construct the sub queries.
-        stmt1 = session.query(PhotosTaxa.photo_id, Taxa.name.label('genus')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'genus').subquery()
-        stmt2 = session.query(PhotosTaxa.photo_id, Taxa.name.label('section')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'section').subquery()
-        stmt3 = session.query(PhotosTaxa.photo_id, Taxa.name.label('species')).\
-            join(Taxa).join(Rank).\
-            filter(Rank.name == 'species').subquery()
-
-        # Construct the query.
-        q = session.query('genus', 'section', 'species',
-                func.count(Photos.id)).\
-            select_from(Photos).\
-            join(stmt1).\
-            outerjoin(stmt2).\
-            join(stmt3).\
-            group_by('genus', 'section', 'species')
-
-        return q
 
     def classification_hierarchy_filters(self, levels, hr, path=[]):
         """Return the classification filter for each path in a hierarchy.
@@ -530,6 +384,7 @@ class Common(object):
         if where_n > 0:
             return "%s where %s" % (class_, where_s)
         return "%s" % class_
+
 
 class Phenotyper(object):
     """Extract features from a digital image and return as a phenotype.

@@ -10,9 +10,9 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.sql import exists
+from sqlalchemy.sql import exists, functions
 
-from exceptions import *
+from nbclassify.exceptions import *
 
 # Every photo must have the following ranks set in the meta data.
 REQUIRED_RANKS = ['genus','species']
@@ -39,6 +39,17 @@ def session_scope(db_path):
         raise
     finally:
         session.close()
+
+def test_classification_filter(f):
+    """Test the validity of the classification filter `f`.
+
+    Raises a ValueError if the filter is not valid.
+    """
+    if 'class' not in f:
+        raise ValueError("Attribute `class` not set")
+    for key in vars(f):
+        if key not in ('where', 'class'):
+            raise ValueError("Unknown key `%s` in filter" % key)
 
 def make_meta_db(db_path):
     """Create a new metadata SQLite database `db_path`.
@@ -258,14 +269,19 @@ def make_meta_db(db_path):
     # Create the database.
     Base.metadata.create_all(engine)
 
-    # Create some default ranks.
-    with session_scope(db_path) as (session, metadata):
-        ranks = ('domain', 'kingdom', 'phylum', 'class', 'order', 'family',
-        'genus', 'subgenus', 'section', 'species', 'subspecies')
+    Session = sessionmaker(bind=engine)
+    session = Session()
 
-        for name in ranks:
-            rank = Rank(name=name)
-            session.add(rank)
+    # Create some default ranks.
+    ranks = ('domain', 'kingdom', 'phylum', 'class', 'order', 'family',
+    'genus', 'subgenus', 'section', 'species', 'subspecies')
+
+    for name in ranks:
+        rank = Rank(name=name)
+        session.add(rank)
+
+    session.commit()
+    session.close()
 
 def insert_new_photo(session, metadata, root, path, **kwargs):
     """Set meta data for a photo in the database.
@@ -401,11 +417,8 @@ def get_filtered_photos_with_taxon(session, metadata, filter_):
     Note that only the photos for which there is the rank `filter_.class` set in
     the meta data are returned.
     """
-    if 'class' not in filter_:
-        raise ValueError("The filter is missing the 'class' key")
-    for key in vars(filter_):
-        if key not in ('where', 'class'):
-            raise ValueError("Unknown key '%s' in filter" % key)
+    test_classification_filter(filter_)
+
     Base = automap_base(metadata=metadata)
     Base.prepare()
 
@@ -418,13 +431,13 @@ def get_filtered_photos_with_taxon(session, metadata, filter_):
     # have a taxa for the given class.
     class_ = getattr(filter_, 'class')
     stmt_genus = session.query(Photo.id, Taxon.name.label('genus')).\
-        join('taxa_collection', 'ranks').\
+        join(Photo.taxa_collection).join(Taxon.ranks).\
         filter(Rank.name == 'genus').subquery()
     stmt_section = session.query(Photo.id, Taxon.name.label('section')).\
-        join('taxa_collection', 'ranks').\
+        join(Photo.taxa_collection).join(Taxon.ranks).\
         filter(Rank.name == 'section').subquery()
     stmt_species = session.query(Photo.id, Taxon.name.label('species')).\
-        join('taxa_collection', 'ranks').\
+        join(Photo.taxa_collection).join(Taxon.ranks).\
         filter(Rank.name == 'species').subquery()
 
     # Construct the main query.
@@ -471,8 +484,8 @@ def get_taxa_photo_count(session, metadata):
     Base = automap_base(metadata=metadata)
     Base.prepare()
 
-    Photos = Base.classes.photos
-    Taxa = Base.classes.taxa
+    Photo = Base.classes.photos
+    Taxon = Base.classes.taxa
     Rank = Base.classes.ranks
 
     stmt_genus = session.query(Photo.id, Taxon.name.label('genus')).\
@@ -487,11 +500,42 @@ def get_taxa_photo_count(session, metadata):
         join('taxa_collection', 'ranks').\
         filter(Rank.name == 'species').subquery()
 
-    q = session.query('genus', 'section', 'species', func.count(Photo.id)).\
+    q = session.query('genus', 'section', 'species', functions.count(Photo.id)).\
+        select_from(Photo).\
         join(stmt_genus, stmt_genus.c.id == Photo.id).\
         outerjoin(stmt_section, stmt_section.c.id == Photo.id).\
         join(stmt_species, stmt_species.c.id == Photo.id).\
-        group_by('genus', 'section', 'species').\
-        all()
+        group_by('genus', 'section', 'species')
+
+    return q
+
+def get_photos_with_taxa(session, metadata):
+    """Return photos with genus, section, and species class.
+
+    This generator returns 4-tuples ``(photo_id, genus, section, species)``.
+    """
+    Base = automap_base(metadata=metadata)
+    Base.prepare()
+
+    Photo = Base.classes.photos
+    Taxon = Base.classes.taxa
+    Rank = Base.classes.ranks
+
+    stmt_genus = session.query(Photo.id, Taxon.name.label('genus')).\
+        join('taxa_collection', 'ranks').\
+        filter(Rank.name == 'genus').subquery()
+
+    stmt_section = session.query(Photo.id, Taxon.name.label('section')).\
+        join('taxa_collection', 'ranks').\
+        filter(Rank.name == 'section').subquery()
+
+    stmt_species = session.query(Photo.id, Taxon.name.label('species')).\
+        join('taxa_collection', 'ranks').\
+        filter(Rank.name == 'species').subquery()
+
+    q = session.query(Photo, 'genus', 'section', 'species').\
+        join(stmt_genus, stmt_genus.c.id == Photo.id).\
+        outerjoin(stmt_section, stmt_section.c.id == Photo.id).\
+        join(stmt_species, stmt_species.c.id == Photo.id)
 
     return q
