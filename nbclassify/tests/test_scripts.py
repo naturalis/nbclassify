@@ -7,7 +7,7 @@ import sys
 import tempfile
 import unittest
 
-from context import nbclassify as nbc
+from context import nbc
 from context import nbc_trainer
 
 CONF_FILE  = "config.yml"
