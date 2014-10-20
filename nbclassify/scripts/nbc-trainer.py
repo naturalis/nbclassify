@@ -69,6 +69,8 @@ ANN_DEFAULTS = {
 }
 
 def main():
+    global session, metadata
+
     parser = argparse.ArgumentParser(
         description="Generate training data and train artificial neural "\
         "networks."
@@ -376,13 +378,9 @@ def main():
     # Load the configurations.
     config = nbc.open_config(args.conf)
 
-    # Build the fingerprint cache if needed.
-    if hasattr(args, 'imdir') and hasattr(args, 'cache_dir'):
-        cache = FingerprintCache(config)
-        cache.make(args.imdir, args.cache_dir, update=False)
-
     # Start selected task.
     try:
+
         if args.task == 'meta':
             meta(config, meta_path, args)
         if args.task == 'data':
@@ -412,23 +410,41 @@ def main():
 
 def meta(config, meta_path, args):
     """Make meta data file for an image directory."""
-    mkmeta = MakeMeta(config, args.imdir)
-    mkmeta.make(meta_path)
+    global session, metadata
+
+    sys.stdout.write("Initializing database...\n")
+    db.make_meta_db(meta_path)
+
+    with db.session_scope(meta_path) as (session, metadata):
+        mkmeta = MakeMeta(config, args.imdir)
+        mkmeta.make()
 
 def data(config, meta_path, args):
     """Start train data routines."""
+    global session, metadata
+
     try:
-        filter_ = config.classification.filter
+        filter_ = config.classification.filter.as_dict()
     except:
         raise nbc.ConfigurationError("The classification filter is not set")
 
-    train_data = MakeTrainData(config, args.cache_dir, meta_path)
-    train_data.export(args.output, filter_, config)
+    with db.session_scope(meta_path) as (session, metadata):
+        cache = FingerprintCache(config)
+        cache.make(args.imdir, args.cache_dir, update=False)
+
+        train_data = MakeTrainData(config, args.cache_dir)
+        train_data.export(args.output, filter_, config)
 
 def data_batch(config, meta_path, args):
     """Start batch train data routines."""
-    train_data = BatchMakeTrainData(config, args.cache_dir, meta_path)
-    train_data.batch_export(args.output)
+    global session, metadata
+
+    with db.session_scope(meta_path) as (session, metadata):
+        cache = FingerprintCache(config)
+        cache.make(args.imdir, args.cache_dir, update=False)
+
+        train_data = BatchMakeTrainData(config, args.cache_dir)
+        train_data.batch_export(args.output)
 
 def ann(config, args):
     """Start neural network training routines."""
@@ -437,50 +453,66 @@ def ann(config, args):
 
 def ann_batch(config, meta_path, args):
     """Start batch neural network training routines."""
-    ann_maker = BatchMakeAnn(config, meta_path)
-    ann_maker.batch_train(args.data, args.output)
+    global session, metadata
+
+    with db.session_scope(meta_path) as (session, metadata):
+        ann_maker = BatchMakeAnn(config)
+        ann_maker.batch_train(args.data, args.output)
 
 def test_ann(config, meta_path, args):
     """Start neural network testing routines."""
-    tester = TestAnn(config)
-    tester.test(args.ann, args.test_data)
+    global session, metadata
 
-    if args.output:
-        try:
-            filter_ = config.classification.filter
-        except:
-            raise nbc.ConfigurationError("The classification filter is not set")
+    with db.session_scope(meta_path) as (session, metadata):
+        tester = TestAnn(config)
+        tester.test(args.ann, args.test_data)
 
-        tester.export_results(args.output, meta_path, filter_, args.error)
+        if args.output:
+            try:
+                filter_ = config.classification.filter.as_dict()
+            except:
+                raise nbc.ConfigurationError("The classification filter is not set")
+
+            tester.export_results(args.output, filter_, args.error)
 
 def test_ann_batch(config, meta_path, args):
     """Start batch neural network testing routines."""
-    tester = TestAnn(config)
-    tester.test_with_hierarchy(meta_path, args.test_data, args.anns,
-        args.error)
+    global session, metadata
 
-    if args.output:
-        correct, total = tester.export_hierarchy_results(args.output)
-        print "Correctly classified: {0}/{1} ({2:.2%})\n".\
-            format(correct, total, float(correct)/total)
+    with db.session_scope(meta_path) as (session, metadata):
+        tester = TestAnn(config)
+        tester.test_with_hierarchy(args.test_data, args.anns, args.error)
+
+        if args.output:
+            correct, total = tester.export_hierarchy_results(args.output)
+            print "Correctly classified: {0}/{1} ({2:.2%})\n".\
+                format(correct, total, float(correct)/total)
 
 def classify(config, meta_path, args):
     """Start classification routines."""
-    classifier = ImageClassifier(config, args.ann, meta_path)
-    classification = classifier.classify(args.image, args.error)
+    global session, metadata
+
+    with db.session_scope(meta_path) as (session, metadata):
+        classifier = ImageClassifier(config, args.ann)
+        classification = classifier.classify(args.image, args.error)
+
     class_ = [class_ for mse,class_ in classification]
     print "Image is classified as {0}".format(", ".join(class_))
 
 def validate(config, meta_path, args):
     """Start validation routines."""
-    global FORCE_OVERWRITE
+    global FORCE_OVERWRITE, session, metadata
 
     # Any existing training data or neural networks must be regenerated during
     # the validation process.
     FORCE_OVERWRITE = True
 
-    validator = Validator(config, args.cache_dir, meta_path)
-    scores = validator.k_fold_xval_stratified(args.k, args.autoskip)
+    with db.session_scope(meta_path) as (session, metadata):
+        cache = FingerprintCache(config)
+        cache.make(args.imdir, args.cache_dir, update=False)
+
+        validator = Validator(config, args.cache_dir)
+        scores = validator.k_fold_xval_stratified(args.k, args.autoskip)
 
     print "Accuracy: {0:.2%} (+/- {1:.2%})".format(
         scores.mean(),
@@ -529,12 +561,12 @@ class FingerprintCache(nbc.Common):
         shelve, a persistent, dictionary-like object. If `update` is set to
         True, existing fingerprints are updated.
         """
+        global session, metadata
+
         phenotyper = nbc.Phenotyper()
-        meta_path = os.path.join(image_dir, META_FILE)
 
         # Get a list of all the photos in the database.
-        with db.session_scope(meta_path) as (session, metadata):
-            photos = db.get_photos(session, metadata)
+        photos = db.get_photos(session, metadata)
 
         # Get the classification hierarchy.
         try:
@@ -720,24 +752,23 @@ class MakeMeta(nbc.Common):
             elif os.path.isfile(path) and classes:
                 yield (path, dict(zip(ranks, classes)))
 
-    def make(self, filename):
+    def make(self):
         """Create the meta data database file `meta_path`."""
-        sys.stdout.write("Initializing database...\n")
-        db.make_meta_db(filename)
+        global session, metadata
 
         sys.stdout.write("Saving meta data for images...\n")
-        with db.session_scope(filename) as (session, metadata):
-            for path, classes in self.get_image_files(self.image_dir, self.ranks):
-                # Get the path relative to self.image_dir
-                path_rel = re.sub(self.image_dir, "", path)
-                if path_rel.startswith(os.sep):
-                    path_rel = path_rel[1:]
 
-                # Save the meta data.
-                db.insert_new_photo(session, metadata,
-                    root=self.image_dir,
-                    path=path_rel,
-                    taxa=classes)
+        for path, classes in self.get_image_files(self.image_dir, self.ranks):
+            # Get the path relative to self.image_dir
+            path_rel = re.sub(self.image_dir, "", path)
+            if path_rel.startswith(os.sep):
+                path_rel = path_rel[1:]
+
+            # Save the meta data.
+            db.insert_new_photo(session, metadata,
+                root=self.image_dir,
+                path=path_rel,
+                taxa=classes)
 
         sys.stdout.write("Done\n")
 
@@ -745,7 +776,7 @@ class MakeTrainData(nbc.Common):
 
     """Generate training data."""
 
-    def __init__(self, config, cache_path, meta_path):
+    def __init__(self, config, cache_path):
         """Constructor for training data generator.
 
         Expects a configurations object `config`, and a path to the database
@@ -753,7 +784,6 @@ class MakeTrainData(nbc.Common):
         """
         super(MakeTrainData, self).__init__(config)
         self.set_cache_path(cache_path)
-        self.set_meta_path(meta_path)
         self.subset = None
         self.cache = FingerprintCache(config)
 
@@ -761,11 +791,6 @@ class MakeTrainData(nbc.Common):
         if not os.path.isdir(path):
             raise IOError("Cannot open %s (no such directory)" % path)
         self.cache_path = path
-
-    def set_meta_path(self, path):
-        if not os.path.isfile(path):
-            raise IOError("Cannot open %s (no such file)" % path)
-        self.meta_path = path
 
     def set_subset(self, subset):
         """Set the sample subset that should be used for export.
@@ -786,84 +811,88 @@ class MakeTrainData(nbc.Common):
         fingerprints are obtained from cache, which must have been created for
         configuration `config`.
         """
+        global session, metadata
+
         if not FORCE_OVERWRITE and os.path.isfile(filename):
             raise nbc.FileExistsError(filename)
 
         # Get the photos and corresponding classification using the filter.
-        with db.session_scope(self.meta_path) as (session, metadata):
-            images = db.get_filtered_photos_with_taxon(session, metadata, filter_)
-            images = images.all()
+        images = db.get_filtered_photos_with_taxon(session, metadata, filter_)
+        images = images.all()
 
-            if not images:
-                logging.info("No images found for the filter `%s`" % filter_)
-                return
+        if not images:
+            logging.info("No images found for the filter `%s`" % filter_)
+            return
 
-            if self.get_photo_count_min():
-                assert len(images) >= self.get_photo_count_min(), \
-                    "Expected to find at least photo_count_min={0} photos, found " \
-                    "{1}".format(self.get_photo_count_min(), len(images))
+        if self.get_photo_count_min():
+            assert len(images) >= self.get_photo_count_min(), \
+                "Expected to find at least photo_count_min={0} photos, found " \
+                "{1}".format(self.get_photo_count_min(), len(images))
 
-            # Calculate the number of images that will be processed, taking into
-            # account the subset.
-            photo_ids = np.array([photo.id for photo, _ in images])
-            if self.subset:
-                n_images = len(np.intersect1d(photo_ids, self.subset))
-            else:
-                n_images = len(images)
+        # Calculate the number of images that will be processed, taking into
+        # account the subset.
+        photo_ids = np.array([photo.id for photo, _ in images])
+        if self.subset:
+            n_images = len(np.intersect1d(photo_ids, self.subset))
+        else:
+            n_images = len(images)
 
-            logging.info("Going to process %d photos..." % n_images)
+        logging.info("Going to process %d photos..." % n_images)
 
-            # Get the classification categories from the database.
-            classes = self.get_classes_from_filter(session, metadata, filter_)
+        # Get the classification categories from the database.
+        classes = self.get_classes_from_filter(session, metadata, filter_)
 
-            # Make a codeword for each class.
-            codewords = self.get_codewords(classes)
+        # Make a codeword for each class.
+        codewords = self.get_codewords(classes)
 
-            # Construct the header.
-            header_data, header_out = self.__make_header(len(classes))
-            header = ["ID"] + header_data + header_out
+        # Construct the header.
+        header_data, header_out = self.__make_header(len(classes))
+        header = ["ID"] + header_data + header_out
 
-            # Load the fingerprint cache.
-            self.cache.load_cache(self.cache_path, config)
+        # Load the fingerprint cache.
+        self.cache.load_cache(self.cache_path, config)
 
-            # Generate the training data.
-            with open(filename, 'w') as fh:
-                # Write the header.
-                fh.write( "%s\n" % "\t".join(header) )
+        # Generate the training data.
+        with open(filename, 'w') as fh:
+            # Write the header.
+            fh.write( "%s\n" % "\t".join(header) )
 
-                # Set the training data.
-                training_data = nbc.TrainData(len(header_data), len(classes))
+            # Set the training data.
+            training_data = nbc.TrainData(len(header_data), len(classes))
 
-                for photo, class_ in images:
-                    # Only export the subset if an export subset is set.
-                    if self.subset and photo.id not in self.subset:
-                        continue
+            for photo, class_ in images:
+                # Only export the subset if an export subset is set.
+                if self.subset and photo.id not in self.subset:
+                    continue
 
-                    logging.info("Processing `%s` of class `%s`..." % (photo.path,
-                        class_))
+                logging.info("Processing `%s` of class `%s`..." % (photo.path,
+                    class_))
 
-                    # Get phenotype for this image from the cache.
-                    phenotype = self.cache.get_phenotype(photo.md5sum)
+                # Get phenotype for this image from the cache.
+                phenotype = self.cache.get_phenotype(photo.md5sum)
 
-                    assert len(phenotype) == len(header_data), \
-                        "Fingerprint size mismatch. According to the header " \
-                        "there are {0} data columns, but the fingerprint has " \
-                        "{1}".format(len(header_data), len(phenotype))
+                assert len(phenotype) == len(header_data), \
+                    "Fingerprint size mismatch. According to the header " \
+                    "there are {0} data columns, but the fingerprint has " \
+                    "{1}".format(len(header_data), len(phenotype))
 
-                    training_data.append(phenotype, codewords[class_],
-                        label=photo.id)
+                training_data.append(phenotype, codewords[class_],
+                    label=photo.id)
 
-                training_data.finalize()
+            training_data.finalize()
 
-                # Round feature data.
-                training_data.round_input(6)
+            if not training_data:
+                raise ValueError("Training data cannot be empty")
 
-                # Write data rows.
-                for photo_id, input_, output in training_data:
-                    row = [str(photo_id)]
-                    row.extend(input_.astype(str))
-                    row.extend(output.astype(str))
-                    fh.write("%s\n" % "\t".join(row))
+            # Round feature data.
+            training_data.round_input(6)
+
+            # Write data rows.
+            for photo_id, input_, output in training_data:
+                row = [str(photo_id)]
+                row.extend(input_.astype(str))
+                row.extend(output.astype(str))
+                fh.write("%s\n" % "\t".join(row))
 
         logging.info("Training data written to %s" % filename)
 
@@ -935,14 +964,14 @@ class BatchMakeTrainData(MakeTrainData):
 
     """Generate training data."""
 
-    def __init__(self, config, cache_path, meta_path):
+    def __init__(self, config, cache_path):
         """Constructor for training data generator.
 
         Expects a configurations object `config`, a path to the root directory
         of the photos, and a path to the database file `meta_path` containing
         photo meta data.
         """
-        super(BatchMakeTrainData, self).__init__(config, cache_path, meta_path)
+        super(BatchMakeTrainData, self).__init__(config, cache_path)
 
         self.taxon_hr = None
 
@@ -953,9 +982,10 @@ class BatchMakeTrainData(MakeTrainData):
             raise nbc.ConfigurationError("classification hierarchy not set")
 
     def _load_taxon_hierarchy(self):
+        global session, metadata
+
         if not self.taxon_hr:
-            with db.session_scope(self.meta_path) as (session, metadata):
-                self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
+            self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
     def batch_export(self, target_dir):
         """Batch export training data to directory `target_dir`."""
@@ -969,13 +999,14 @@ class BatchMakeTrainData(MakeTrainData):
         # Make training data for each path in the classification hierarchy.
         for filter_ in self.classification_hierarchy_filters(levels,
                 self.taxon_hr):
-            level = levels.index(filter_['class'])
+            level = levels.index(filter_.get('class'))
             train_file = os.path.join(target_dir,
                 self.class_hr[level].train_file)
             config = self.class_hr[level]
 
             # Replace any placeholders in the paths.
-            for key, val in filter_['where'].items():
+            where = filter_.get('where', {})
+            for key, val in where.items():
                 val = val if val is not None else '_'
                 train_file = train_file.replace("__%s__" % key, val)
 
@@ -983,6 +1014,7 @@ class BatchMakeTrainData(MakeTrainData):
             logging.info("Classifying images on %s" % \
                 self.readable_filter(filter_))
             try:
+                print filter_
                 self.export(train_file, filter_, config)
             except nbc.FileExistsError as e:
                 # Don't export if the file already exists.
@@ -1047,7 +1079,7 @@ class BatchMakeAnn(MakeAnn):
 
     """Generate training data."""
 
-    def __init__(self, config, meta_path):
+    def __init__(self, config):
         """Constructor for training data generator.
 
         Expects a configurations object `config`, a path to the root directory
@@ -1056,7 +1088,6 @@ class BatchMakeAnn(MakeAnn):
         """
         super(BatchMakeAnn, self).__init__(config)
 
-        self.set_meta_path(meta_path)
         self.taxon_hr = None
 
         # Get the taxonomic hierarchy from the configurations.
@@ -1065,15 +1096,11 @@ class BatchMakeAnn(MakeAnn):
         except:
             raise nbc.ConfigurationError("missing `classification.hierarchy`")
 
-    def set_meta_path(self, path):
-        if not os.path.isfile(path):
-            raise IOError("Cannot open %s (no such file)" % path)
-        self.meta_path = path
-
     def _load_taxon_hierarchy(self):
+        global session, metadata
+
         if not self.taxon_hr:
-            with db.session_scope(self.meta_path) as (session, metadata):
-                self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
+            self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
     def batch_train(self, data_dir, output_dir):
         """Batch train neural networks.
@@ -1092,7 +1119,7 @@ class BatchMakeAnn(MakeAnn):
 
         # Train an ANN for each path in the classification hierarchy.
         for filter_ in self.classification_hierarchy_filters(levels, self.taxon_hr):
-            level = levels.index(filter_['class'])
+            level = levels.index(filter_.get('class'))
             train_file = os.path.join(data_dir, self.class_hr[level].train_file)
             ann_file = os.path.join(output_dir, self.class_hr[level].ann_file)
             if 'ann' not in self.class_hr[level]:
@@ -1101,7 +1128,8 @@ class BatchMakeAnn(MakeAnn):
                 config = self.class_hr[level].ann
 
             # Replace any placeholders in the paths.
-            for key, val in filter_['where'].items():
+            where = filter_.get('where', {})
+            for key, val in where.items():
                 val = val if val is not None else '_'
                 train_file = train_file.replace("__%s__" % key, val)
                 ann_file = ann_file.replace("__%s__" % key, val)
@@ -1128,16 +1156,6 @@ class TestAnn(nbc.Common):
         self.classifications_expected = {}
         self.class_hr = None
         self.taxon_hr = None
-
-    def path_from_filter(self, filter_, levels):
-        """Return the path from a filter."""
-        path = []
-        for name in levels:
-            try:
-                path.append(filter_['where'][name])
-            except:
-                return path
-        return path
 
     def test(self, ann_file, test_file):
         """Test an artificial neural network."""
@@ -1172,7 +1190,7 @@ class TestAnn(nbc.Common):
         mse = self.ann.get_MSE()
         logging.info("Mean Square Error on test data: %f" % mse)
 
-    def export_results(self, filename, db_path, filter_, error=0.01):
+    def export_results(self, filename, filter_, error=0.01):
         """Export the classification results to a TSV file.
 
         Export the test results to a tab separated file `filename`. The class
@@ -1180,12 +1198,13 @@ class TestAnn(nbc.Common):
         classification filter `filter_`. A bit in a codeword is considered on
         if the mean square error for a bit is less or equal to `error`.
         """
+        global session, metadata
+
         if self.test_data is None:
             raise RuntimeError("Test data is not set")
 
         # Get the classification categories from the database.
-        with db.session_scope(db_path) as (session, metadata):
-            classes = self.get_classes_from_filter(session, metadata, filter_)
+        classes = self.get_classes_from_filter(session, metadata, filter_)
 
         # Get the codeword for each class.
         if not classes:
@@ -1244,20 +1263,20 @@ class TestAnn(nbc.Common):
         print "Correctly classified: %.1f%%" % (fraction*100)
         print "Testing results written to %s" % filename
 
-    def test_with_hierarchy(self, db_path, test_data_dir, ann_dir,
-                            max_error=0.001):
+    def test_with_hierarchy(self, test_data_dir, ann_dir, max_error=0.001):
         """Test each ANN in a classification hierarchy and export results.
 
         Returns a 2-tuple ``(correct,total)``.
         """
+        global session, metadata
+
         logging.info("Testing the neural networks hierarchy...")
 
         self.classifications = {}
         self.classifications_expected = {}
 
         # Get the taxonomic hierarchy from the database.
-        with db.session_scope(db_path) as (session, metadata):
-            self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
+        self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
         # Get the classification hierarchy from the configurations.
         try:
@@ -1279,7 +1298,7 @@ class TestAnn(nbc.Common):
         for filter_ in self.classification_hierarchy_filters(levels, self.taxon_hr):
             logging.info("Classifying on %s" % self.readable_filter(filter_))
 
-            level_name = filter_['class']
+            level_name = filter_.get('class')
             level_n = levels.index(level_name)
             level = self.class_hr[level_n]
             test_file = os.path.join(test_data_dir, level.test_file)
@@ -1292,7 +1311,8 @@ class TestAnn(nbc.Common):
                 pass
 
             # Replace any placeholders in the paths.
-            for key, val in filter_['where'].items():
+            where = filter_.get('where', {})
+            for key, val in where.items():
                 val = val if val is not None else '_'
                 test_file = test_file.replace("__%s__" % key, val)
                 ann_file = ann_file.replace("__%s__" % key, val)
@@ -1455,18 +1475,19 @@ class ImageClassifier(nbc.Common):
 
     """Classify an image."""
 
-    def __init__(self, config, ann_file, db_file):
+    def __init__(self, config, ann_file):
+        global session, metadata
+
         super(ImageClassifier, self).__init__(config)
         self.set_ann(ann_file)
 
         # Get the classification categories from the database.
-        with db.session_scope(db_file) as (session, metadata):
-            try:
-                filter_ = self.config.classification.filter
-            except:
-                raise nbc.ConfigurationError("Missing `classification.filter`")
+        try:
+            filter_ = self.config.classification.filter.as_dict()
+        except:
+            raise nbc.ConfigurationError("Missing `classification.filter`")
 
-            self.classes = self.get_classes_from_filter(session, metadata, filter_)
+        self.classes = self.get_classes_from_filter(session, metadata, filter_)
 
     def set_ann(self, path):
         if not os.path.isfile(path):
@@ -1490,7 +1511,7 @@ class Validator(nbc.Common):
 
     """Validate artificial neural networks."""
 
-    def __init__(self, config, cache_path, meta_path):
+    def __init__(self, config, cache_path):
         """Constructor for the validator.
 
         Expects a configurations object `config`, the path to to the directory
@@ -1501,17 +1522,11 @@ class Validator(nbc.Common):
         self.classifications = {}
         self.classifications_expected = {}
         self.set_cache_path(cache_path)
-        self.set_meta_path(meta_path)
 
     def set_cache_path(self, path):
         if not os.path.isdir(path):
             raise IOError("Cannot open %s (no such directory)" % path)
         self.cache_path = path
-
-    def set_meta_path(self, path):
-        if not os.path.isfile(path):
-            raise IOError("Cannot open %s (no such file)" % path)
-        self.meta_path = path
 
     def k_fold_xval_stratified(self, k=3, autoskip=False):
         """Perform stratified K-folds cross validation.
@@ -1521,20 +1536,22 @@ class Validator(nbc.Common):
         If `autoskip` is set to True, only the photos for species with at least
         `k` photos are used for the cross validation.
         """
+        global session, metadata
+
         # Will hold the score of each folds.
         scores = []
 
         # Get a list of all the photo IDs in the database.
-        with db.session_scope(self.meta_path) as (session, metadata):
-            samples = db.get_photos_with_taxa(session, metadata)
+        samples = db.get_photos_with_taxa(session, metadata)
 
-            # Get a list of the photo IDs and a list of the classes. The classes
-            # are needed for the stratified cross validation.
-            photo_ids = []
-            classes = []
-            for x in samples:
-                photo_ids.append(str(x[0].id))
-                classes.append('_'.join(x[1:]))
+        # Get a list of the photo IDs and a list of the classes. The classes
+        # are needed for the stratified cross validation.
+        photo_ids = []
+        classes = []
+        for x in samples:
+            photo_ids.append(x[0].id)
+            tmp = np.array(x[1:]).astype(str)
+            classes.append('_'.join(tmp))
 
         # Numpy features are needed for these.
         photo_ids = np.array(photo_ids)
@@ -1566,8 +1583,7 @@ class Validator(nbc.Common):
             photo_count_min = 0
 
         # Train data exporter.
-        train_data = BatchMakeTrainData(self.config, self.cache_path,
-            self.meta_path)
+        train_data = BatchMakeTrainData(self.config, self.cache_path)
         train_data.set_photo_count_min(photo_count_min)
 
         # Obtain cross validation folds.
@@ -1595,15 +1611,14 @@ class Validator(nbc.Common):
             train_data.batch_export(test_dir)
 
             # Train neural networks on training data.
-            trainer = BatchMakeAnn(self.config, self.meta_path)
+            trainer = BatchMakeAnn(self.config)
             trainer.set_photo_count_min(photo_count_min)
             trainer.batch_train(data_dir=train_dir, output_dir=ann_dir)
 
             # Calculate the score for this fold.
             tester = TestAnn(self.config)
             tester.set_photo_count_min(photo_count_min)
-            correct, total = tester.test_with_hierarchy(self.meta_path,
-                test_dir, ann_dir)
+            correct, total = tester.test_with_hierarchy(test_dir, ann_dir)
             tester.export_hierarchy_results(test_result)
             score = float(correct) / total
             scores.append(score)

@@ -95,7 +95,19 @@ class Struct(Namespace):
         return str(self) == str(other)
 
     def __getitem__(self, key):
-        return getattr(self, key)
+        return getattr(self, str(key))
+
+    def as_dict(self):
+        d = vars(self)
+        for key, val in d.iteritems():
+            if isinstance(val, (list, tuple)):
+                d[key] = [x.as_dict() if \
+                    isinstance(x, self.__class__) else x for x in val]
+            elif isinstance(val, self.__class__):
+                d[key] = val.as_dict()
+            else:
+                d[key] = val
+        return d
 
 class Common(object):
 
@@ -200,24 +212,21 @@ class Common(object):
         Filters are those as returned by
         :meth:`classification_hierarchy_filters`.
         """
-        test_classification_filter(filter_)
-
         levels = ['genus','section','species']
-        path = []
-        if 'where' in filter_:
-            for level in levels:
-                try:
-                    path.append( getattr(filter_.where, level) )
-                except:
-                    if level == getattr(filter_, 'class'):
-                        break
-                    else:
-                        raise ValueError("Incorrect filter: %s" % filter_)
-
+        path = self.path_from_filter(filter_, levels)
         hr = self.get_taxon_hierarchy(session, metadata)
         classes = self.get_childs_from_hierarchy(hr, path)
-
         return set(classes)
+
+    def path_from_filter(self, filter_, levels):
+        """Return the path from a classification filter."""
+        path = []
+        for name in levels:
+            try:
+                path.append(filter_['where'][name])
+            except:
+                return path
+        return path
 
     def get_taxon_hierarchy(self, session, metadata):
         """Return the taxanomic hierarchy for photos in the metadata database.
@@ -370,7 +379,7 @@ class Common(object):
             ... 'genus': 'Phragmipedium'}, 'class': 'species'})
             'species where section is Lorifolia and genus is Phragmipedium'
         """
-        class_ = filter_.get('class')
+        class_ = filter_['class']
         where = filter_.get('where', {})
         where_n = len(where)
         where_s = ""
