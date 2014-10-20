@@ -832,8 +832,9 @@ class MakeTrainData(nbc.Common):
         # Calculate the number of images that will be processed, taking into
         # account the subset.
         photo_ids = np.array([photo.id for photo, _ in images])
+
         if self.subset:
-            n_images = len(np.intersect1d(photo_ids, self.subset))
+            n_images = len(np.intersect1d(list(photo_ids), list(self.subset)))
         else:
             n_images = len(images)
 
@@ -1014,7 +1015,6 @@ class BatchMakeTrainData(MakeTrainData):
             logging.info("Classifying images on %s" % \
                 self.readable_filter(filter_))
             try:
-                print filter_
                 self.export(train_file, filter_, config)
             except nbc.FileExistsError as e:
                 # Don't export if the file already exists.
