@@ -28,6 +28,31 @@ REQUIRED_RANKS = ['genus','species']
 # Show verbose database messages.
 ORM_VERBOSE = False
 
+
+class TableModels(object):
+
+    """Provide table models with relationship attributes."""
+
+    def __init__(self, **kw):
+        Base = automap_base(**kw)
+        Base.prepare()
+
+        self.photos = Base.classes.photos
+        self.ranks = Base.classes.ranks
+        self.taxa = Base.classes.taxa
+        self.photos_taxa = Base.classes.photos_taxa
+        self.tags = Base.classes.tags
+        self.photos_tags = Base.classes.photos_tags
+
+        self.taxa.rank = relationship(self.ranks)
+        self.photos_taxa.photo = relationship(self.photos)
+        self.photos_taxa.taxon = relationship(self.taxa)
+        self.photos.taxa = relationship(self.photos_taxa)
+        self.photos_tags.photo = relationship(self.photos)
+        self.photos_tags.tag = relationship(self.tags)
+        self.photos.tags = relationship(self.photos_tags)
+
+
 @contextmanager
 def session_scope(db_path):
     """Provide a transactional scope around a series of operations.
@@ -103,10 +128,8 @@ def make_meta_db(db_path):
         title = Column(String(100))
         description = Column(String(255))
 
-        taxa_collection = relationship('Taxon', secondary='photos_taxa',
-            backref=backref(__tablename__))
-        tags_collection = relationship('Tag', secondary='photos_tags',
-            backref=backref(__tablename__))
+        taxa = relationship('PhotoTaxon')
+        tags = relationship('PhotoTag')
 
         def __repr__(self):
            return "<{class}(id='{id}', title='{title}', path='{path}')>".\
@@ -178,7 +201,7 @@ def make_meta_db(db_path):
 
         UniqueConstraint('rank_id', 'name')
 
-        rank = relationship('Rank', backref=backref(__tablename__))
+        rank = relationship('Rank')
 
         def __repr__(self):
            return "<{class}(id={id}, rank='{rank}', name='{name}')>".\
@@ -218,8 +241,8 @@ def make_meta_db(db_path):
 
         UniqueConstraint('photo_id', 'taxon_id')
 
-        photo = relationship('Photo', backref=backref(__tablename__))
-        taxon = relationship('Taxon', backref=backref(__tablename__))
+        photo = relationship('Photo')
+        taxon = relationship('Taxon')
 
         def __repr__(self):
            return "<{class}(id='{1}', photo='{photo}', taxon='{taxon}')>".\
@@ -288,8 +311,8 @@ def make_meta_db(db_path):
 
         UniqueConstraint('photo_id', 'tag_id')
 
-        photo = relationship("Photo", backref=backref(__tablename__))
-        tag = relationship("Tag", backref=backref(__tablename__))
+        photo = relationship('Photo')
+        tag = relationship('Tag')
 
         def __repr__(self):
            return "<{class}(id='{1}', photo='{photo}', tag='{tag}')>".\
@@ -340,14 +363,13 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
     tags = list(kwargs.get('tags', []))
 
     # Get the database models.
-    Base = automap_base(metadata=metadata)
-    Base.prepare()
-    Photo = Base.classes.photos
-    Rank = Base.classes.ranks
-    Taxon = Base.classes.taxa
-    PhotoTaxon = Base.classes.photos_taxa
-    Tag = Base.classes.tags
-    PhotoTag = Base.classes.photos_tags
+    models = TableModels(metadata=metadata)
+    Photo = models.photos
+    Rank = models.ranks
+    Taxon = models.taxa
+    PhotoTaxon = models.photos_taxa
+    Tag = models.tags
+    PhotoTag = models.photos_tags
 
     # Get the MD5 hash.
     hasher = hashlib.md5()
@@ -372,70 +394,71 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
         title=title,
         description=description
     )
+
+    with session.no_autoflush:
+        # Save photo's taxa to the database.
+        processed_ranks = []
+        for rank_name, taxon_name in taxa.items():
+            # Skip ranks that evaluate to False.
+            if not rank_name:
+                continue
+
+            # Skip if the taxon is not set.
+            if not taxon_name:
+                continue
+
+            # Check if the rank exists in the database. If not, create it.
+            try:
+                rank = session.query(Rank).\
+                    filter(Rank.name == rank_name).one()
+            except NoResultFound:
+                rank = Rank(name=rank_name)
+                session.add(rank)
+
+            # Check if the taxon exists in the database. If not, create it.
+            try:
+                taxon = session.query(Taxon).\
+                    filter(Taxon.rank == rank,
+                           Taxon.name == taxon_name).one()
+            except NoResultFound:
+                taxon = Taxon(name=taxon_name)
+                taxon.rank = rank
+                session.add(taxon)
+
+            # Connect the photo to this taxon.
+            photo_taxon = PhotoTaxon()
+            photo_taxon.taxon = taxon
+            session.add(photo_taxon)
+            photo.taxa.append(photo_taxon)
+
+            # Keep track of processed ranks.
+            processed_ranks.append(rank.name)
+
+        if REQUIRED_RANKS:
+            assert set(REQUIRED_RANKS).issubset(processed_ranks), \
+                "Every photo must at least have the ranks {0}".\
+                    format(REQUIRED_RANKS)
+
+        # Set the tags for this photo.
+        for tag_name in tags:
+            if not tag_name:
+                continue
+
+            # Check if the tag exists in the database. If not, create it.
+            try:
+                tag = session.query(Tag).\
+                    filter(Tag.name == tag_name).one()
+            except NoResultFound:
+                tag = Tag(name=tag_name)
+                session.add(tag)
+
+            # Connect the photo to this tag.
+            photo_tag = PhotoTag()
+            photo_tag.tag = tag
+            session.add(photo_tag)
+            photo.tags.append(photo_tag)
+
     session.add(photo)
-    session.commit()
-
-    # Save photo's taxa to the database.
-    processed_ranks = []
-    for rank_name, taxon_name in taxa.items():
-        # Skip ranks that evaluate to False.
-        if not rank_name:
-            continue
-
-        # Skip if the taxon is not set.
-        if not taxon_name:
-            continue
-
-        # Check if the rank exists in the database. If not, create it.
-        try:
-            rank = session.query(Rank).\
-                filter(Rank.name == rank_name).one()
-        except NoResultFound:
-            rank = Rank(name=rank_name)
-            session.add(rank)
-            session.commit()
-
-        # Check if the taxon exists in the database. If not, create it.
-        try:
-            taxon = session.query(Taxon).\
-                filter(Taxon.rank_id == rank.id,
-                       Taxon.name == taxon_name).one()
-        except NoResultFound:
-            taxon = Taxon(name=taxon_name, rank_id=rank.id)
-            session.add(taxon)
-            session.commit()
-
-        # Connect the photo to this taxon.
-        photo_taxon = PhotoTaxon(photo_id=photo.id, taxon_id=taxon.id)
-        session.add(photo_taxon)
-        session.commit()
-
-        # Keep track of processed ranks.
-        processed_ranks.append(rank.name)
-
-    if REQUIRED_RANKS:
-        assert set(REQUIRED_RANKS).issubset(processed_ranks), \
-            "Every photo must at least have the ranks {0}".\
-                format(REQUIRED_RANKS)
-
-    # Set the tags for this photo.
-    for tag_name in tags:
-        if not tag_name:
-            continue
-
-        # Check if the tag exists in the database. If not, create it.
-        try:
-            tag = session.query(Tag).\
-                filter(Tag.name == tag_name).one()
-        except NoResultFound:
-            tag = Tag(name=tag_name)
-            session.add(tag)
-            session.commit()
-
-        # Connect the photo to this tag.
-        photo_tag = PhotoTag(photo_id=photo.id, tag_id=tag.id)
-        session.add(photo_tag)
-        session.commit()
 
 def get_photos(session, metadata):
     """Return photo records from the database."""
