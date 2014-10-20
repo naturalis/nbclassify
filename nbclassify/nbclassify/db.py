@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""Database routines.
+
+Uses SQLAlchmy for object relational mapping.
+"""
+
 import os
 import hashlib
 import sys

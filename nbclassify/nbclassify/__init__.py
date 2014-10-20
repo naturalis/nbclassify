@@ -24,6 +24,7 @@ from sqlalchemy import orm
 from sqlalchemy.ext.automap import automap_base
 import yaml
 
+import db
 from exceptions import *
 
 def open_config(path):

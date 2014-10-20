@@ -1,3 +1,14 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""Database routines.
+
+Uses SQLAlchmy for object relational mapping. This module is a copy of :mod:`db`
+which implements SQLAlchemy's Automap extension to automate many-to-many
+relationships discovery. Due to an apparent bug in SQLAlchemy this module
+is unstable and should not be used.
+"""
+
 import os
 import hashlib
 import sys
