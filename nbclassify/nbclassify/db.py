@@ -95,6 +95,11 @@ def make_meta_db(db_path):
         title = Column(String(100))
         description = Column(String(255))
 
+        taxa_collection = relationship('Taxon', secondary='photos_taxa',
+            backref=backref(__tablename__))
+        tags_collection = relationship('Tag', secondary='photos_tags',
+            backref=backref(__tablename__))
+
         def __repr__(self):
            return "<{class}(id='{id}', title='{title}', path='{path}')>".\
                 format({
@@ -165,8 +170,7 @@ def make_meta_db(db_path):
 
         UniqueConstraint('rank_id', 'name')
 
-        rank = relationship("Rank", backref=backref(__tablename__,
-            order_by=id))
+        rank = relationship('Rank', backref=backref(__tablename__))
 
         def __repr__(self):
            return "<{class}(id={id}, rank='{rank}', name='{name}')>".\
@@ -206,10 +210,8 @@ def make_meta_db(db_path):
 
         UniqueConstraint('photo_id', 'taxon_id')
 
-        photo = relationship("Photo", backref=backref(__tablename__,
-            order_by=id))
-        taxon = relationship("Taxon", backref=backref(__tablename__,
-            order_by=id))
+        photo = relationship('Photo', backref=backref(__tablename__))
+        taxon = relationship('Taxon', backref=backref(__tablename__))
 
         def __repr__(self):
            return "<{class}(id='{1}', photo='{photo}', taxon='{taxon}')>".\
@@ -278,10 +280,8 @@ def make_meta_db(db_path):
 
         UniqueConstraint('photo_id', 'tag_id')
 
-        photo = relationship("Photo", backref=backref(__tablename__,
-            order_by=id))
-        tag = relationship("Tag", backref=backref(__tablename__,
-            order_by=id))
+        photo = relationship("Photo", backref=backref(__tablename__))
+        tag = relationship("Tag", backref=backref(__tablename__))
 
         def __repr__(self):
            return "<{class}(id='{1}', photo='{photo}', tag='{tag}')>".\
