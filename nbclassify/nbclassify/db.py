@@ -362,7 +362,7 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
     taxa = dict(kwargs.get('taxa', {}))
     tags = list(kwargs.get('tags', []))
 
-    # Get the database models.
+    # Get the table models.
     models = TableModels(metadata=metadata)
     Photo = models.photos
     Rank = models.ranks
@@ -413,7 +413,6 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
                     filter(Rank.name == rank_name).one()
             except NoResultFound:
                 rank = Rank(name=rank_name)
-                session.add(rank)
 
             # Check if the taxon exists in the database. If not, create it.
             try:
@@ -423,12 +422,10 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
             except NoResultFound:
                 taxon = Taxon(name=taxon_name)
                 taxon.rank = rank
-                session.add(taxon)
 
             # Connect the photo to this taxon.
             photo_taxon = PhotoTaxon()
             photo_taxon.taxon = taxon
-            session.add(photo_taxon)
             photo.taxa.append(photo_taxon)
 
             # Keep track of processed ranks.
@@ -450,21 +447,18 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
                     filter(Tag.name == tag_name).one()
             except NoResultFound:
                 tag = Tag(name=tag_name)
-                session.add(tag)
 
             # Connect the photo to this tag.
             photo_tag = PhotoTag()
             photo_tag.tag = tag
-            session.add(photo_tag)
             photo.tags.append(photo_tag)
 
     session.add(photo)
 
 def get_photos(session, metadata):
     """Return photo records from the database."""
-    Base = automap_base(metadata=metadata)
-    Base.prepare()
-    Photo = Base.classes.photos
+    models = TableModels(metadata=metadata)
+    Photo = models.photos
     photos = session.query(Photo)
     return photos
 
@@ -480,26 +474,23 @@ def get_filtered_photos_with_taxon(session, metadata, filter_):
     if not isinstance(filter_, dict):
         ValueError("Expected a dict as filter")
 
-    Base = automap_base(metadata=metadata)
-    Base.prepare()
-
-    # Get the table classes.
-    Photo = Base.classes.photos
-    Taxon = Base.classes.taxa
-    Rank = Base.classes.ranks
-    PhotoTaxon = Base.classes.photos_taxa
+    # Get the table models.
+    models = TableModels(metadata=metadata)
+    Photo = models.photos
+    Rank = models.ranks
+    Taxon = models.taxa
 
     # Use a subquery because we want photos to be returned even if the don't
     # have a taxa for the given class.
     class_ = filter_.get('class')
     stmt_genus = session.query(Photo.id, Taxon.name.label('genus')).\
-        join(PhotoTaxon, Taxon, Rank).\
+        join(Photo.taxa, Taxon, Rank).\
         filter(Rank.name == 'genus').subquery()
     stmt_section = session.query(Photo.id, Taxon.name.label('section')).\
-        join(PhotoTaxon, Taxon, Rank).\
+        join(Photo.taxa, Taxon, Rank).\
         filter(Rank.name == 'section').subquery()
     stmt_species = session.query(Photo.id, Taxon.name.label('species')).\
-        join(PhotoTaxon, Taxon, Rank).\
+        join(Photo.taxa, Taxon, Rank).\
         filter(Rank.name == 'species').subquery()
 
     # Construct the main query.
@@ -525,24 +516,22 @@ def get_taxa_photo_count(session, metadata):
 
     Taxa are returned as 4-tuples ``(genus, section, species, photo_count)``.
     """
-    Base = automap_base(metadata=metadata)
-    Base.prepare()
-
-    Photo = Base.classes.photos
-    Taxon = Base.classes.taxa
-    Rank = Base.classes.ranks
-    PhotoTaxon = Base.classes.photos_taxa
+    # Get the table models.
+    models = TableModels(metadata=metadata)
+    Photo = models.photos
+    Rank = models.ranks
+    Taxon = models.taxa
 
     stmt_genus = session.query(Photo.id, Taxon.name.label('genus')).\
-        join(PhotoTaxon, Taxon, Rank).\
+        join(Photo.taxa, Taxon, Rank).\
         filter(Rank.name == 'genus').subquery()
 
     stmt_section = session.query(Photo.id, Taxon.name.label('section')).\
-        join(PhotoTaxon, Taxon, Rank).\
+        join(Photo.taxa, Taxon, Rank).\
         filter(Rank.name == 'section').subquery()
 
     stmt_species = session.query(Photo.id, Taxon.name.label('species')).\
-        join(PhotoTaxon, Taxon, Rank).\
+        join(Photo.taxa, Taxon, Rank).\
         filter(Rank.name == 'species').subquery()
 
     q = session.query('genus', 'section', 'species', functions.count(Photo.id)).\
@@ -559,24 +548,22 @@ def get_photos_with_taxa(session, metadata):
 
     This generator returns 4-tuples ``(photo_id, genus, section, species)``.
     """
-    Base = automap_base(metadata=metadata)
-    Base.prepare()
-
-    Photo = Base.classes.photos
-    Taxon = Base.classes.taxa
-    Rank = Base.classes.ranks
-    PhotoTaxon = Base.classes.photos_taxa
+    # Get the table models.
+    models = TableModels(metadata=metadata)
+    Photo = models.photos
+    Rank = models.ranks
+    Taxon = models.taxa
 
     stmt_genus = session.query(Photo.id, Taxon.name.label('genus')).\
-        join(PhotoTaxon, Taxon, Rank).\
+        join(Photo.taxa, Taxon, Rank).\
         filter(Rank.name == 'genus').subquery()
 
     stmt_section = session.query(Photo.id, Taxon.name.label('section')).\
-        join(PhotoTaxon, Taxon, Rank).\
+        join(Photo.taxa, Taxon, Rank).\
         filter(Rank.name == 'section').subquery()
 
     stmt_species = session.query(Photo.id, Taxon.name.label('species')).\
-        join(PhotoTaxon, Taxon, Rank).\
+        join(Photo.taxa, Taxon, Rank).\
         filter(Rank.name == 'species').subquery()
 
     q = session.query(Photo, 'genus', 'section', 'species').\

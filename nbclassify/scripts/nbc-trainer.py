@@ -593,7 +593,7 @@ class FingerprintCache(nbc.Common):
                 if not update and str(photo.md5sum) in cache:
                     continue
 
-                logging.info("Processing photo `%s`..." % photo.md5sum)
+                logging.info("Processing photo `%s`..." % photo.id)
 
                 # Construct a new configuration object with a single feature
                 # which we can pass to Phenotyper().
