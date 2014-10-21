@@ -380,7 +380,6 @@ def main():
 
     # Start selected task.
     try:
-
         if args.task == 'meta':
             meta(config, meta_path, args)
         if args.task == 'data':
@@ -514,10 +513,14 @@ def validate(config, meta_path, args):
         validator = Validator(config, args.cache_dir)
         scores = validator.k_fold_xval_stratified(args.k, args.autoskip)
 
-    print "Accuracy: {0:.2%} (+/- {1:.2%})".format(
-        scores.mean(),
-        scores.std() * 2
-    )
+    for level in ('all','genus','section','species'):
+        values = np.array(scores[level])
+
+        print "Accuracy[{level}]: {mean:.2%} (+/- {sd:.2%})".format(**{
+            'level': level,
+            'mean': values.mean(),
+            'sd': values.std() * 2
+        })
 
 class FingerprintCache(nbc.Common):
 
@@ -1440,10 +1443,16 @@ class TestAnn(nbc.Common):
 
         return (correct, total)
 
-    def get_correct_count(self):
+    def get_correct_count(self, level_filter=None):
         """Return number of correctly classified samples.
 
-        Returns a 2-tuple ``(correct,total)``.
+        By default, the expected class must be among the classified at all
+        levels for the classification to me marked as correct. The result can be
+        filtered by level name `level_filter`.
+
+        Returns a dictinary where the keys correspond to the level name, and
+        "all" for the overall score. Each value is a 2-tuples
+        ``(correct,total)``.
         """
         if not self.classifications or not self.classifications_expected:
             raise RuntimeError("Classifications not set")
@@ -1454,9 +1463,11 @@ class TestAnn(nbc.Common):
 
         # Count the number of correct classifications.
         for photo_id, class_exp in self.classifications_expected.iteritems():
-
             match = True
             for level in levels:
+                if level_filter and not level == level_filter:
+                    continue
+
                 try:
                     expected = class_exp[level][0]
                 except:
@@ -1539,7 +1550,7 @@ class Validator(nbc.Common):
         global session, metadata
 
         # Will hold the score of each folds.
-        scores = []
+        scores = {}
 
         # Get a list of all the photo IDs in the database.
         samples = db.get_photos_with_taxa(session, metadata)
@@ -1618,12 +1629,19 @@ class Validator(nbc.Common):
             # Calculate the score for this fold.
             tester = TestAnn(self.config)
             tester.set_photo_count_min(photo_count_min)
-            correct, total = tester.test_with_hierarchy(test_dir, ann_dir)
+            tester.test_with_hierarchy(test_dir, ann_dir)
             tester.export_hierarchy_results(test_result)
-            score = float(correct) / total
-            scores.append(score)
 
-        return np.array(scores)
+            for level in ('genus','section','species',None):
+                correct, total = tester.get_correct_count(level)
+                score = float(correct) / total
+                if level is None:
+                    level = 'all'
+                if level not in scores:
+                    scores[level] = []
+                scores[level].append(score)
+
+        return scores
 
 if __name__ == "__main__":
     main()
