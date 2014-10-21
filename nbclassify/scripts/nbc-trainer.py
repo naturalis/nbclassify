@@ -513,11 +513,18 @@ def validate(config, meta_path, args):
         validator = Validator(config, args.cache_dir)
         scores = validator.k_fold_xval_stratified(args.k, args.autoskip)
 
-    for level in ('all','genus','section','species'):
-        values = np.array(scores[level])
+    paths = (
+        "genus",
+        "genus/section",
+        "genus/section/species",
+    )
 
-        print "Accuracy[{level}]: {mean:.2%} (+/- {sd:.2%})".format(**{
-            'level': level,
+    print
+    for path in paths:
+        values = np.array(scores[path])
+
+        print "Accuracy[{path}]: {mean:.2%} (+/- {sd:.2%})".format(**{
+            'path': path,
             'mean': values.mean(),
             'sd': values.std() * 2
         })
@@ -1446,9 +1453,12 @@ class TestAnn(nbc.Common):
     def get_correct_count(self, level_filter=None):
         """Return number of correctly classified samples.
 
-        By default, the expected class must be among the classified at all
-        levels for the classification to me marked as correct. The result can be
-        filtered by level name `level_filter`.
+        The classifications are checked on the level names in the list
+        `level_filter`. If `level_filter` is None, all levels are checked. A
+        classification is considered correct if the classifications at all
+        levels are correct. If the classification for a level returns multiple
+        values, the level is considered correct if the expected value is one
+        of the members.
 
         Returns a dictinary where the keys correspond to the level name, and
         "all" for the overall score. Each value is a 2-tuples
@@ -1465,7 +1475,7 @@ class TestAnn(nbc.Common):
         for photo_id, class_exp in self.classifications_expected.iteritems():
             match = True
             for level in levels:
-                if level_filter and not level == level_filter:
+                if level_filter and not level in level_filter:
                     continue
 
                 try:
@@ -1632,14 +1642,20 @@ class Validator(nbc.Common):
             tester.test_with_hierarchy(test_dir, ann_dir)
             tester.export_hierarchy_results(test_result)
 
-            for level in ('genus','section','species',None):
-                correct, total = tester.get_correct_count(level)
+            level_filters = (
+                ['genus'],
+                ['genus','section'],
+                ['genus','section','species']
+            )
+
+            for filter_ in level_filters:
+                correct, total = tester.get_correct_count(filter_)
                 score = float(correct) / total
-                if level is None:
-                    level = 'all'
-                if level not in scores:
-                    scores[level] = []
-                scores[level].append(score)
+
+                filter_s = "/".join(filter_)
+                if filter_s not in scores:
+                    scores[filter_s] = []
+                scores[filter_s].append(score)
 
         return scores
 
