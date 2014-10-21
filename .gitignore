@@ -1,6 +1,7 @@
 *.DS_Store
 *.pyc
 *.sqlite3
+.meta.db
 
 # Where user uploads are stored.
 html/media/
@@ -9,3 +10,6 @@ html/media/
 _build/
 dist/
 nbclassify.egg-info/
+
+# Admin panel
+html/webapp/static
