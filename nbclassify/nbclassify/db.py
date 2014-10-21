@@ -6,14 +6,16 @@
 Uses SQLAlchmy for object relational mapping.
 """
 
-import os
-import hashlib
-import sys
 from contextlib import contextmanager
+import hashlib
+import logging
+import os
+import sys
 
 import sqlalchemy
 from sqlalchemy import Column, ForeignKey, Integer, Sequence, String, \
-    UniqueConstraint
+    UniqueConstraint, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
@@ -47,11 +49,19 @@ class TableModels(object):
         self.taxa.rank = relationship(self.ranks)
         self.photos_taxa.photo = relationship(self.photos)
         self.photos_taxa.taxon = relationship(self.taxa)
-        self.photos.taxa = relationship(self.photos_taxa)
+        self.photos.taxa = relationship(self.photos_taxa,
+            cascade="all,delete-orphan")
         self.photos_tags.photo = relationship(self.photos)
         self.photos_tags.tag = relationship(self.tags)
-        self.photos.tags = relationship(self.photos_tags)
+        self.photos.tags = relationship(self.photos_tags,
+            cascade="all,delete-orphan")
 
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 @contextmanager
 def session_scope(db_path):
@@ -128,12 +138,12 @@ def make_meta_db(db_path):
         title = Column(String(100))
         description = Column(String(255))
 
-        taxa = relationship('PhotoTaxon')
-        tags = relationship('PhotoTag')
+        taxa = relationship('PhotoTaxon', cascade="all,delete-orphan")
+        tags = relationship('PhotoTag', cascade="all,delete-orphan")
 
         def __repr__(self):
            return "<{class}(id='{id}', title='{title}', path='{path}')>".\
-                format({
+                format(**{
                     'class': self.__class__,
                     'id': self.id,
                     'title': self.title,
@@ -163,7 +173,7 @@ def make_meta_db(db_path):
 
         def __repr__(self):
            return "<{class}(id='{id}', name='{name}')>".\
-                format({
+                format(**{
                     'class': self.__class__,
                     'id': self.id,
                     'name': self.name
@@ -205,7 +215,7 @@ def make_meta_db(db_path):
 
         def __repr__(self):
            return "<{class}(id={id}, rank='{rank}', name='{name}')>".\
-                format({
+                format(**{
                     'class': self.__class__,
                     'id': self.id,
                     'rank': self.rank,
@@ -246,7 +256,7 @@ def make_meta_db(db_path):
 
         def __repr__(self):
            return "<{class}(id='{1}', photo='{photo}', taxon='{taxon}')>".\
-                format({
+                format(**{
                     'class': self.__class__,
                     'id': self.id,
                     'photo': self.photo,
@@ -276,7 +286,7 @@ def make_meta_db(db_path):
 
         def __repr__(self):
            return "<{class}(id={id}, name='{name}')>".\
-                format({
+                format(**{
                     'class': self.__class__,
                     'id': self.id,
                     'name': self.name
@@ -316,7 +326,7 @@ def make_meta_db(db_path):
 
         def __repr__(self):
            return "<{class}(id='{1}', photo='{photo}', tag='{tag}')>".\
-                format({
+                format(**{
                     'class': self.__class__,
                     'id': self.id,
                     'photo': self.photo,
@@ -382,10 +392,11 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
     try:
         photo = session.query(Photo).\
             filter(Photo.md5sum == hasher.hexdigest()).one()
-        session.delete(photo)
-        session.commit()
+        raise ValueError("Found existing photo {0} with matching MD5 sum {1}, "
+            "please check for duplicates".\
+            format(photo.path, hasher.hexdigest()))
     except NoResultFound:
-        photo = None
+        pass
 
     # Insert the photo into the database.
     photo = Photo(
