@@ -55,6 +55,9 @@ META_FILE = ".meta.db"
 # files are overwritten without warning.
 FORCE_OVERWRITE = False
 
+# Switch to True during unit testing.
+TESTING = False
+
 # Default settings.
 ANN_DEFAULTS = {
     'connection_rate': 1,
@@ -404,6 +407,10 @@ def main():
     except nbc.FileExistsError as e:
         logging.error("An output file already exists: %s", e)
         return 1
+    except Exception as e:
+        logging.error(e)
+        if TESTING:
+            raise
 
     return 0
 

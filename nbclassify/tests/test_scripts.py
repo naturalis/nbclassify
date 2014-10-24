@@ -15,6 +15,9 @@ CONF_FILE  = "config.yml"
 # Disable FileExistsError exceptions.
 nbc_trainer.FORCE_OVERWRITE = True
 
+# Raise exceptions which would otherwise be caught.
+nbc_trainer.TESTING = True
+
 
 def delete_temp_file(path):
     """Delete temporary file."""
@@ -51,7 +54,7 @@ class TestTrainer(unittest.TestCase):
         test_result = os.path.join(self.temp_dir, 'test_result.tsv')
 
         # Create an empty temporary directory.
-        #delete_temp_dir(self.temp_dir, recursive=True)
+        delete_temp_dir(self.temp_dir, recursive=True)
         if not os.path.isdir(self.temp_dir):
             os.mkdir(self.temp_dir)
 
