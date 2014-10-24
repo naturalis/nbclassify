@@ -46,7 +46,7 @@ class TestCommon(TestCase):
         if not os.path.isfile(self.meta_file):
             self.make_meta_db()
 
-    def test_taxon_hierarchy(self):
+    def test_get_taxon_hierarchy(self):
         """Test the get_taxon_hierarchy() method."""
         expected = {
             u'Paphiopedilum': {
@@ -110,8 +110,8 @@ class TestDatabaseMethods(TestCase):
             "59c8640b2494161db4062020b3525224": ['Phragmipedium','Micropetalum','besseae']
         }
 
-    def test_photos_with_taxa(self):
-        """Test the photos_with_taxa() method."""
+    def test_get_photos_with_taxa(self):
+        """Test the get_photos_with_taxa() method."""
         with db.session_scope(self.meta_file) as (session, metadata):
             q = db.get_photos_with_taxa(session, metadata)
             ret = q.all()
@@ -120,8 +120,8 @@ class TestDatabaseMethods(TestCase):
                 class_ = [genus, section, species]
                 self.assertEqual(class_, self.expected_taxa[photo.md5sum])
 
-    def test_taxa_photo_count(self):
-        """Test the taxa_photo_count() method."""
+    def test_get_taxa_photo_count(self):
+        """Test the get_taxa_photo_count() method."""
         expected = {
             'Cypripedium_Obtusipetala_flavum': 3,
             'Cypripedium_Arietinum_plectrochilum': 3,
@@ -141,8 +141,52 @@ class TestDatabaseMethods(TestCase):
                 class_ = '_'.join([genus, str(section), species])
                 self.assertEqual(count, expected[class_])
 
-    def test_filtered_photos_with_taxon(self):
-        """Test the filtered_photos_with_taxon() method."""
+    def test_get_classes_from_filter(self):
+        """Test the get_classes_from_filter() method."""
+        filter_genera = {
+            'class': 'genus'
+        }
+
+        filter_sections = {
+            'class': 'section'
+        }
+
+        filter_mexi_section = {
+            'class': 'section',
+            'where': {
+                'genus': 'Mexipedium'
+            }
+        }
+
+        filter_trigo = {
+            'class': 'species',
+            'where': {
+                'genus': 'Cypripedium',
+                'section': 'Trigonopedia'
+            }
+        }
+
+        with db.session_scope(self.meta_file) as (session, metadata):
+            classes = db.get_classes_from_filter(session, metadata,
+                filter_genera)
+            self.assertEqual(classes, set(['Cypripedium','Mexipedium',
+                'Paphiopedilum','Selenipedium','Phragmipedium']))
+
+            classes = db.get_classes_from_filter(session, metadata,
+                filter_sections)
+            self.assertEqual(classes, set(['Obtusipetala','Arietinum',
+                'Trigonopedia','Brachypetalum','Micropetalum',None]))
+
+            classes = db.get_classes_from_filter(session, metadata,
+                filter_mexi_section)
+            self.assertEqual(classes, set([None]))
+
+            classes = db.get_classes_from_filter(session, metadata,
+                filter_trigo)
+            self.assertEqual(classes, set(['sichuanense','fargesii']))
+
+    def test_get_filtered_photos_with_taxon(self):
+        """Test the get_filtered_photos_with_taxon() method."""
         filter_mexi_species = {
             'class': 'species',
             'where': {

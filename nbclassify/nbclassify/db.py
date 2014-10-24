@@ -419,6 +419,25 @@ def get_filtered_photos_with_taxon(session, metadata, filter_):
 
     return q
 
+def get_classes_from_filter(session, metadata, filter_):
+    """Return the classes for a classification filter.
+
+    Requires access to a database via an SQLAlchemy Session `session` and
+    MetaData object `metadata`.
+
+    The unique set of classes for the classification filter `filter_` are
+    returned. Filters are those as returned by
+    :meth:`classification_hierarchy_filters`.
+    """
+    if not isinstance(filter_, dict):
+        ValueError("Expected a dict as filter")
+
+    class_ = filter_.get('class')
+    q = get_filtered_photos_with_taxon(session, metadata, filter_)
+    q = q.group_by(class_)
+    classes = [class_ for photo,class_ in q.all()]
+    return set(classes)
+
 def get_taxa_photo_count(session, metadata):
     """Return the photo count for each (genus, section, species) combination.
 

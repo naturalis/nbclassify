@@ -589,7 +589,7 @@ class FingerprintCache(nbc.Common):
         try:
             hr = self.config.classification.hierarchy
         except:
-            raise nbc.ConfigurationError("missing `classification.hierarchy`")
+            raise nbc.ConfigurationError("classification hierarchy not set")
 
         # Cache each feature for each photo separately. One cache per
         # feature type is created, and each cache contains the fingerprints
@@ -858,7 +858,7 @@ class MakeTrainData(nbc.Common):
         logging.info("Going to process %d photos..." % n_images)
 
         # Get the classification categories from the database.
-        classes = self.get_classes_from_filter(session, metadata, filter_)
+        classes = db.get_classes_from_filter(session, metadata, filter_)
 
         # Make a codeword for each class.
         codewords = self.get_codewords(classes)
@@ -1221,7 +1221,7 @@ class TestAnn(nbc.Common):
             raise RuntimeError("Test data is not set")
 
         # Get the classification categories from the database.
-        classes = self.get_classes_from_filter(session, metadata, filter_)
+        classes = db.get_classes_from_filter(session, metadata, filter_)
 
         # Get the codeword for each class.
         if not classes:
@@ -1515,7 +1515,7 @@ class ImageClassifier(nbc.Common):
         except:
             raise nbc.ConfigurationError("Missing `classification.filter`")
 
-        self.classes = self.get_classes_from_filter(session, metadata, filter_)
+        self.classes = db.get_classes_from_filter(session, metadata, filter_)
 
     def set_ann(self, path):
         if not os.path.isfile(path):

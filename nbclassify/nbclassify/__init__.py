@@ -202,23 +202,6 @@ class Common(object):
                     break
         return sorted(classes)
 
-    def get_classes_from_filter(self, session, metadata, filter_):
-        """Return the classes for a classification filter.
-
-        Requires access to a database via an SQLAlchemy Session `session` and
-        MetaData object `metadata`.
-
-        This is a generator that returns one class at a time. The unique set
-        of classes for the classification filter `filter_` are returned.
-        Filters are those as returned by
-        :meth:`classification_hierarchy_filters`.
-        """
-        levels = ['genus','section','species']
-        path = self.path_from_filter(filter_, levels)
-        hr = self.get_taxon_hierarchy(session, metadata)
-        classes = self.get_childs_from_hierarchy(hr, path)
-        return set(classes)
-
     def path_from_filter(self, filter_, levels):
         """Return the path from a classification filter."""
         path = []
@@ -287,7 +270,8 @@ class Common(object):
             {'where': {'section': 'Micropetalum', 'genus': 'Phragmipedium'}, 'class': 'species'}
 
         These filters are used directly by methods like
-        :meth:`get_photos_with_class` and :meth:`get_classes_from_filter`.
+        :meth:`db.get_filtered_photos_with_taxon` and
+        :meth:`db.get_classes_from_filter`.
         """
         filter_ = {}
 
