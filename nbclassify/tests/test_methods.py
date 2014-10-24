@@ -7,17 +7,82 @@ import sys
 import tempfile
 import unittest
 
-from context import nbc
 from context import db
+from context import nbc
+from context import nbc_trainer
 
-DB_PATH = 'test.db'
+CONF_FILE  = "config.yml"
+IMAGE_DIR = "images"
 
-class TestDatabaseMethods(unittest.TestCase):
+class TestCase(unittest.TestCase):
+
+    """Super class for test cases."""
+
+    def make_meta_db(self):
+        """Create a metadata database for the image directory."""
+        self.meta_file = os.path.join(IMAGE_DIR, '.meta.db')
+        if os.path.isfile(self.meta_file):
+            os.remove(self.meta_file)
+
+        sys.argv = [
+            'nbc-trainer.py',
+            CONF_FILE,
+            'meta',
+            IMAGE_DIR
+        ]
+        ret = nbc_trainer.main()
+        self.assertEqual(ret, 0)
+
+class TestCommon(TestCase):
+
+    """Unit tests for the Common class."""
+
+    def setUp(self):
+        """Prepare the testing environment."""
+        config = nbc.open_config('config.yml')
+        self.cmn = nbc.Common(config)
+
+        self.meta_file = os.path.join(IMAGE_DIR, '.meta.db')
+        if not os.path.isfile(self.meta_file):
+            self.make_meta_db()
+
+    def test_taxon_hierarchy(self):
+        """Test the get_taxon_hierarchy() method."""
+        expected = {
+            u'Paphiopedilum': {
+                u'Brachypetalum': [u'wenshanense']
+            },
+            u'Selenipedium': {
+                None: [u'palmifolium']
+            },
+            u'Mexipedium': {
+                None: [u'xerophyticum']
+            },
+            u'Cypripedium': {
+                u'Trigonopedia': [u'fargesii', u'sichuanense'],
+                u'Obtusipetala': [u'flavum'],
+                u'Arietinum': [u'plectrochilum']
+            },
+            u'Phragmipedium': {
+                u'Micropetalum': [u'besseae']
+            }
+        }
+
+        with db.session_scope(self.meta_file) as (session, metadata):
+            hier = self.cmn.get_taxon_hierarchy(session, metadata)
+
+        self.assertEqual(str(hier), str(expected))
+
+class TestDatabaseMethods(TestCase):
 
     """Unit tests for the database module."""
 
     def setUp(self):
         """Prepare the testing environment."""
+        self.meta_file = os.path.join(IMAGE_DIR, '.meta.db')
+        if not os.path.isfile(self.meta_file):
+            self.make_meta_db()
+
         self.expected_taxa = {
             "40dde798989d9ea3b05140bc218d929a": ['Cypripedium','Obtusipetala','flavum'],
             "ae1cb63196cb236ae27accec4e7861cc": ['Cypripedium','Obtusipetala','flavum'],
@@ -47,7 +112,7 @@ class TestDatabaseMethods(unittest.TestCase):
 
     def test_photos_with_taxa(self):
         """Test the photos_with_taxa() method."""
-        with db.session_scope(DB_PATH) as (session, metadata):
+        with db.session_scope(self.meta_file) as (session, metadata):
             q = db.get_photos_with_taxa(session, metadata)
             ret = q.all()
             self.assertEqual(len(ret), len(self.expected_taxa))
@@ -68,7 +133,7 @@ class TestDatabaseMethods(unittest.TestCase):
             'Phragmipedium_Micropetalum_besseae': 3
         }
 
-        with db.session_scope(DB_PATH) as (session, metadata):
+        with db.session_scope(self.meta_file) as (session, metadata):
             q = db.get_taxa_photo_count(session, metadata)
             ret = q.all()
             self.assertEqual(len(ret), len(expected))
@@ -120,7 +185,7 @@ class TestDatabaseMethods(unittest.TestCase):
             'class': 'genus'
         }
 
-        with db.session_scope(DB_PATH) as (session, metadata):
+        with db.session_scope(self.meta_file) as (session, metadata):
             q = db.get_filtered_photos_with_taxon(session, metadata,
                 filter_mexi_species).all()
             self.assertEqual(len(q), 3)
@@ -155,42 +220,6 @@ class TestDatabaseMethods(unittest.TestCase):
             for photo, class_ in q:
                 self.assertIn(class_, ('Cypripedium','Mexipedium',
                     'Paphiopedilum','Selenipedium','Phragmipedium'))
-
-class TestCommon(unittest.TestCase):
-
-    """Unit tests for the Common class."""
-
-    def setUp(self):
-        """Prepare the testing environment."""
-        config = nbc.open_config('config.yml')
-        self.cmn = nbc.Common(config)
-
-    def test_taxon_hierarchy(self):
-        """Test the get_taxon_hierarchy() method."""
-        expected = {
-            u'Paphiopedilum': {
-                u'Brachypetalum': [u'wenshanense']
-            },
-            u'Selenipedium': {
-                None: [u'palmifolium']
-            },
-            u'Mexipedium': {
-                None: [u'xerophyticum']
-            },
-            u'Cypripedium': {
-                u'Trigonopedia': [u'fargesii', u'sichuanense'],
-                u'Obtusipetala': [u'flavum'],
-                u'Arietinum': [u'plectrochilum']
-            },
-            u'Phragmipedium': {
-                u'Micropetalum': [u'besseae']
-            }
-        }
-
-        with db.session_scope(DB_PATH) as (session, metadata):
-            hier = self.cmn.get_taxon_hierarchy(session, metadata)
-
-        self.assertEqual(str(hier), str(expected))
 
 if __name__ == '__main__':
     unittest.main()

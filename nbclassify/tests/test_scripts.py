@@ -51,7 +51,7 @@ class TestTrainer(unittest.TestCase):
         test_result = os.path.join(self.temp_dir, 'test_result.tsv')
 
         # Create an empty temporary directory.
-        delete_temp_dir(self.temp_dir, recursive=True)
+        #delete_temp_dir(self.temp_dir, recursive=True)
         if not os.path.isdir(self.temp_dir):
             os.mkdir(self.temp_dir)
 

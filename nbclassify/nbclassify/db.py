@@ -3,22 +3,23 @@
 
 """Database routines.
 
-Uses SQLAlchmy for object relational mapping.
+Uses SQLAlchmy for object relational mapping. This module is a copy of :mod:`db`
+which implements SQLAlchemy's Automap extension to automate many-to-many
+relationships discovery. Due to an apparent bug in SQLAlchemy this module
+is unstable and should not be used.
 """
 
 from contextlib import contextmanager
 import hashlib
-import logging
 import os
 import sys
 
 import sqlalchemy
 from sqlalchemy import Column, ForeignKey, Integer, Sequence, String, \
-    UniqueConstraint, event
-from sqlalchemy.engine import Engine
+    UniqueConstraint
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.orm import sessionmaker, configure_mappers
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import exists, functions
 
@@ -29,39 +30,6 @@ REQUIRED_RANKS = ['genus','species']
 
 # Show verbose database messages.
 ORM_VERBOSE = False
-
-
-class TableModels(object):
-
-    """Provide table models with relationship attributes."""
-
-    def __init__(self, **kw):
-        Base = automap_base(**kw)
-        Base.prepare()
-
-        self.photos = Base.classes.photos
-        self.ranks = Base.classes.ranks
-        self.taxa = Base.classes.taxa
-        self.photos_taxa = Base.classes.photos_taxa
-        self.tags = Base.classes.tags
-        self.photos_tags = Base.classes.photos_tags
-
-        self.taxa.rank = relationship(self.ranks)
-        self.photos_taxa.photo = relationship(self.photos)
-        self.photos_taxa.taxon = relationship(self.taxa)
-        self.photos.taxa = relationship(self.photos_taxa,
-            cascade="all,delete-orphan")
-        self.photos_tags.photo = relationship(self.photos)
-        self.photos_tags.tag = relationship(self.tags)
-        self.photos.tags = relationship(self.photos_tags,
-            cascade="all,delete-orphan")
-
-
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
 
 @contextmanager
 def session_scope(db_path):
@@ -138,18 +106,6 @@ def make_meta_db(db_path):
         title = Column(String(100))
         description = Column(String(255))
 
-        taxa = relationship('PhotoTaxon', cascade="all,delete-orphan")
-        tags = relationship('PhotoTag', cascade="all,delete-orphan")
-
-        def __repr__(self):
-           return "<{class}(id='{id}', title='{title}', path='{path}')>".\
-                format(**{
-                    'class': self.__class__,
-                    'id': self.id,
-                    'title': self.title,
-                    'path': self.path
-                })
-
     class Rank(Base):
 
         """Taxonomic ranks.
@@ -170,14 +126,6 @@ def make_meta_db(db_path):
 
         id = Column(Integer, Sequence("ranks_id_seq"), primary_key=True)
         name = Column(String(50), index=True, unique=True, nullable=False)
-
-        def __repr__(self):
-           return "<{class}(id='{id}', name='{name}')>".\
-                format(**{
-                    'class': self.__class__,
-                    'id': self.id,
-                    'name': self.name
-                })
 
     class Taxon(Base):
 
@@ -211,17 +159,6 @@ def make_meta_db(db_path):
 
         UniqueConstraint('rank_id', 'name')
 
-        rank = relationship('Rank')
-
-        def __repr__(self):
-           return "<{class}(id={id}, rank='{rank}', name='{name}')>".\
-                format(**{
-                    'class': self.__class__,
-                    'id': self.id,
-                    'rank': self.rank,
-                    'name': self.name
-                })
-
     class PhotoTaxon(Base):
 
         """Establish photos-taxa relationships.
@@ -230,12 +167,10 @@ def make_meta_db(db_path):
 
             CREATE TABLE photos_taxa
             (
-                id INTEGER,
                 photo_id INTEGER NOT NULL,
                 taxon_id INTEGER NOT NULL,
 
-                PRIMARY KEY (id),
-                UNIQUE (photo_id, taxon_id),
+                PRIMARY KEY (photo_id, taxon_id),
                 FOREIGN KEY (photo_id) REFERENCES photos (id) ON DELETE CASCADE,
                 FOREIGN KEY (taxon_id) REFERENCES taxa (id) ON DELETE RESTRICT
             );
@@ -243,25 +178,10 @@ def make_meta_db(db_path):
 
         __tablename__ = 'photos_taxa'
 
-        id = Column(Integer, Sequence("photos_taxa_id_seq"), primary_key=True)
         photo_id = Column(Integer, ForeignKey('photos.id', ondelete="CASCADE"),
-            nullable=False)
+            primary_key=True, nullable=False)
         taxon_id = Column(Integer, ForeignKey('taxa.id', ondelete="RESTRICT"),
-            nullable=False)
-
-        UniqueConstraint('photo_id', 'taxon_id')
-
-        photo = relationship('Photo')
-        taxon = relationship('Taxon')
-
-        def __repr__(self):
-           return "<{class}(id='{1}', photo='{photo}', taxon='{taxon}')>".\
-                format(**{
-                    'class': self.__class__,
-                    'id': self.id,
-                    'photo': self.photo,
-                    'taxon': self.taxon
-                })
+            primary_key=True, nullable=False)
 
     class Tag(Base):
 
@@ -284,14 +204,6 @@ def make_meta_db(db_path):
         id = Column(Integer, Sequence("tags_id_seq"), primary_key=True)
         name = Column(String(50), index=True, unique=True, nullable=False)
 
-        def __repr__(self):
-           return "<{class}(id={id}, name='{name}')>".\
-                format(**{
-                    'class': self.__class__,
-                    'id': self.id,
-                    'name': self.name
-                })
-
     class PhotoTag(Base):
 
         """Establish photos-tags relationships.
@@ -300,12 +212,10 @@ def make_meta_db(db_path):
 
             CREATE TABLE photos_tags
             (
-                id INTEGER,
                 photo_id INTEGER NOT NULL,
                 tag_id INTEGER NOT NULL,
 
-                PRIMARY KEY (id),
-                UNIQUE (photo_id, tag_id),
+                PRIMARY KEY (photo_id, tag_id),
                 FOREIGN KEY (photo_id) REFERENCES photos (id) ON DELETE CASCADE,
                 FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE RESTRICT
             );
@@ -313,37 +223,26 @@ def make_meta_db(db_path):
 
         __tablename__ = 'photos_tags'
 
-        id = Column(Integer, Sequence("photos_tags_id_seq"), primary_key=True)
         photo_id = Column(Integer, ForeignKey('photos.id', ondelete="CASCADE"),
-            nullable=False)
+            primary_key=True, nullable=False)
         tag_id = Column(Integer, ForeignKey('tags.id', ondelete="RESTRICT"),
-            nullable=False)
-
-        UniqueConstraint('photo_id', 'tag_id')
-
-        photo = relationship('Photo')
-        tag = relationship('Tag')
-
-        def __repr__(self):
-           return "<{class}(id='{1}', photo='{photo}', tag='{tag}')>".\
-                format(**{
-                    'class': self.__class__,
-                    'id': self.id,
-                    'photo': self.photo,
-                    'tag': self.tag
-                })
+            primary_key=True, nullable=False)
 
     # Create the database.
     Base.metadata.create_all(engine)
 
-    # Create some default ranks.
-    with session_scope(db_path) as (session, metadata):
-        ranks = ('domain', 'kingdom', 'phylum', 'class', 'order', 'family',
-        'genus', 'subgenus', 'section', 'species', 'subspecies')
+    # Populate the ranks table.
+    ranks = ('domain', 'kingdom', 'phylum', 'class', 'order', 'family',
+    'genus', 'subgenus', 'section', 'species', 'subspecies')
+    Session = sessionmaker(bind=engine)
+    session = Session()
 
-        for name in ranks:
-            rank = Rank(name=name)
-            session.add(rank)
+    for name in ranks:
+        rank = Rank(name=name)
+        session.add(rank)
+
+    session.commit()
+    session.close()
 
 def insert_new_photo(session, metadata, root, path, **kwargs):
     """Set meta data for a photo in the database.
@@ -372,14 +271,15 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
     taxa = dict(kwargs.get('taxa', {}))
     tags = list(kwargs.get('tags', []))
 
-    # Get the table models.
-    models = TableModels(metadata=metadata)
-    Photo = models.photos
-    Rank = models.ranks
-    Taxon = models.taxa
-    PhotoTaxon = models.photos_taxa
-    Tag = models.tags
-    PhotoTag = models.photos_tags
+    # Get the database models.
+    Base = automap_base(metadata=metadata)
+    Base.prepare()
+    configure_mappers()
+
+    Photo = Base.classes.photos
+    Rank = Base.classes.ranks
+    Taxon = Base.classes.taxa
+    Tag = Base.classes.tags
 
     # Get the MD5 hash.
     hasher = hashlib.md5()
@@ -406,70 +306,67 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
         description=description
     )
 
-    with session.no_autoflush:
-        # Save photo's taxa to the database.
-        processed_ranks = []
-        for rank_name, taxon_name in taxa.items():
-            # Skip ranks that evaluate to False.
-            if not rank_name:
-                continue
+    # Save photo's taxa to the database.
+    processed_ranks = []
+    for rank_name, taxon_name in taxa.items():
+        # Skip ranks that evaluate to False.
+        if not rank_name:
+            continue
 
-            # Skip if the taxon is not set.
-            if not taxon_name:
-                continue
+        # Skip if the taxon is not set.
+        if not taxon_name:
+            continue
 
-            # Check if the rank exists in the database. If not, create it.
-            try:
-                rank = session.query(Rank).\
-                    filter(Rank.name == rank_name).one()
-            except NoResultFound:
-                rank = Rank(name=rank_name)
+        # Get a rank instance.
+        try:
+            rank = session.query(Rank).\
+                filter(Rank.name == rank_name).one()
+        except NoResultFound:
+            rank = Rank(name=rank_name)
 
-            # Check if the taxon exists in the database. If not, create it.
-            try:
-                taxon = session.query(Taxon).\
-                    filter(Taxon.rank == rank,
-                           Taxon.name == taxon_name).one()
-            except NoResultFound:
-                taxon = Taxon(name=taxon_name)
-                taxon.rank = rank
+        # Get a taxon instance.
+        try:
+            taxon = session.query(Taxon).\
+                filter(Taxon.ranks == rank,
+                       Taxon.name == taxon_name).one()
+        except NoResultFound:
+            taxon = Taxon(name=taxon_name, ranks=rank)
 
-            # Connect the photo to this taxon.
-            photo_taxon = PhotoTaxon()
-            photo_taxon.taxon = taxon
-            photo.taxa.append(photo_taxon)
+        # Add this taxon to the photo.
+        photo.taxa_collection.append(taxon)
 
-            # Keep track of processed ranks.
-            processed_ranks.append(rank.name)
+        # Keep track of processed ranks.
+        processed_ranks.append(rank.name)
 
-        if REQUIRED_RANKS:
-            assert set(REQUIRED_RANKS).issubset(processed_ranks), \
-                "Every photo must at least have the ranks {0}".\
-                    format(REQUIRED_RANKS)
+    if REQUIRED_RANKS:
+        assert set(REQUIRED_RANKS).issubset(processed_ranks), \
+            "Every photo must at least have the ranks {0}".\
+                format(REQUIRED_RANKS)
 
-        # Set the tags for this photo.
-        for tag_name in tags:
-            if not tag_name:
-                continue
+    # Set the tags for this photo.
+    for tag_name in tags:
+        if not tag_name:
+            continue
 
-            # Check if the tag exists in the database. If not, create it.
-            try:
-                tag = session.query(Tag).\
-                    filter(Tag.name == tag_name).one()
-            except NoResultFound:
-                tag = Tag(name=tag_name)
+        # Get a tag instance.
+        try:
+            tag = session.query(Tag).\
+                filter(Tag.name == tag_name).one()
+        except NoResultFound:
+            tag = Tag(name=tag_name)
 
-            # Connect the photo to this tag.
-            photo_tag = PhotoTag()
-            photo_tag.tag = tag
-            photo.tags.append(photo_tag)
+        # Add this tag to the photo.
+        photo.tags_collection.append(tag)
 
+    # Add photo to session.
     session.add(photo)
 
 def get_photos(session, metadata):
     """Return photo records from the database."""
-    models = TableModels(metadata=metadata)
-    Photo = models.photos
+    Base = automap_base(metadata=metadata)
+    Base.prepare()
+    configure_mappers()
+    Photo = Base.classes.photos
     photos = session.query(Photo)
     return photos
 
@@ -485,23 +382,26 @@ def get_filtered_photos_with_taxon(session, metadata, filter_):
     if not isinstance(filter_, dict):
         ValueError("Expected a dict as filter")
 
-    # Get the table models.
-    models = TableModels(metadata=metadata)
-    Photo = models.photos
-    Rank = models.ranks
-    Taxon = models.taxa
+    Base = automap_base(metadata=metadata)
+    Base.prepare()
+    configure_mappers()
+
+    # Get the table classes.
+    Photo = Base.classes.photos
+    Taxon = Base.classes.taxa
+    Rank = Base.classes.ranks
 
     # Use a subquery because we want photos to be returned even if the don't
     # have a taxa for the given class.
     class_ = filter_.get('class')
     stmt_genus = session.query(Photo.id, Taxon.name.label('genus')).\
-        join(Photo.taxa, Taxon, Rank).\
+        join(Photo.taxa_collection, Taxon.ranks).\
         filter(Rank.name == 'genus').subquery()
     stmt_section = session.query(Photo.id, Taxon.name.label('section')).\
-        join(Photo.taxa, Taxon, Rank).\
+        join(Photo.taxa_collection, Taxon.ranks).\
         filter(Rank.name == 'section').subquery()
     stmt_species = session.query(Photo.id, Taxon.name.label('species')).\
-        join(Photo.taxa, Taxon, Rank).\
+        join(Photo.taxa_collection, Taxon.ranks).\
         filter(Rank.name == 'species').subquery()
 
     # Construct the main query.
@@ -527,22 +427,24 @@ def get_taxa_photo_count(session, metadata):
 
     Taxa are returned as 4-tuples ``(genus, section, species, photo_count)``.
     """
-    # Get the table models.
-    models = TableModels(metadata=metadata)
-    Photo = models.photos
-    Rank = models.ranks
-    Taxon = models.taxa
+    Base = automap_base(metadata=metadata)
+    Base.prepare()
+    configure_mappers()
+
+    Photo = Base.classes.photos
+    Taxon = Base.classes.taxa
+    Rank = Base.classes.ranks
 
     stmt_genus = session.query(Photo.id, Taxon.name.label('genus')).\
-        join(Photo.taxa, Taxon, Rank).\
+        join(Photo.taxa_collection, Taxon.ranks).\
         filter(Rank.name == 'genus').subquery()
 
     stmt_section = session.query(Photo.id, Taxon.name.label('section')).\
-        join(Photo.taxa, Taxon, Rank).\
+        join(Photo.taxa_collection, Taxon.ranks).\
         filter(Rank.name == 'section').subquery()
 
     stmt_species = session.query(Photo.id, Taxon.name.label('species')).\
-        join(Photo.taxa, Taxon, Rank).\
+        join(Photo.taxa_collection, Taxon.ranks).\
         filter(Rank.name == 'species').subquery()
 
     q = session.query('genus', 'section', 'species', functions.count(Photo.id)).\
@@ -559,22 +461,24 @@ def get_photos_with_taxa(session, metadata):
 
     This generator returns 4-tuples ``(photo_id, genus, section, species)``.
     """
-    # Get the table models.
-    models = TableModels(metadata=metadata)
-    Photo = models.photos
-    Rank = models.ranks
-    Taxon = models.taxa
+    Base = automap_base(metadata=metadata)
+    Base.prepare()
+    configure_mappers()
+
+    Photo = Base.classes.photos
+    Taxon = Base.classes.taxa
+    Rank = Base.classes.ranks
 
     stmt_genus = session.query(Photo.id, Taxon.name.label('genus')).\
-        join(Photo.taxa, Taxon, Rank).\
+        join(Photo.taxa_collection, Taxon.ranks).\
         filter(Rank.name == 'genus').subquery()
 
     stmt_section = session.query(Photo.id, Taxon.name.label('section')).\
-        join(Photo.taxa, Taxon, Rank).\
+        join(Photo.taxa_collection, Taxon.ranks).\
         filter(Rank.name == 'section').subquery()
 
     stmt_species = session.query(Photo.id, Taxon.name.label('species')).\
-        join(Photo.taxa, Taxon, Rank).\
+        join(Photo.taxa_collection, Taxon.ranks).\
         filter(Rank.name == 'species').subquery()
 
     q = session.query(Photo, 'genus', 'section', 'species').\

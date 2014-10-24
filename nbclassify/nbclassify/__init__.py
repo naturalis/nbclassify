@@ -24,8 +24,8 @@ from sqlalchemy import orm
 from sqlalchemy.ext.automap import automap_base
 import yaml
 
-import db
-from exceptions import *
+import nbclassify.db as db
+from nbclassify.exceptions import *
 
 def open_config(path):
     """Read a configurations file and return as a nested :class:`Struct` object.
