@@ -14,15 +14,20 @@ from context import nbc_trainer
 CONF_FILE  = "config.yml"
 IMAGE_DIR = "images"
 
-class TestCase(unittest.TestCase):
+#@unittest.skip("Debugging")
+class TestCommon(unittest.TestCase):
 
-    """Super class for test cases."""
+    """Unit tests for the Common class."""
 
-    def make_meta_db(self):
-        """Create a metadata database for the image directory."""
-        self.meta_file = os.path.join(IMAGE_DIR, '.meta.db')
-        if os.path.isfile(self.meta_file):
-            os.remove(self.meta_file)
+    @classmethod
+    def setUpClass(cls):
+        """Remove an existing metadata file and create a new one.
+
+        This is executed before any test is started.
+        """
+        meta_file = os.path.join(IMAGE_DIR, '.meta.db')
+        if os.path.isfile(meta_file):
+            os.remove(meta_file)
 
         sys.argv = [
             'nbc-trainer.py',
@@ -30,18 +35,14 @@ class TestCase(unittest.TestCase):
             'meta',
             IMAGE_DIR
         ]
-        ret = nbc_trainer.main()
-        self.assertEqual(ret, 0)
-
-class TestCommon(TestCase):
-
-    """Unit tests for the Common class."""
+        nbc_trainer.main()
 
     def setUp(self):
         """Prepare the testing environment."""
         config = nbc.open_config('config.yml')
         self.cmn = nbc.Common(config)
 
+        # Create the metadata file if it does not exist.
         self.meta_file = os.path.join(IMAGE_DIR, '.meta.db')
         if not os.path.isfile(self.meta_file):
             self.make_meta_db()
@@ -73,16 +74,30 @@ class TestCommon(TestCase):
 
         self.assertEqual(str(hier), str(expected))
 
-class TestDatabaseMethods(TestCase):
+#@unittest.skip("Debugging")
+class TestDatabaseMethods(unittest.TestCase):
 
     """Unit tests for the database module."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Create a new metadata file if it does not exist.
+
+        This is executed before any test is started.
+        """
+        meta_file = os.path.join(IMAGE_DIR, '.meta.db')
+        if not os.path.isfile(meta_file):
+            sys.argv = [
+                'nbc-trainer.py',
+                CONF_FILE,
+                'meta',
+                IMAGE_DIR
+            ]
+            nbc_trainer.main()
 
     def setUp(self):
         """Prepare the testing environment."""
         self.meta_file = os.path.join(IMAGE_DIR, '.meta.db')
-        if not os.path.isfile(self.meta_file):
-            self.make_meta_db()
-
         self.expected_taxa = {
             "40dde798989d9ea3b05140bc218d929a": ['Cypripedium','Obtusipetala','flavum'],
             "ae1cb63196cb236ae27accec4e7861cc": ['Cypripedium','Obtusipetala','flavum'],
