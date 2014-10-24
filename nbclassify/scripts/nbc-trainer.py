@@ -249,6 +249,7 @@ def main():
         "--test-data",
         "-t",
         metavar="FILE",
+        required=True,
         help="Path to tab separated file containing test data.")
     parser_test_ann.add_argument(
         "imdir",
@@ -1052,9 +1053,10 @@ class MakeAnn(nbc.Common):
     def train(self, train_file, output_file, config=None):
         """Train an artificial neural network.
 
-        Loads training data from a CSV file `train_file`, trains a neural
-        network `output_file` with training settings from the `config`
-        object.
+        Loads training data from a TSV file `train_file`, trains a neural
+        network `output_file` with training settings from the configurations
+        set with :meth:`set_config`. If training paramerters are provided with
+        `config`, those are used instead.
         """
         if not os.path.isfile(train_file):
             raise IOError("Cannot open %s (no such file)" % train_file)
@@ -1065,6 +1067,14 @@ class MakeAnn(nbc.Common):
 
         # Instantiate the ANN trainer.
         trainer = nbc.TrainANN()
+
+        # Set the training parameters.
+        if not config:
+            try:
+                config = self.config.ann
+            except:
+                pass
+
         for option, value in ANN_DEFAULTS.iteritems():
             if config:
                 value = getattr(config, option, value)

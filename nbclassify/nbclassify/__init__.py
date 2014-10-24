@@ -620,12 +620,12 @@ class Phenotyper(object):
 
     def __get_color_bgr_means(self, src, args, bin_mask=None):
         """Executes :meth:`features.color_bgr_means`."""
-        if self.bin_mask == None:
+        if self.bin_mask is None:
             raise ValueError("Binary mask cannot be None")
 
         # Get the contours from the mask.
         contour = ft.get_largest_contour(bin_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if contour == None:
+        if contour is None:
             raise ValueError("No contour found for binary image")
 
         # Create a masked image.
