@@ -260,14 +260,14 @@ class TestDatabaseMethods(unittest.TestCase):
             q = db.get_filtered_photos_with_taxon(session, metadata,
                 filter_trigo).all()
             self.assertEqual(len(q), 6)
-            for photo, class_ in q:
-                self.assertIn(class_, ('fargesii', 'sichuanense'))
+            taxa = set([taxon for photo, taxon in q])
+            self.assertEqual(taxa, set(['fargesii', 'sichuanense']))
 
             q = db.get_filtered_photos_with_taxon(session, metadata,
                 filter_cypr).all()
             self.assertEqual(len(q), 12)
-            for photo, class_ in q:
-                self.assertIn(class_, ('Arietinum','Obtusipetala','Trigonopedia'))
+            taxa = set([taxon for photo, taxon in q])
+            self.assertEqual(taxa, set(['Arietinum','Obtusipetala','Trigonopedia']))
 
             q = db.get_filtered_photos_with_taxon(session, metadata,
                 filter_cypr_none).all()
@@ -276,9 +276,9 @@ class TestDatabaseMethods(unittest.TestCase):
             q = db.get_filtered_photos_with_taxon(session, metadata,
                 filter_genera).all()
             self.assertEqual(len(q), len(self.expected_taxa))
-            for photo, class_ in q:
-                self.assertIn(class_, ('Cypripedium','Mexipedium',
-                    'Paphiopedilum','Selenipedium','Phragmipedium'))
+            taxa = set([taxon for photo, taxon in q])
+            self.assertEqual(taxa, set(['Cypripedium','Mexipedium',
+                'Paphiopedilum','Selenipedium','Phragmipedium']))
 
 if __name__ == '__main__':
     unittest.main()
