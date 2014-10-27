@@ -113,8 +113,8 @@ to locate the Flickr harvested images and their corresponding classifications.
 
 Example usage::
 
-    $ nbc-harvest-images.py -v 123456789@A12 harvest -o images/orchids/ \
-    > --page 1 --per-page 500
+    $ nbc-harvest-images.py -v 123456789@A12 harvest \
+    > --page 1 --per-page 500 images/orchids/
 
 
 .. _nbc-trainer-py:
