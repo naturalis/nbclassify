@@ -13,6 +13,7 @@ from context import nbc_trainer
 
 CONF_FILE  = "config.yml"
 IMAGE_DIR = "images"
+META_FILE = ".meta.db"
 
 #@unittest.skip("Debugging")
 class TestCommon(unittest.TestCase):
@@ -25,7 +26,7 @@ class TestCommon(unittest.TestCase):
 
         This is executed before any test is started.
         """
-        meta_file = os.path.join(IMAGE_DIR, '.meta.db')
+        meta_file = os.path.join(IMAGE_DIR, META_FILE)
         if os.path.isfile(meta_file):
             os.remove(meta_file)
 
@@ -43,7 +44,7 @@ class TestCommon(unittest.TestCase):
         self.cmn = nbc.Common(config)
 
         # Create the metadata file if it does not exist.
-        self.meta_file = os.path.join(IMAGE_DIR, '.meta.db')
+        self.meta_file = os.path.join(IMAGE_DIR, META_FILE)
         if not os.path.isfile(self.meta_file):
             self.make_meta_db()
 
@@ -51,7 +52,7 @@ class TestCommon(unittest.TestCase):
         """Test the get_taxon_hierarchy() method."""
         expected = {
             u'Paphiopedilum': {
-                u'Brachypetalum': [u'wenshanense']
+                u'Brachypetalum': [u'godefroyae', u'wenshanense']
             },
             u'Selenipedium': {
                 None: [u'palmifolium']
@@ -85,7 +86,7 @@ class TestDatabaseMethods(unittest.TestCase):
 
         This is executed before any test is started.
         """
-        meta_file = os.path.join(IMAGE_DIR, '.meta.db')
+        meta_file = os.path.join(IMAGE_DIR, META_FILE)
         if not os.path.isfile(meta_file):
             sys.argv = [
                 'nbc-trainer.py',
@@ -97,11 +98,12 @@ class TestDatabaseMethods(unittest.TestCase):
 
     def setUp(self):
         """Prepare the testing environment."""
-        self.meta_file = os.path.join(IMAGE_DIR, '.meta.db')
+        self.meta_file = os.path.join(IMAGE_DIR, META_FILE)
         self.expected_taxa = {
             "40dde798989d9ea3b05140bc218d929a": ['Cypripedium','Obtusipetala','flavum'],
             "ae1cb63196cb236ae27accec4e7861cc": ['Cypripedium','Obtusipetala','flavum'],
-            "2da3ae62eb4411af53ac019c01b90039": ['Cypripedium','Obtusipetala','flavum'],
+            "370652c5f89eb65989c73b04aa9d1130": ['Cypripedium','Obtusipetala','flavum'],
+            "9217e5000f2486fd32977b37b394153a": ['Cypripedium','Obtusipetala','flavum'],
             "d1b09d26b512b9c9d979053fdfc07a70": ['Cypripedium','Arietinum','plectrochilum'],
             "48a673b9080ba4bdb5c0581d3367ce8e": ['Cypripedium','Arietinum','plectrochilum'],
             "c900e0e3313b3770e04fea7dea7c56b0": ['Cypripedium','Arietinum','plectrochilum'],
@@ -117,12 +119,17 @@ class TestDatabaseMethods(unittest.TestCase):
             "a7f66ae88910622b8484df23e4830c6d": ['Paphiopedilum','Brachypetalum','wenshanense'],
             "fa86742d507f914bd1dad82256a84c09": ['Paphiopedilum','Brachypetalum','wenshanense'],
             "c0a0b423f58491a386477a934f9889af": ['Paphiopedilum','Brachypetalum','wenshanense'],
+            "af17cc52e35199b1bc3d98375e8add2b": ['Paphiopedilum','Brachypetalum','godefroyae'],
+            "82562f872e7fc568785b8d5a13f38dff": ['Paphiopedilum','Brachypetalum','godefroyae'],
+            "3023792b35e49861769939812eedd4e0": ['Paphiopedilum','Brachypetalum','godefroyae'],
+            "11c006917100bcc6a64f0f396ade4abb": ['Paphiopedilum','Brachypetalum','godefroyae'],
             "fb11aa91dd5f11633ac608c51d86edc0": ['Selenipedium',None,'palmifolium'],
             "7f8f42421563be7dc9c753ab7b75453d": ['Selenipedium',None,'palmifolium'],
             "010b61e8a300f92b93536280bcae7657": ['Selenipedium',None,'palmifolium'],
             "b15523eb489824d2ac4be1838cd193bd": ['Phragmipedium','Micropetalum','besseae'],
             "ee014cb617f6a1fc7fd2a7cef261a75d": ['Phragmipedium','Micropetalum','besseae'],
-            "59c8640b2494161db4062020b3525224": ['Phragmipedium','Micropetalum','besseae']
+            "59c8640b2494161db4062020b3525224": ['Phragmipedium','Micropetalum','besseae'],
+            "2feb25b6467e06080b2df81507b10d0e": ['Phragmipedium','Micropetalum','besseae']
         }
 
     def test_get_photos_with_taxa(self):
@@ -138,14 +145,15 @@ class TestDatabaseMethods(unittest.TestCase):
     def test_get_taxa_photo_count(self):
         """Test the get_taxa_photo_count() method."""
         expected = {
-            'Cypripedium_Obtusipetala_flavum': 3,
+            'Cypripedium_Obtusipetala_flavum': 4,
             'Cypripedium_Arietinum_plectrochilum': 3,
             'Cypripedium_Trigonopedia_sichuanense': 3,
             'Cypripedium_Trigonopedia_fargesii': 3,
             'Mexipedium_None_xerophyticum': 3,
             'Paphiopedilum_Brachypetalum_wenshanense': 3,
+            'Paphiopedilum_Brachypetalum_godefroyae': 4,
             'Selenipedium_None_palmifolium': 3,
-            'Phragmipedium_Micropetalum_besseae': 3
+            'Phragmipedium_Micropetalum_besseae': 4
         }
 
         with db.session_scope(self.meta_file) as (session, metadata):
@@ -265,7 +273,7 @@ class TestDatabaseMethods(unittest.TestCase):
 
             q = db.get_filtered_photos_with_taxon(session, metadata,
                 filter_cypr).all()
-            self.assertEqual(len(q), 12)
+            self.assertEqual(len(q), 13)
             taxa = set([taxon for photo, taxon in q])
             self.assertEqual(taxa, set(['Arietinum','Obtusipetala','Trigonopedia']))
 

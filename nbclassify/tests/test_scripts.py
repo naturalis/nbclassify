@@ -10,8 +10,8 @@ import unittest
 from context import nbc
 from context import nbc_trainer
 
-# Configurations file.
 CONF_FILE  = "config.yml"
+META_FILE = ".meta.db"
 
 # Temporary directory.
 TEMP_DIR = os.path.join(tempfile.gettempdir(), 'nbclassify-{0}'.format(os.getuid()))
@@ -52,7 +52,7 @@ class TestTrainer(unittest.TestCase):
         if not os.path.isdir(TEMP_DIR):
             os.mkdir(TEMP_DIR)
 
-        meta_file = os.path.join('images', '.meta.db')
+        meta_file = os.path.join('images', META_FILE)
         if os.path.isfile(meta_file):
             os.remove(meta_file)
 
@@ -181,7 +181,7 @@ class TestTrainer(unittest.TestCase):
     def test_trainer_ca(self):
         """Test the `validate` subcommand.
 
-        Should fail because of not enough members per class.
+        Should fail because not every class has enough photos.
         """
         sys.argv += [
             'validate',
@@ -200,13 +200,16 @@ class TestTrainer(unittest.TestCase):
     def test_trainer_cb(self):
         """Test the `validate` subcommand.
 
-        Should fail because of no data. Note: different scikit-learn versions
-        raise different exception types.
+        Should fail because there are no classes with at least 5 photos.
+
+        .. note::
+
+           Different scikit-learn versions raise different exception types.
         """
         sys.argv += [
             'validate',
             '--cache-dir', TEMP_DIR,
-            '-k4',
+            '-k5',
             '--autoskip',
             'images/'
         ]
@@ -219,7 +222,27 @@ class TestTrainer(unittest.TestCase):
         )
 
     def test_trainer_cc(self):
-        """Test the `validate` subcommand."""
+        """Test the `validate` subcommand.
+
+        Should only process photos from classes with at least k=4 photos.
+        """
+        sys.argv += [
+            'validate',
+            '--cache-dir', TEMP_DIR,
+            '-k4',
+            '--autoskip',
+            'images/'
+        ]
+
+        sys.stderr.write("\nRunning: {0}\n".format(' '.join(sys.argv)))
+        ret = nbc_trainer.main()
+        self.assertEqual(ret, 0)
+
+    def test_trainer_cd(self):
+        """Test the `validate` subcommand.
+
+        Should be able to process all photos.
+        """
         sys.argv += [
             'validate',
             '--cache-dir', TEMP_DIR,
