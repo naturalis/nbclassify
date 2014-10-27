@@ -20,13 +20,14 @@ import mimetypes
 import os
 import re
 import sys
-import sqlite3 as sqlite
 import time
 import urllib
 import urllib2
 import xml.etree.ElementTree
 
 import flickrapi
+
+import nbclassify.db as db
 
 # Workaround for flickrapi issue #24
 # https://bitbucket.org/sybren/flickrapi/issue/24/
@@ -134,51 +135,77 @@ def main():
     args.imdir = os.path.realpath(args.imdir)
 
     if args.task == 'harvest':
-        if not (0 < args.per_page <= 500):
-            sys.stderr.write("Incorrect value for option --per-page\n")
-            return
+        harvest(meta_path, args)
+    elif args.task == 'cleanup':
+        cleanup(meta_path, args)
 
-        # Initialize Flickr downloader.
-        flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
+def harvest(meta_path, args):
+    """Run the image harvester."""
+    if not (0 < args.per_page <= 500):
+        sys.stderr.write("Incorrect value for option --per-page\n")
+        return
 
-        # Flickr search options.
-        search_options = {}
-        if args.tag_mode is not None: search_options['tag_mode'] = args.tag_mode
-        if args.tags is not None:
-            # We have to do this because the argparse module parses strings that
-            # start with a hyphen (-) as a command line option.
-            args.tags = args.tags.replace('_', '-')
-            search_options['tags'] = args.tags
-        if args.page is not None: search_options['page'] = args.page
-        if args.per_page is not None: search_options['per_page'] = args.per_page
+    # Initialize Flickr downloader.
+    flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
 
+    # Flickr search options.
+    search_options = {}
+    if args.tag_mode is not None: search_options['tag_mode'] = args.tag_mode
+    if args.tags is not None:
+        # We have to do this because the argparse module parses strings that
+        # start with a hyphen (-) as a command line option.
+        search_options['tags'] = args.tags.replace('_', '-')
+    if args.page is not None: search_options['page'] = args.page
+    if args.per_page is not None: search_options['per_page'] = args.per_page
+
+    # Create a new database if required.
+    db_dir = os.path.dirname(meta_path)
+    if not os.path.exists(db_dir):
+        os.makedirs(db_dir)
+    if not os.path.isfile(meta_path):
+        db.make_meta_db(meta_path)
+
+    with db.session_scope(meta_path) as (session, metadata):
         # Download and organize photos.
-        harvester = ImageHarvester(flickr, meta_path)
+        harvester = ImageHarvester(flickr, session, metadata)
         n = harvester.archive_taxon_photos(args.imdir, **search_options)
         if n > 0:
             sys.stderr.write("Finished processing %d photos\n" % n)
         else:
             sys.stderr.write("No photos were found matching your search criteria\n")
 
-    elif args.task == 'cleanup':
-        flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
-        harvester = ImageHarvester(flickr, meta_path)
-        sys.stderr.write("Now checking for unknown Flickr photos in `%s` " % args.imdir)
-        n = harvester.remove_unknown_photos(args.imdir)
-        sys.stderr.write("A total of %d photos were deleted\n" % n)
+def cleanup(meta_path, args):
+    """Clean up image directory."""
+    flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
+    harvester = ImageHarvester(flickr, meta_path)
+    sys.stderr.write("Now checking for unknown Flickr photos in `%s` " % args.imdir)
+    n = harvester.remove_unknown_photos(args.imdir)
+    sys.stderr.write("A total of %d photos were deleted\n" % n)
+
 
 class ImageHarvester(object):
 
     """Harvest images from a Flickr account."""
 
-    def __init__(self, flickr, db_file):
-        self.conn = None
-        self.cursor = None
+    def __init__(self, flickr, session, metadata):
+        """Initialize the image harvester.
+
+        Expects a FlickrDownloader instance `flickr`, and a connection to an
+        existing metadata database via an SQLAlchemy Session instance
+        `sesssion`, and an SQLAlchemy MetaData instance `metadata` which
+        describes the database tables.
+        """
         self.re_filename_replace = re.compile(r'[\s]+')
         self.re_tags_ignore = re.compile(r'vision:')
         self.re_photo_id = re.compile(r'^[0-9]+$')
+        self.re_taxon_tag = re.compile(r'^([a-z]+):([A-Za-z\-]+)$')
         self.set_flickr_downloader(flickr)
-        self.db_connect(db_file)
+        self.session = session
+        self.metadata = metadata
+
+        # Only collect photo taxon information from tags for the following
+        # taxonomic ranks.
+        self.ranks = ('genus','section','species')
 
     def set_flickr_downloader(self, flickr):
         """Set the Flickr downloader."""
@@ -187,157 +214,22 @@ class ImageHarvester(object):
         else:
             raise TypeError("Expected an instance of FlickrDownloader")
 
-    def db_connect(self, db_file):
-        """Connect to an SQLite database.
-
-        The database is loaded from database file `db_file`. If `db_file`
-        points to a non-existent file, the database is automatically created.
-        """
-        make_new = False
-        if not os.path.isfile(db_file):
-            make_new = True
-
-        # Check if the folder exists. If not, create it.
-        db_dir = os.path.dirname(db_file)
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
-
-        self.conn = sqlite.connect(db_file)
-        self.cursor = self.conn.cursor()
-        self.__enable_foreign_key_support()
-
-        if make_new:
-            self.create_new_db(db_file)
-
-    def __enable_foreign_key_support(self):
-        """Enable foreign key support for SQLite.
-
-        Support for SQL foreign key constraints were introduced in SQLite
-        version 3.6.19, but is disabled by default.
-        """
-        if self.conn is None or self.cursor is None:
-            raise RuntimeError("Not connected to a database")
-
-        self.cursor.execute("PRAGMA foreign_keys = ON;")
-        self.conn.commit()
-
-        # We have to separately execute this query to check if foreign keys
-        # are enabled.
-        self.cursor.execute("PRAGMA foreign_keys;")
-        foreign_keys = self.cursor.fetchone()
-        if foreign_keys is None or foreign_keys[0] != 1:
-            raise OSError("SQL foreign key support for SQLite could not be enabled. SQLite 3.6.19 or later is required.")
-
-    def create_new_db(self, db_file):
-        """Create a new database."""
-        if self.conn is None or self.cursor is None:
-            raise RuntimeError("Not connected to a database")
-
-        logging.info("Creating new database at %s ..." % db_file)
-
-        # Create the tables.
-        self.cursor.executescript("""
-        CREATE TABLE photos
-        (
-            id INTEGER,
-            md5sum VARCHAR NOT NULL,
-            path VARCHAR,
-            title VARCHAR,
-            description VARCHAR,
-
-            PRIMARY KEY (id),
-            UNIQUE (md5sum),
-            UNIQUE (path)
-        );
-
-        CREATE TABLE ranks
-        (
-            id INTEGER,
-            name VARCHAR NOT NULL,
-
-            PRIMARY KEY (id),
-            UNIQUE (name)
-        );
-
-        INSERT INTO ranks (name) VALUES ('domain');
-        INSERT INTO ranks (name) VALUES ('kingdom');
-        INSERT INTO ranks (name) VALUES ('phylum');
-        INSERT INTO ranks (name) VALUES ('class');
-        INSERT INTO ranks (name) VALUES ('order');
-        INSERT INTO ranks (name) VALUES ('family');
-        INSERT INTO ranks (name) VALUES ('genus');
-        INSERT INTO ranks (name) VALUES ('subgenus');
-        INSERT INTO ranks (name) VALUES ('section');
-        INSERT INTO ranks (name) VALUES ('species');
-        INSERT INTO ranks (name) VALUES ('subspecies');
-
-        CREATE TABLE taxa
-        (
-            id INTEGER,
-            rank_id INTEGER NOT NULL,
-            name VARCHAR NOT NULL,
-            description VARCHAR,
-
-            PRIMARY KEY (id),
-            UNIQUE (rank_id, name),
-            FOREIGN KEY (rank_id) REFERENCES ranks (id) ON DELETE RESTRICT
-        );
-
-        CREATE TABLE photos_taxa
-        (
-            id INTEGER,
-            photo_id INTEGER NOT NULL,
-            taxon_id INTEGER NOT NULL,
-
-            PRIMARY KEY (id),
-            UNIQUE (photo_id, taxon_id),
-            FOREIGN KEY (photo_id) REFERENCES photos (id) ON DELETE CASCADE,
-            FOREIGN KEY (taxon_id) REFERENCES taxa (id) ON DELETE RESTRICT
-        );
-
-        CREATE TABLE tags
-        (
-            id INTEGER,
-            name VARCHAR NOT NULL,
-
-            PRIMARY KEY (id),
-            UNIQUE (name)
-        );
-
-        CREATE TABLE photos_tags
-        (
-            id INTEGER,
-            photo_id INTEGER NOT NULL,
-            tag_id INTEGER NOT NULL,
-
-            PRIMARY KEY (id),
-            UNIQUE (photo_id, tag_id),
-            FOREIGN KEY (photo_id) REFERENCES photos (id) ON DELETE CASCADE,
-            FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE RESTRICT
-        );
-        """)
-
-        # Commit the transaction.
-        self.conn.commit()
-
-    def db_insert_photo(self, photo_info, path, target='.'):
+    def db_insert_photo(self, photo_info, path, target):
         """Set meta data for a photo in the database.
 
-        Sets the meta data `photo_info` for a photo with file path `path`
-        in the database, where `path` should be the path constructed from
-        meta data. If `path` is not relative from the current directory,
-        `target` should be set to the containing directory, which is
-        prepended to `path` to get the photo's real path. By default
-        `target` is set to the current directory.
+        Sets the meta data `photo_info` for a photo with file path `path` in the
+        database, where `path` should be the path constructed from meta data. If
+        `path` is not relative from the current directory, `target` should be
+        set to the containing directory, which is prepended to `path` to get the
+        photo's real path. By default `target` is set to the current directory.
 
-        So if the photo's path is
-        ``/path/to/Genus/Subgenus/Section/species/123.jpg``, then `path`
-        should be ``Genus/Subgenus/Section/species/123.jpg`` and `target` is
+        So if the photo's path is ``/path/to/Genus/Section/species/123.jpg``,
+        then `path` should be ``Genus/Section/species/123.jpg`` and `target` is
         ``/path/to/``. Only `path` is stored in the database.
 
-        This function checks whether an existing entry in the database
-        matches the file's MD5 hash. If they don't match, the file entry is
-        deleted and a new one is created.
+        This function checks whether an existing entry in the database matches
+        the file's MD5 hash. If they don't match, the file entry is deleted and
+        a new one is created.
         """
         real_path = os.path.join(target, path)
         if not os.path.isfile(real_path):
@@ -348,134 +240,47 @@ class ImageHarvester(object):
         # Photo ID must be an integer.
         photo_id = int(photo_info.get('id'))
 
-        # Get the MD5 hash.
-        hasher = hashlib.md5()
-        with open(real_path, 'rb') as fh:
-            buf = fh.read()
-            hasher.update(buf)
-
-        # Check if the photo exists in the database.
-        self.cursor.execute("SELECT md5sum FROM photos WHERE id=?;", [photo_id])
-        md5sum = self.cursor.fetchone()
-
-        # If the photo exists, but the MD5 sums mismatch, delete the record
-        # from the database. Otherwise skip this photo.
-        if md5sum:
-            if md5sum[0] != hasher.hexdigest():
-                # Remove the photo record if the MD5 sums don't match.
-                logging.warning("MD5 sum mismatch for photo %d; photo record will be updated..." % photo_id)
-                self.cursor.execute("DELETE FROM photos WHERE id=?;", [photo_id])
-            else:
-                return
-
-        # Get dict of all ranks {name: id, ...}.
-        self.cursor.execute("SELECT name, id FROM ranks;")
-        ranks = self.cursor.fetchall()
-        ranks = dict(ranks)
-
-        # Get meta data.
+        # Get photo metadata.
         title = photo_info.find('title')
         title = None if title is None else title.text
         description = photo_info.find('description')
         description = None if description is None else description.text
+        tags = self.flickr_info_get_tags(photo_info)
+        taxa = self.get_taxa_from_tags(tags, self.ranks)
 
         # Insert the photo into the database.
-        try:
-            self.conn.execute("INSERT INTO photos VALUES (?,?,?,?,?);",
-                [photo_id, hasher.hexdigest(), path, title, description])
-        except sqlite.IntegrityError as e:
-            logging.error("Failed to save meta data for photo %s `%s`. Error returned was: %s" % (photo_id, title, e))
-            self.conn.rollback()
-            return
+        db.insert_new_photo(self.session, self.metadata,
+            target,
+            path,
+            update=True,
+            id=photo_id,
+            title=title,
+            description=description,
+            tags=tags,
+            taxa=taxa
+        )
 
-        # Process photo's taxon tags.
-        tags = self.flickr_info_get_tags(photo_info, dict)
-        for key, val in tags.items():
-            # Check if key is a known rank. If not, skip tag.
-            rank_id = ranks.get(key)
-            if rank_id is None:
-                continue
-
-            # Insert the taxon if it doesn't exist.
-            taxon_id = self.db_insert_taxon(rank_id, val)
-
-            # Connect the photo to this taxon.
-            self.conn.execute("INSERT INTO photos_taxa (photo_id, taxon_id) VALUES (?,?);",
-                [photo_id, taxon_id])
-
-        # Set the tags for this photo.
-        tags = self.flickr_info_get_tags(photo_info, list)
-        self.db_set_photo_tags(photo_id, tags)
-
-    def db_insert_taxon(self, rank_id, taxon_name):
-        """Insert a taxon in the database.
-
-        Returns the taxon ID for the rank/taxon combination.
-        """
-        self.cursor.execute("INSERT OR IGNORE INTO taxa (rank_id, name) VALUES (?,?);",
-            [rank_id, taxon_name])
-
-        self.cursor.execute("SELECT id FROM taxa WHERE rank_id=? AND name=?;",
-            [rank_id, taxon_name])
-        taxon_id = self.cursor.fetchone()
-        return int(taxon_id[0])
-
-    def db_set_photo_tags(self, photo_id, tags):
-        """Sets the tags for a photo in the database.
-
-        This method assumes that the tags from `tags` already exist in the
-        database. The photo with ID `photo_id` will be linked to the tags.
-        """
-        self.cursor.execute("DELETE FROM photos_tags WHERE photo_id=?;",
-            [photo_id])
-        self.cursor.executemany("INSERT INTO photos_tags (photo_id, tag_id) SELECT ?,id FROM tags WHERE name=?;",
-            [(photo_id, t) for t in tags])
-
-    def db_set_tags(self):
-        """Sets all Flickr user tags in the database.
-
-        Run this method before calling :meth:`db_set_photo_tags`. Existing
-        tags are kept, missing tags are added.
-        """
-        who = self.flickr.execute('tags.getListUserRaw')
-        if who is False:
-            raise RuntimeError("Failed to obtain user tags list from Flickr")
-
-        # Construct list of raw tags and filter out unwanted tags.
-        tags = [t.find('raw').text for t in who.find('tags')]
-        tags = [t for t in tags if not self.re_tags_ignore.match(t)]
-
-        self.cursor.executemany('INSERT OR IGNORE INTO tags (name) VALUES (?);',
-            [(t,) for t in tags])
-        self.conn.commit()
-
-    def archive_taxon_photos(self, target, **kwargs):
-        """Download taxon photos to a taxonomic directory hierarchy.
+    def archive_taxon_photos(self, target, **filters):
+        """Download photos with taxon tags to a taxonomic directory hierarchy.
 
         Taxon photos are photos with tags with taxonomic information of the
-        format ``rank:name``, where `rank` is either ``genus``,
-        ``subgenus``, ``section``, or ``species``.
+        format ``rank:name``, where `rank` is either "genus", "section", or
+        "species".
 
-        Downloads photos matching criteria set in `kwargs`. Downloaded
-        photos are stored in the following taxonomic directory structure:
-        ``Genus/Subgenus/Section/species`` in the target directory
-        `target`. Photo meta data is automatically stored in a database.
+        Downloads photos matching Flickr API search criteria set as remaining
+        keyword arguments. Downloaded photos are stored in the following
+        taxonomic directory structure: ``Genus/Section/species`` in the target
+        directory `target`. Photo metadata is automatically stored in a
+        database.
 
-        Return the number of photos processed.
+        Returns the number of photos processed.
         """
         if not os.path.isdir(target):
             raise IOError("Cannot open %s (no such directory)" % target)
-        if self.conn is None:
-            raise RuntimeError("Not connected to a database")
-        if self.cursor is None:
-            raise RuntimeError("No database cursor set")
 
-        photos = self.flickr.execute('photos.search', **kwargs)
+        photos = self.flickr.execute('photos.search', **filters)
         if photos is False:
             raise RuntimeError("Failed to obtain photo list from Flickr")
-
-        # Make sure that all tags are set in the database.
-        self.db_set_tags()
 
         n_photos = len(photos)
         if n_photos > 0:
@@ -489,21 +294,24 @@ class ImageHarvester(object):
             if info is False:
                 raise RuntimeError("Failed to obtain photo info from Flickr")
 
-            title = '' if info.find('title') is None else info.find('title').text
-            tags = self.flickr_info_get_tags(info, dict)
+            # Get some photo metadata.
+            title = info.find('title')
+            title = None if title is None else title.text
+            tags = self.flickr_info_get_tags(info)
+            taxa = self.get_taxa_from_tags(tags, self.ranks)
             ext = info.get('originalformat')
 
-            # Skip if genus or species is not set.
-            if tags.get('genus') is None or tags.get('species') is None:
-                logging.warning("Skipping photo %s `%s` because genus or species is not set" % (photo_id, title))
+            # Skip if genus or species tag is not set.
+            if not (taxa.get('genus') and taxa.get('species')):
+                logging.warning("Skipping photo {0} `{1}` because the genus or " \
+                    "species tag is not set".format(photo_id, title))
                 continue
 
             # Construct the save path for the photo.
             photo_dir = os.path.join(
-                tags.get('genus', 'genus_null'),
-                tags.get('subgenus', 'subgenus_null'),
-                tags.get('section', 'section_null'),
-                tags.get('species', 'species_null')
+                taxa.get('genus', 'None'),
+                taxa.get('section', 'None'),
+                taxa.get('species', 'None')
             )
 
             filename = "%s.%s" % (photo_id, ext)
@@ -515,61 +323,62 @@ class ImageHarvester(object):
 
             # Check if the folder exists. If not, create it.
             if not os.path.exists(real_photo_dir):
-                logging.info("Creating directory %s" % real_photo_dir)
+                logging.info("Creating directory %s", real_photo_dir)
                 os.makedirs(real_photo_dir)
 
             # Download the photo.
             if not os.path.isfile(real_path):
-                logging.info("Downloading photo %s `%s` to %s ..." % (photo_id, title, real_path))
+                logging.info("Downloading photo %s `%s` to %s ...",
+                    photo_id, title, real_path)
                 self.flickr.download_photo(photo_id, real_path)
             else:
-                logging.info("Photo %s `%s` already exists. Skipping download." % (photo_id, title))
+                logging.info("Photo %s `%s` already exists. Skipping download.",
+                    photo_id, title)
 
             # Insert the photo into the database.
             self.db_insert_photo(info, photo_path, target)
 
-        # Commit the transaction.
-        self.conn.commit()
-
         return n
 
-    def flickr_info_get_tags(self, info, format=list):
-        """Returns the tags from a photo info object.
-
-        If `format` is ``list``, the raw tag values are returned in a list.
-        If `format` is ``dict``, the tags are returned as a dictionary. Tags
-        of the format ``key:value`` are stored as a key:value pair in
-        the dictionary. Otherwise the key will be the raw tag value, and the
-        corresponding value will be None.
-        """
+    def flickr_info_get_tags(self, info):
+        """Return a list of the tags from a photo info object."""
         if not xml.etree.ElementTree.iselement(info):
             raise TypeError("Argument `info` is not an xml.etree.ElementTree element")
-        if format is list:
-            out = []
-        elif format is dict:
-            out = {}
-        else:
-            raise ValueError("Unkown format '%s'" % format)
 
-        seen_keys = []
+        out = []
         tags = info.find('tags')
         for tag in tags:
             raw = tag.get('raw').strip()
-            if format is list:
-                out.append(raw)
-            else:
-                e = raw.split(':')
-                if len(e) == 2:
-                    k,v = e
-                    if k not in seen_keys:
-                        seen_keys.append(k)
-                    else:
-                        photo_id = info.get('id')
-                        logging.warning("Photo %s has multiple tags with key `%s`" % (photo_id, k))
-                    out[k] = v
-                else:
-                    out[raw] = None
+            out.append(raw)
         return out
+
+    def get_taxa_from_tags(self, tags, ranks):
+        """Return a taxa dictionary from a list of tags.
+
+        Searches for tags of the format ``key:value``. If the `key` exists in
+        the list of taxonomic ranks `ranks`, then this key-value pair will be
+        present in the returned taxa dictionary.
+        """
+        if not tags:
+            raise ValueError("Argument `tags` must be a list of photo tags")
+        if not ranks:
+            raise ValueError("Argument `ranks` must be a list of taxonomic ranks")
+
+        taxa = {}
+        seen = []
+        for tag in tags:
+            if self.re_taxon_tag.match(tag):
+                rank, taxon = self.re_taxon_tag.search(tag).group(1,2)
+                if rank not in ranks:
+                    continue
+
+                if rank not in seen:
+                    seen.append(rank)
+                else:
+                    logging.warning("Found multiple taxon tags with rank `%s`",
+                        ranks)
+                taxa[rank] = taxon
+        return taxa
 
     def remove_unknown_photos(self, path):
         """Remove any photos that do not exist on the Flickr account.

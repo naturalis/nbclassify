@@ -241,12 +241,14 @@ def make_meta_db(db_path):
     session.commit()
     session.close()
 
-def insert_new_photo(session, metadata, root, path, **kwargs):
+def insert_new_photo(session, metadata, root, path, update=False, **kwargs):
     """Set meta data for a photo in the database.
 
     Sets meta data for a photo with `path` that is relative from the top image
     directory `root`. So ``os.path.join(root, path)`` should point to and actual
-    image file. Only `path` is stored in the database.
+    image file. Only `path` is stored in the database. If `update` is set to
+    True, an existing record for this photo is updated, otherwise a ValueError
+    is raised.
 
     This function checks whether an existing photo entry in the database matches
     the file's MD5 hash. If one is found, the photo entry is deleted and a new
@@ -256,17 +258,36 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
     be passed to provide additional meta data. Here `title` and `description`
     provide a title and a description for the photo. Taxonomic classifications
     are provided as a dict `taxa` of the format ``{rank: taxon, ...}``. Photo
-    tags can be provided as a list `tags`.
+    tags can be provided as a list `tags`. If an argument `id` is provided,
+    this is used as the unique identifier for the photo, which must be an
+    integer.
     """
     real_path = os.path.join(root, path)
     if not os.path.isfile(real_path):
         raise IOError("Cannot open %s (no such file)" % real_path)
 
     # Get meta data from the arguments.
-    title = kwargs.get('title')
-    description = kwargs.get('description')
-    taxa = dict(kwargs.get('taxa', {}))
-    tags = list(kwargs.get('tags', []))
+    photo_id = None
+    title = None
+    description = None
+    taxa = {}
+    tags = []
+    for key, val in kwargs.items():
+        if val is None:
+            continue
+
+        if key == 'id':
+            photo_id = int(val)
+        elif key == 'title':
+            title = val
+        elif key == 'description':
+            description = val
+        elif key == 'taxa':
+            taxa = dict(val)
+        elif key == 'tags':
+            tags = list(val)
+        else:
+            ValueError("Unknown keyword argument `%s`" % key)
 
     # Get the database models.
     Base = automap_base(metadata=metadata)
@@ -284,16 +305,34 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
         buf = fh.read()
         hasher.update(buf)
 
-    # Check if the photo exists in the database. Delete the photo entry if it
-    # exists.
+    # Check if a photo with the same MD5 sum exists in the database.
     try:
         photo = session.query(Photo).\
             filter(Photo.md5sum == hasher.hexdigest()).one()
-        raise ValueError("Found existing photo {0} with matching MD5 sum {1}, "
-            "please check for duplicates".\
-            format(photo.path, hasher.hexdigest()))
     except NoResultFound:
-        pass
+        photo = None
+
+    if photo:
+        if not update:
+            raise ValueError("Found existing photo {0} with matching MD5 sum {1}".\
+                format(photo.path, hasher.hexdigest()))
+        else:
+            session.delete(photo)
+
+    # Check if a photo with the same ID exists in the database.
+    if photo_id:
+        try:
+            photo = session.query(Photo).\
+                filter(Photo.id == photo_id).one()
+        except NoResultFound:
+            photo = None
+
+        if photo:
+            if not update:
+                raise ValueError("Found existing photo {0} with matching ID {1}".\
+                    format(photo.path, photo_id))
+            else:
+                session.delete(photo)
 
     # Insert the photo into the database.
     photo = Photo(
@@ -302,6 +341,10 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
         title=title,
         description=description
     )
+
+    # Overwrite the ID if the photo ID was provided.
+    if photo_id:
+        photo.id = photo_id
 
     # Save photo's taxa to the database.
     processed_ranks = []
@@ -335,6 +378,7 @@ def insert_new_photo(session, metadata, root, path, **kwargs):
         # Keep track of processed ranks.
         processed_ranks.append(rank.name)
 
+    # Make sure that the required ranks are set for each photo.
     if REQUIRED_RANKS:
         assert set(REQUIRED_RANKS).issubset(processed_ranks), \
             "Every photo must at least have the ranks {0}".\
