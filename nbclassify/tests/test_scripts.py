@@ -14,7 +14,7 @@ from context import nbc_trainer
 CONF_FILE  = "config.yml"
 
 # Temporary directory.
-TEMP_DIR = os.path.join(tempfile.gettempdir(), 'nbclassify')
+TEMP_DIR = os.path.join(tempfile.gettempdir(), 'nbclassify-{0}'.format(os.getuid()))
 
 # Disable FileExistsError exceptions.
 nbc_trainer.FORCE_OVERWRITE = True
