@@ -20,7 +20,7 @@ TEMP_DIR = os.path.join(tempfile.gettempdir(), 'nbclassify-{0}'.format(os.getuid
 nbc_trainer.FORCE_OVERWRITE = True
 
 # Raise exceptions which would otherwise be caught.
-nbc_trainer.TESTING = True
+nbc_trainer.DEBUG = True
 
 def delete_temp_dir(path, recursive=False):
     """Delete temporary directory with content."""

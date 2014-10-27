@@ -116,6 +116,15 @@ class Common(object):
 
     This class is used as a super class in several scripts that implement this
     package. It provides commonly used functions.
+
+    .. note::
+
+       Methods of this class take into account the minimum photo count per
+       class, when set with :meth:`set_photo_count_min`. When a script needs to
+       take into account this value, always use methods from this class. If an
+       outside function is used to obtain records from the metadata database,
+       always make sure that the results are somehow filtered by
+       :meth:`get_photo_count_min`.
     """
 
     def __init__(self, config):
@@ -142,11 +151,19 @@ class Common(object):
         self.config = config
 
     def set_photo_count_min(self, count):
-        """Set a minimum for photos count per species.
+        """Set a minimum for photos count per photo classification.
 
-        This setting is used by :meth:`get_taxon_hierarchy`. If `count` is a
-        positive integer, only the species with a photo count of at least
-        `count` are used to build the taxon hierarchy.
+        If `count` is a positive integer, only the classifications (i.e. genus,
+        section, species combination) with a photo count of at least `count` are
+        used to build the taxon hierarchy. Other methods of this class that
+        process metadata records also filter by this criterion, if set. As a
+        result, any data processing is done exclusively on photos of
+        classifications with enough photos.
+
+        This setting is used by :meth:`get_taxon_hierarchy`, and indirectly by
+        :meth:`get_classes_from_filter` (there exists an equivalent of this
+        method in the :mod:`nbclassify.db` module, but that function does not
+        filter by this criterion).
         """
         if not count >= 0:
             raise ValueError("Value must be an integer of 0 or more")
@@ -237,6 +254,22 @@ class Common(object):
                 hierarchy[genus][section] = []
             hierarchy[genus][section].append(species)
         return hierarchy
+
+    def get_classes_from_filter(self, session, metadata, filter_):
+        """Return the classes for a classification filter.
+
+        Requires access to a database via an SQLAlchemy Session `session` and
+        MetaData object `metadata`.
+
+        The unique set of classes for the classification filter `filter_` are
+        returned. Filters are those as returned by
+        :meth:`classification_hierarchy_filters`.
+        """
+        levels = ['genus','section','species']
+        path = self.path_from_filter(filter_, levels)
+        hr = self.get_taxon_hierarchy(session, metadata)
+        classes = self.get_childs_from_hierarchy(hr, path)
+        return set(classes)
 
     def classification_hierarchy_filters(self, levels, hr, path=[]):
         """Return the classification filter for each path in a hierarchy.

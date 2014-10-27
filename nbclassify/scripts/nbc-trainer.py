@@ -55,8 +55,10 @@ META_FILE = ".meta.db"
 # files are overwritten without warning.
 FORCE_OVERWRITE = False
 
-# Switch to True during unit testing.
-TESTING = False
+# Switch to True whilst debugging. It is automatically set to True when the
+# -d switch is set on the Python interpreter. Setting this to True prevents
+# some exceptions from being caught.
+DEBUG = False
 
 # Default settings.
 ANN_DEFAULTS = {
@@ -72,7 +74,7 @@ ANN_DEFAULTS = {
 }
 
 def main():
-    global session, metadata
+    global session, metadata, DEBUG
 
     parser = argparse.ArgumentParser(
         description="Generate training data and train artificial neural "\
@@ -368,6 +370,7 @@ def main():
     # Print debug messages if the -d flag is set for the Python interpreter.
     if sys.flags.debug:
         log_level = logging.DEBUG
+        DEBUG = True
     else:
         log_level = logging.INFO
 
@@ -409,9 +412,9 @@ def main():
         logging.error("An output file already exists: %s", e)
         return 1
     except Exception as e:
+        if DEBUG: raise
         logging.error(e)
-        if TESTING:
-            raise
+        return 1
 
     return 0
 
@@ -859,7 +862,7 @@ class MakeTrainData(nbc.Common):
         logging.info("Going to process %d photos..." % n_images)
 
         # Get the classification categories from the database.
-        classes = db.get_classes_from_filter(session, metadata, filter_)
+        classes = self.get_classes_from_filter(session, metadata, filter_)
 
         # Make a codeword for each class.
         codewords = self.get_codewords(classes)
