@@ -66,6 +66,7 @@ ANN_DEFAULTS = {
     'connection_rate': 1,
     'hidden_layers': 1,
     'hidden_neurons': 8,
+    'max_neurons': 20,
     'learning_rate': 0.7,
     'epochs': 100000,
     'desired_error': 0.00001,
@@ -350,6 +351,11 @@ def main():
         required=True,
         help="Path to a directory where temporary data and cache is stored.")
     parser_validate.add_argument(
+        "--aivolver-config",
+        metavar="PATH",
+        help="Path to the configuration file for Aivolver. Using this option" \
+        "results in training with Aivolver.")
+    parser_validate.add_argument(
         "-k",
         metavar="N",
         type=int,
@@ -537,6 +543,8 @@ def validate(config, meta_path, args):
         cache.make(args.imdir, args.cache_dir, update=False)
 
         validator = Validator(config, args.cache_dir)
+        if args.aivolver_config:
+            validator.set_aivolver_config_path(args.aivolver_config)
         scores = validator.k_fold_xval_stratified(args.k, args.autoskip)
 
     paths = (
@@ -1061,30 +1069,44 @@ class MakeAnn(nbc.Common):
     """Train an artificial neural network."""
 
     def __init__(self, config):
-        """Constructor for network trainer.
-
-        Expects a configurations object `config`, and optionally the
-        script arguments `args`.
-        """
+        """Set the configurations object `config`."""
         super(MakeAnn, self).__init__(config)
+        self._train_method = 'default'
+        self._aivolver_config_path = None
 
-    def train(self, train_file, output_file, config=None):
+    def set_training_method(self, method, *args):
+        methods = ('default', 'aivolver')
+        if method not in methods:
+            raise ValueError("Unknown method `%s`. Expected one of %s" % \
+                method, methods)
+        if method == 'aivolver':
+            try:
+                self._aivolver_config_path = str(args[0])
+            except:
+                raise ValueError("The Aivolver configuration path must be" \
+                    "passed as the second argument")
+        self._train_method = method
+
+    def train(self, train_file, ann_file, config=None):
         """Train an artificial neural network.
 
         Loads training data from a TSV file `train_file`, trains a neural
-        network `output_file` with training settings from the configurations
-        set with :meth:`set_config`. If training paramerters are provided with
-        `config`, those are used instead.
+        network `ann_file` with training paramerters ``ann`` from the
+        configurations set with :meth:`set_config`. If training paramerters are
+        provided with `config`, those are used instead.
         """
         if not os.path.isfile(train_file):
             raise IOError("Cannot open %s (no such file)" % train_file)
-        if not FORCE_OVERWRITE and os.path.isfile(output_file):
-            raise nbc.FileExistsError(output_file)
+        if not FORCE_OVERWRITE and os.path.isfile(ann_file):
+            raise nbc.FileExistsError(ann_file)
         if config and not isinstance(config, nbc.Struct):
-            raise ValueError("Expected an nbclassify.Struct instance for `config`")
+            raise TypeError("Expected an nbclassify.Struct instance for `config`")
 
         # Instantiate the ANN trainer.
-        trainer = nbc.TrainANN()
+        if self._train_method == 'default':
+            trainer = nbc.TrainANN()
+        if self._train_method == 'aivolver':
+            trainer = nbc.Aivolver()
 
         # Set the training parameters.
         if not config:
@@ -1100,25 +1122,28 @@ class MakeAnn(nbc.Common):
 
         trainer.iterations_between_reports = trainer.epochs / 100
 
-        # Get the prefix for the classification columns.
-        try:
-            dependent_prefix = self.config.data.dependent_prefix
-        except:
-            dependent_prefix = OUTPUT_PREFIX
-
-        try:
-            train_data = nbc.TrainData()
-            train_data.read_from_file(train_file, dependent_prefix)
-        except ValueError as e:
-            logging.error("Failed to process the training data: %s" % e)
-            sys.exit(1)
-
         # Train the ANN.
-        ann = trainer.train(train_data)
-        ann.save(str(output_file))
-        logging.info("Artificial neural network saved to %s" % output_file)
-        error = trainer.test(train_data)
-        logging.info("Mean Square Error on training data: %f" % error)
+        if self._train_method == 'default':
+            try:
+                dependent_prefix = self.config.data.dependent_prefix
+            except:
+                dependent_prefix = OUTPUT_PREFIX
+
+            try:
+                train_data = nbc.TrainData()
+                train_data.read_from_file(train_file, dependent_prefix)
+            except ValueError as e:
+                logging.error("Failed to process the training data: %s" % e)
+                sys.exit(1)
+
+            ann = trainer.train(train_data)
+
+        if self._train_method == 'aivolver':
+            ann = trainer.train(train_file, self._aivolver_config_path)
+
+        # Save the neural network to disk.
+        ann.save(str(ann_file))
+        logging.info("Artificial neural network saved to %s" % ann_file)
 
 class BatchMakeAnn(MakeAnn):
 
@@ -1578,6 +1603,16 @@ class Validator(nbc.Common):
         self.classifications = {}
         self.classifications_expected = {}
         self.set_cache_path(cache_path)
+        self.aivolver_config_path = None
+
+    def set_aivolver_config_path(self, path):
+        """Set the path for the Aivolver configuration file `path`.
+
+        Setting this value results in training with Aivolver.
+        """
+        if not os.path.isfile(path):
+            raise IOError("Cannot open %s (no such file)" % path)
+        self.aivolver_config_path = path
 
     def set_cache_path(self, path):
         if not os.path.isdir(path):
@@ -1642,6 +1677,16 @@ class Validator(nbc.Common):
         train_data = BatchMakeTrainData(self.config, self.cache_path)
         train_data.set_photo_count_min(photo_count_min)
 
+        # Set the trainer.
+        trainer = BatchMakeAnn(self.config)
+        trainer.set_photo_count_min(photo_count_min)
+        if self.aivolver_config_path:
+            trainer.set_training_method('aivolver', self.aivolver_config_path)
+
+        # Set the ANN tester.
+        tester = TestAnn(self.config)
+        tester.set_photo_count_min(photo_count_min)
+
         # Obtain cross validation folds.
         folds = cross_validation.StratifiedKFold(classes, k)
         result_dir = os.path.join(self.cache_path, 'results')
@@ -1667,13 +1712,9 @@ class Validator(nbc.Common):
             train_data.batch_export(test_dir)
 
             # Train neural networks on training data.
-            trainer = BatchMakeAnn(self.config)
-            trainer.set_photo_count_min(photo_count_min)
             trainer.batch_train(data_dir=train_dir, output_dir=ann_dir)
 
             # Calculate the score for this fold.
-            tester = TestAnn(self.config)
-            tester.set_photo_count_min(photo_count_min)
             tester.test_with_hierarchy(test_dir, ann_dir)
             tester.export_hierarchy_results(test_result)
 

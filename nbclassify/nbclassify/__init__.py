@@ -13,7 +13,10 @@ from argparse import Namespace
 import csv
 import logging
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 
 import cv2
 import imgpheno as ft
@@ -26,6 +29,23 @@ import yaml
 
 import nbclassify.db as db
 from nbclassify.exceptions import *
+
+def delete_temp_dir(path, recursive=False):
+    """Delete a temporary directory.
+
+    As a safeguard, this function only removes directories and files that are
+    within the system's temporary directory (e.g. /tmp on Unix). Setting
+    `recursive` to True also deletes its contents.
+    """
+    path = os.path.abspath(str(path))
+    if os.path.isdir(path):
+        if path.startswith(tempfile.gettempdir()):
+            if recursive:
+                shutil.rmtree(path)
+            else:
+                os.rmdir(path)
+        else:
+            raise ValueError("Cannot delete non-temporary directories")
 
 def open_config(path):
     """Read a configurations file and return as a nested :class:`Struct` object.
@@ -843,6 +863,8 @@ class TrainData(object):
                 raise ValueError("No input columns found in training data")
             if self.num_output  == 0:
                 raise ValueError("No output columns found in training data")
+            if self.num_output  == 1:
+                raise ValueError("Only one output column found in training data")
 
             input_end = input_start + self.num_input
             output_end = output_start + self.num_output
@@ -945,6 +967,7 @@ class TrainANN(object):
         self.learning_rate = 0.7
         self.hidden_layers = 1
         self.hidden_neurons = 8
+        self.max_neurons = 20 # used for cascadetrain only
         self.epochs = 500000
         self.iterations_between_reports = self.epochs / 100
         self.desired_error = 0.0001
@@ -965,8 +988,12 @@ class TrainANN(object):
             raise ValueError("Train data is empty")
         self.train_data = data
 
-    def train(self, train_data):
-        self.set_train_data(train_data)
+    def train(self, data):
+        """Train a neural network on training data `data`.
+
+        Returns a FANN structure.
+        """
+        self.set_train_data(data)
 
         hidden_layers = [self.hidden_neurons] * self.hidden_layers
         layers = [self.train_data.num_input]
@@ -1026,3 +1053,61 @@ class TrainANN(object):
         self.ann.test_data(fann_test_data)
 
         return self.ann.get_MSE()
+
+class Aivolver(TrainANN):
+
+    """Use Aivolver to train an artificial neural network."""
+
+    def __init__(self):
+        super(Aivolver, self).__init__()
+
+    def train(self, data_path, config_path):
+        """Train a neural network on training data from `data_path`.
+
+        Returns a FANN structure.
+        """
+        # Load and update Aivolver configurations.
+        with open(config_path, 'r') as fh:
+            config = yaml.load(fh)
+
+        if 'experiment' not in config:
+            raise ValueError("Missing `experiment` configurations")
+        if 'ann' not in config:
+            raise ValueError("Missing `ann` configurations")
+
+        config['ann']['error'] = self.desired_error
+        config['ann']['epochs'] = self.epochs
+        config['ann']['neurons'] = self.max_neurons
+
+        sys.stderr.write("Aivolver:\n")
+        sys.stderr.write("* Maximum number of neurons: %s\n" % \
+            config['ann']['neurons'])
+        sys.stderr.write("* Desired error: %s\n" % \
+            config['ann']['error'])
+        sys.stderr.write("* Activation function: %s\n" % \
+            config['ann']['activation_function'])
+
+        # Empty the working directory.
+        workdir = config['experiment']['workdir']
+        delete_temp_dir(workdir, recursive=True)
+        os.makedirs(workdir)
+
+        # Write new configurations file for Aivolver.
+        new_config_path = os.path.join(workdir, 'config.yml')
+        with open(new_config_path, 'w') as fh:
+            yaml.dump(config, fh)
+
+        # Execute Aivolver.
+        ann_path = os.path.join(workdir, 'fittest.ann')
+        subprocess.check_call([
+            'aivolver',
+            new_config_path,
+            '-d', "file=%s" % data_path,
+            '-o', ann_path,
+        ])
+
+        # Load the neural network from the temporary directory.
+        self.ann = libfann.neural_net()
+        self.ann.create_from_file(ann_path)
+
+        return self.ann
