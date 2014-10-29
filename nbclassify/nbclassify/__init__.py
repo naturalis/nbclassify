@@ -72,13 +72,32 @@ def test_classification_filter(f):
         if key not in ('where', 'class'):
             raise ValueError("Unknown key `%s` in filter" % key)
 
+class ConfigManager(object):
+    """Manage global configurations.
+
+    An instance of this class provides access to a set of variables that need to
+    be accessible across modules. By importing this module, one instance of this
+    class is created. Subsequent imports in other modules provides access to
+    that same instance.
+
+    Configurations are set as attributes of an instance of this class. Getting
+    an attribute that does not exist returns None, so this never raises an
+    AttributeError.
+    """
+    def __getattribute__(self, name):
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError:
+            return None
+
 class Struct(Namespace):
 
     """Return a dictionary as an object."""
 
     def __init__(self, d):
         if not isinstance(d, dict):
-            raise TypeError("Expected a dictionary, got {0} instead".format(type(d)))
+            raise TypeError("Expected a dictionary, got {0} instead".\
+                format(type(d)))
         for key, val in d.iteritems():
             if isinstance(val, (list, tuple)):
                 setattr(self, str(key), [self.__class__(x) if \
@@ -138,7 +157,8 @@ class Common(object):
         Expects a configuration object as returned by :meth:`open_config`.
         """
         if not isinstance(config, Struct):
-            raise TypeError("Configurations object must be of type Struct, not %s" % type(config))
+            raise TypeError("Configurations object must be of type Struct, " \
+                "not %s" % type(config))
 
         try:
             path = config.preprocess.segmentation.output_folder
@@ -1024,3 +1044,6 @@ class TrainANN(object):
         self.ann.test_data(fann_test_data)
 
         return self.ann.get_MSE()
+
+# Create configurations singleton.
+conf = ConfigManager()

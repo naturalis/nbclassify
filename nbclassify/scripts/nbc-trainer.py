@@ -74,7 +74,7 @@ ANN_DEFAULTS = {
 }
 
 def main():
-    global session, metadata, DEBUG
+    global DEBUG
 
     parser = argparse.ArgumentParser(
         description="Generate training data and train artificial neural "\
@@ -418,27 +418,37 @@ def main():
 
     return 0
 
+def set_db_session(session, metadata):
+    nbc.conf.session = session
+    nbc.conf.metadata = metadata
+
+def get_db_session_or_error():
+    if not (nbc.conf.session and nbc.conf.metadata):
+        raise RuntimeError("No database connection found")
+    else:
+        return (nbc.conf.session, nbc.conf.metadata)
+
 def meta(config, meta_path, args):
     """Make meta data file for an image directory."""
-    global session, metadata
-
     sys.stdout.write("Initializing database...\n")
     db.make_meta_db(meta_path)
 
     with db.session_scope(meta_path) as (session, metadata):
+        set_db_session(session, metadata)
+
         mkmeta = MakeMeta(config, args.imdir)
         mkmeta.make()
 
 def data(config, meta_path, args):
     """Start train data routines."""
-    global session, metadata
-
     try:
         filter_ = config.classification.filter.as_dict()
     except:
         raise nbc.ConfigurationError("The classification filter is not set")
 
     with db.session_scope(meta_path) as (session, metadata):
+        set_db_session(session, metadata)
+
         cache = FingerprintCache(config)
         cache.make(args.imdir, args.cache_dir, update=False)
 
@@ -447,9 +457,9 @@ def data(config, meta_path, args):
 
 def data_batch(config, meta_path, args):
     """Start batch train data routines."""
-    global session, metadata
-
     with db.session_scope(meta_path) as (session, metadata):
+        set_db_session(session, metadata)
+
         cache = FingerprintCache(config)
         cache.make(args.imdir, args.cache_dir, update=False)
 
@@ -463,17 +473,17 @@ def ann(config, args):
 
 def ann_batch(config, meta_path, args):
     """Start batch neural network training routines."""
-    global session, metadata
-
     with db.session_scope(meta_path) as (session, metadata):
+        set_db_session(session, metadata)
+
         ann_maker = BatchMakeAnn(config)
         ann_maker.batch_train(args.data, args.output)
 
 def test_ann(config, meta_path, args):
     """Start neural network testing routines."""
-    global session, metadata
-
     with db.session_scope(meta_path) as (session, metadata):
+        set_db_session(session, metadata)
+
         tester = TestAnn(config)
         tester.test(args.ann, args.test_data)
 
@@ -487,9 +497,9 @@ def test_ann(config, meta_path, args):
 
 def test_ann_batch(config, meta_path, args):
     """Start batch neural network testing routines."""
-    global session, metadata
-
     with db.session_scope(meta_path) as (session, metadata):
+        set_db_session(session, metadata)
+
         tester = TestAnn(config)
         tester.test_with_hierarchy(args.test_data, args.anns, args.error)
 
@@ -500,9 +510,9 @@ def test_ann_batch(config, meta_path, args):
 
 def classify(config, meta_path, args):
     """Start classification routines."""
-    global session, metadata
-
     with db.session_scope(meta_path) as (session, metadata):
+        set_db_session(session, metadata)
+
         classifier = ImageClassifier(config, args.ann)
         classification = classifier.classify(args.image, args.error)
 
@@ -511,13 +521,15 @@ def classify(config, meta_path, args):
 
 def validate(config, meta_path, args):
     """Start validation routines."""
-    global FORCE_OVERWRITE, session, metadata
+    global FORCE_OVERWRITE
 
     # Any existing training data or neural networks must be regenerated during
     # the validation process.
     FORCE_OVERWRITE = True
 
     with db.session_scope(meta_path) as (session, metadata):
+        set_db_session(session, metadata)
+
         cache = FingerprintCache(config)
         cache.make(args.imdir, args.cache_dir, update=False)
 
@@ -582,7 +594,7 @@ class FingerprintCache(nbc.Common):
         shelve, a persistent, dictionary-like object. If `update` is set to
         True, existing fingerprints are updated.
         """
-        global session, metadata
+        session, metadata = get_db_session_or_error()
 
         phenotyper = nbc.Phenotyper()
 
@@ -775,7 +787,7 @@ class MakeMeta(nbc.Common):
 
     def make(self):
         """Create the meta data database file `meta_path`."""
-        global session, metadata
+        session, metadata = get_db_session_or_error()
 
         sys.stdout.write("Saving meta data for images...\n")
 
@@ -832,7 +844,7 @@ class MakeTrainData(nbc.Common):
         fingerprints are obtained from cache, which must have been created for
         configuration `config`.
         """
-        global session, metadata
+        session, metadata = get_db_session_or_error()
 
         if not FORCE_OVERWRITE and os.path.isfile(filename):
             raise nbc.FileExistsError(filename)
@@ -1004,7 +1016,7 @@ class BatchMakeTrainData(MakeTrainData):
             raise nbc.ConfigurationError("classification hierarchy not set")
 
     def _load_taxon_hierarchy(self):
-        global session, metadata
+        session, metadata = get_db_session_or_error()
 
         if not self.taxon_hr:
             self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
@@ -1127,7 +1139,7 @@ class BatchMakeAnn(MakeAnn):
             raise nbc.ConfigurationError("missing `classification.hierarchy`")
 
     def _load_taxon_hierarchy(self):
-        global session, metadata
+        session, metadata = get_db_session_or_error()
 
         if not self.taxon_hr:
             self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
@@ -1228,7 +1240,7 @@ class TestAnn(nbc.Common):
         classification filter `filter_`. A bit in a codeword is considered on
         if the mean square error for a bit is less or equal to `error`.
         """
-        global session, metadata
+        session, metadata = get_db_session_or_error()
 
         if self.test_data is None:
             raise RuntimeError("Test data is not set")
@@ -1298,7 +1310,7 @@ class TestAnn(nbc.Common):
 
         Returns a 2-tuple ``(correct,total)``.
         """
-        global session, metadata
+        session, metadata = get_db_session_or_error()
 
         logging.info("Testing the neural networks hierarchy...")
 
@@ -1517,7 +1529,7 @@ class ImageClassifier(nbc.Common):
     """Classify an image."""
 
     def __init__(self, config, ann_file):
-        global session, metadata
+        session, metadata = get_db_session_or_error()
 
         super(ImageClassifier, self).__init__(config)
         self.set_ann(ann_file)
@@ -1572,12 +1584,12 @@ class Validator(nbc.Common):
     def k_fold_xval_stratified(self, k=3, autoskip=False):
         """Perform stratified K-folds cross validation.
 
-        The number of folds `k` must be at least 2. The minimum number of labels
-        for any class cannot be less than `k`, or an AssertionError is raised.
-        If `autoskip` is set to True, only the photos for species with at least
-        `k` photos are used for the cross validation.
+        The number of folds `k` must be at least 2. The minimum number of
+        members for any class cannot be less than `k`, or an AssertionError is
+        raised. If `autoskip` is set to True, only the members for classes with
+        at least `k` members are used for the cross validation.
         """
-        global session, metadata
+        session, metadata = get_db_session_or_error()
 
         # Will hold the score of each folds.
         scores = {}
