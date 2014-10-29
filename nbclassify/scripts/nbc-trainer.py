@@ -43,6 +43,7 @@ import yaml
 
 import nbclassify as nbc
 import nbclassify.db as db
+from nbclassify.config import conf
 
 # Prefix for output columns in training data.
 OUTPUT_PREFIX = "OUT:"
@@ -419,14 +420,16 @@ def main():
     return 0
 
 def set_db_session(session, metadata):
-    nbc.conf.session = session
-    nbc.conf.metadata = metadata
+    """Set the database session and metadata."""
+    conf.session = session
+    conf.metadata = metadata
 
 def get_db_session_or_error():
-    if not (nbc.conf.session and nbc.conf.metadata):
+    """Get the database session and metadata."""
+    if not (conf.session and conf.metadata):
         raise RuntimeError("No database connection found")
     else:
-        return (nbc.conf.session, nbc.conf.metadata)
+        return (conf.session, conf.metadata)
 
 def meta(config, meta_path, args):
     """Make meta data file for an image directory."""
