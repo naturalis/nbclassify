@@ -34,7 +34,7 @@ def delete_temp_dir(path, recursive=False):
 #@unittest.skip("Debugging")
 class TestTrainer(unittest.TestCase):
 
-    """Unit tests for the trainer script.
+    """Test the trainer script.
 
     This simply tests if the trainer script runs without crashing unexpectedly.
     It does not test any output data. It is important that the tests run in a
