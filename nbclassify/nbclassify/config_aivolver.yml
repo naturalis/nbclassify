@@ -1,0 +1,49 @@
+---
+# logging level, 0..4 => FATAL..DEBUG
+verbosity: 3
+# logging formatter, simple, medium or verbose
+formatter: simple
+
+experiment:
+    # p of exchange between chromosomes
+    crossover_rate: 0.3
+    # p of a trait mutating
+    mutation_rate: 0.1
+    # number of generations
+    ngens: 5
+    # proportion of population contributing to next generation
+    reproduction_rate: 0.35
+    # temporary directory
+    workdir: /tmp/aivolver/
+
+data:
+    # amount of data to use for training
+    fraction: 1
+    # prefix used for classification columns
+    dependent_prefix: "OUT:"
+    # uninformative columns to ignore, e.g. unique record identifiers
+    ignore: [ID]
+
+initialize:
+    # number of individuals in population
+    individual_count: 5
+    # number of non-homologous chromosomes (i.e. n for diploid org)
+    chromosome_count: 1
+    # number of genes per chromosome
+    gene_count: 1
+
+ann:
+    # ANN error threshold
+    error: 0.0001
+    # max number of epochs
+    epochs: 30000
+    # 'ordinary' or 'cascade'
+    train_type: ordinary
+    # how often to print progress during 'ordinary'
+    epoch_printfreq: 100
+    # how often to print progress during 'cascade'
+    neuron_printfreq: 1
+    # number of neurons
+    neurons: 20
+    # constant identifier of funtion
+    activation_function: FANN_SIGMOID_SYMMETRIC
