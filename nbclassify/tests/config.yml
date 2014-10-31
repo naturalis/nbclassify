@@ -89,9 +89,8 @@ classification:
     filter:
         where:
             genus: Cypripedium
-            section: Arietinum
         class:
-            species
+            section
 
     # Define the classification hierarchy from top to bottom.
     hierarchy:

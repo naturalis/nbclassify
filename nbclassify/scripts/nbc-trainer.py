@@ -860,6 +860,17 @@ class MakeTrainData(nbc.Common):
         if not FORCE_OVERWRITE and os.path.isfile(filename):
             raise nbc.FileExistsError(filename)
 
+        # Get the classification categories from the database.
+        classes = self.get_classes_from_filter(session, metadata, filter_)
+        assert len(classes) > 0, \
+            "No classes found for filter `%s`" % filter_
+
+        # Skip train data export if there is only one class for this filter.
+        if not len(classes) > 1:
+            logging.info("Not enough classes for filter. Skipping export " \
+                "of %s" % filename)
+            return
+
         # Get the photos and corresponding classification using the filter.
         images = db.get_filtered_photos_with_taxon(session, metadata, filter_)
         images = images.all()
@@ -883,9 +894,6 @@ class MakeTrainData(nbc.Common):
             n_images = len(images)
 
         logging.info("Going to process %d photos..." % n_images)
-
-        # Get the classification categories from the database.
-        classes = self.get_classes_from_filter(session, metadata, filter_)
 
         # Make a codeword for each class.
         codewords = self.get_codewords(classes)
@@ -1027,6 +1035,11 @@ class BatchMakeTrainData(MakeTrainData):
             raise nbc.ConfigurationError("classification hierarchy not set")
 
     def _load_taxon_hierarchy(self):
+        """Load the taxon hierarchy.
+
+        Must be separate from the constructor because
+        :meth:`set_photo_count_min` influences the taxon hierarchy.
+        """
         session, metadata = get_db_session_or_error()
 
         if not self.taxon_hr:
@@ -1056,7 +1069,7 @@ class BatchMakeTrainData(MakeTrainData):
                 train_file = train_file.replace("__%s__" % key, val)
 
             # Generate and export the training data.
-            logging.info("Classifying images on %s" % \
+            logging.info("Exporting train data for classification on %s" % \
                 self.readable_filter(filter_))
             try:
                 self.export(train_file, filter_, config)
@@ -1129,12 +1142,8 @@ class MakeAnn(nbc.Common):
             except:
                 dependent_prefix = OUTPUT_PREFIX
 
-            try:
-                train_data = nbc.TrainData()
-                train_data.read_from_file(train_file, dependent_prefix)
-            except ValueError as e:
-                logging.error("Failed to process the training data: %s" % e)
-                sys.exit(1)
+            train_data = nbc.TrainData()
+            train_data.read_from_file(train_file, dependent_prefix)
 
             ann = trainer.train(train_data)
 
@@ -1164,9 +1173,14 @@ class BatchMakeAnn(MakeAnn):
         try:
             self.class_hr = self.config.classification.hierarchy
         except:
-            raise nbc.ConfigurationError("missing `classification.hierarchy`")
+            raise nbc.ConfigurationError("classification hierarchy not set")
 
     def _load_taxon_hierarchy(self):
+        """Load the taxon hierarchy.
+
+        Must be separate from the constructor because
+        :meth:`set_photo_count_min` influences the taxon hierarchy.
+        """
         session, metadata = get_db_session_or_error()
 
         if not self.taxon_hr:
@@ -1180,6 +1194,8 @@ class BatchMakeAnn(MakeAnn):
         data to train on is set in the classification hierarchy of the
         configurations.
         """
+        session, metadata = get_db_session_or_error()
+
         # Must not be loaded in the constructor, in case set_photo_count_min()
         # is used.
         self._load_taxon_hierarchy()
@@ -1203,6 +1219,17 @@ class BatchMakeAnn(MakeAnn):
                 val = val if val is not None else '_'
                 train_file = train_file.replace("__%s__" % key, val)
                 ann_file = ann_file.replace("__%s__" % key, val)
+
+            # Get the classification categories from the database.
+            classes = self.get_classes_from_filter(session, metadata, filter_)
+            assert len(classes) > 0, \
+                "No classes found for filter `%s`" % filter_
+
+            # Skip train data export if there is only one class for this filter.
+            if not len(classes) > 1:
+                logging.info("Not enough classes for filter. Skipping training " \
+                    "of %s" % ann_file)
+                continue
 
             # Train the ANN.
             logging.info("Training network `%s` with training data " \
@@ -1274,11 +1301,11 @@ class TestAnn(nbc.Common):
             raise RuntimeError("Test data is not set")
 
         # Get the classification categories from the database.
-        classes = db.get_classes_from_filter(session, metadata, filter_)
+        classes = self.get_classes_from_filter(session, metadata, filter_)
+        assert len(classes) > 0, \
+            "No classes found for filter `%s`" % filter_
 
         # Get the codeword for each class.
-        if not classes:
-            raise RuntimeError("No classes found for filter `%s`" % filter_)
         codewords = self.get_codewords(classes)
 
         # Write results to file.
@@ -1387,13 +1414,19 @@ class TestAnn(nbc.Common):
                 test_file = test_file.replace("__%s__" % key, val)
                 ann_file = ann_file.replace("__%s__" % key, val)
 
-            # Get the class names for this node in the taxonomic hierarchy.
-            path = self.path_from_filter(filter_, levels)
-            classes = self.get_childs_from_hierarchy(self.taxon_hr, path)
+            # Get the class names for this filter.
+            classes = self.get_classes_from_filter(session, metadata, filter_)
+            assert len(classes) > 0, \
+                "No classes found for filter `%s`" % filter_
+
+            # Skip test if there is only one class for this filter. Result
+            # will be missing from the test results output.
+            if not len(classes) > 1:
+                logging.info("Not enough classes for filter. Skipping " \
+                    "testing of %s" % ann_file)
+                continue
 
             # Get the codeword for each class.
-            if not classes:
-                raise RuntimeError("No classes found for filter `%s`" % filter_)
             codewords = self.get_codewords(classes)
 
             # Load the ANN.
@@ -1569,6 +1602,8 @@ class ImageClassifier(nbc.Common):
             raise nbc.ConfigurationError("Missing `classification.filter`")
 
         self.classes = db.get_classes_from_filter(session, metadata, filter_)
+        assert len(self.classes) > 0, \
+            "No classes found for filter `%s`" % filter_
 
     def set_ann(self, path):
         if not os.path.isfile(path):

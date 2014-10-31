@@ -164,7 +164,7 @@ class TestTrainer(unittest.TestCase):
         self.assertEqual(ret, 0)
 
     def test_trainer_bc(self):
-        """Test the `test-ann` subcommands."""
+        """Test the `test-ann-batch` subcommands."""
         sys.argv += [
             'test-ann-batch',
             '--anns', self.ann_dir,

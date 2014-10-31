@@ -811,7 +811,7 @@ class TrainData(object):
     file with :meth:`read_from_file` or manually appended with :meth:`append`.
     """
 
-    def __init__(self, num_input=0, num_output=0):
+    def __init__(self, num_input=None, num_output=None):
         """Set the number of input and output columns.
 
         Training data consists of input data columns, and output data columns.
@@ -821,12 +821,27 @@ class TrainData(object):
         If :meth:`read_from_file` is used to load training data from a file,
         the number of input and output columns is automatically set.
         """
-        self.num_input = num_input
-        self.num_output = num_output
         self.labels = []
         self.input = []
         self.output = []
         self.counter = 0
+        self.num_input = num_input
+        self.num_output = num_output
+
+        if num_input:
+            self.set_num_input(num_input)
+        if num_output:
+            self.set_num_output(num_output)
+
+    def set_num_input(self, n):
+        if not n > 0:
+            raise ValueError("The number of input columns must be at least 1")
+        self.num_input = n
+
+    def set_num_output(self, n):
+        if not n > 1:
+            raise ValueError("The number of output columns must be at least 2")
+        self.num_output = n
 
     def read_from_file(self, path, dependent_prefix="OUT:"):
         """Load training data from file.
@@ -859,12 +874,11 @@ class TrainData(object):
                         input_start = i
                     self.num_input += 1
 
-            if self.num_input == 0:
+            if not self.num_input > 0:
                 raise ValueError("No input columns found in training data")
-            if self.num_output  == 0:
-                raise ValueError("No output columns found in training data")
-            if self.num_output  == 1:
-                raise ValueError("Only one output column found in training data")
+            if not self.num_output > 1:
+                raise ValueError("Training data needs at least 2 output " \
+                    "columns, found %d" % self.num_output)
 
             input_end = input_start + self.num_input
             output_end = output_start + self.num_output
