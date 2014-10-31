@@ -1040,17 +1040,6 @@ class TrainANN(object):
             layers.extend(hidden_layers)
             layers.append(self.train_data.num_output)
 
-            sys.stderr.write("Ordinary training:\n")
-            sys.stderr.write("* Neuron layers: %s\n" % layers)
-            sys.stderr.write("* Connection rate: %s\n" % self.connection_rate)
-            if not self.training_algorithm in ('FANN_TRAIN_RPROP',):
-                sys.stderr.write("* Learning rate: %s\n" % self.learning_rate)
-            sys.stderr.write("* Activation function for the hidden layers: %s\n" % \
-                self.activation_function_hidden)
-            sys.stderr.write("* Activation function for the output layer: %s\n" % \
-                self.activation_function_output)
-            sys.stderr.write("* Training algorithm: %s\n" % self.training_algorithm)
-
             self.ann = libfann.neural_net()
             self.ann.create_sparse_array(self.connection_rate, layers)
 
@@ -1063,20 +1052,14 @@ class TrainANN(object):
             self.ann.set_training_algorithm(
                 getattr(libfann, self.training_algorithm))
 
+            sys.stderr.write("Ordinary training...\n")
+            self.ann.print_parameters()
+
             # Ordinary training.
             self.ann.train_on_data(fann_train_data, self.epochs,
                 self.iterations_between_reports, self.desired_error)
 
         if self.train_type == 'cascade':
-            sys.stderr.write("Cascade training:\n")
-            sys.stderr.write("* Maximum number of neurons: %s\n" % self.max_neurons)
-            sys.stderr.write("* Training algorithm: %s\n" % self.training_algorithm)
-            sys.stderr.write("* Activation function for the hidden layers: %s\n" % \
-                self.activation_function_hidden)
-            sys.stderr.write("* Activation function for the output layer: %s\n" % \
-                self.activation_function_output)
-            sys.stderr.write("* Training algorithm: %s\n" % self.training_algorithm)
-
             # This algorithm adds neurons to the neural network while training,
             # which means that it needs to start with an ANN without any hidden
             # layers.
@@ -1095,6 +1078,9 @@ class TrainANN(object):
                 self.cascade_activation_steepnesses)
             self.ann.set_cascade_num_candidate_groups(
                 self.cascade_num_candidate_groups)
+
+            sys.stderr.write("Cascade training...\n")
+            self.ann.print_parameters()
 
             # Cascade training.
             self.ann.cascadetrain_on_data(fann_train_data, self.max_neurons,
@@ -1152,13 +1138,7 @@ class Aivolver(TrainANN):
         config['ann']['epochs'] = self.epochs
         config['ann']['neurons'] = self.max_neurons
 
-        sys.stderr.write("Aivolver:\n")
-        sys.stderr.write("* Maximum number of neurons: %s\n" % \
-            config['ann']['neurons'])
-        sys.stderr.write("* Desired error: %s\n" % \
-            config['ann']['error'])
-        sys.stderr.write("* Activation function: %s\n" % \
-            config['ann']['activation_function'])
+        sys.stderr.write("Training with Aivolver...\n")
 
         # Empty the working directory.
         workdir = config['experiment']['workdir']
