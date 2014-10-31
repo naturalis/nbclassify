@@ -30,6 +30,24 @@ import yaml
 import nbclassify.db as db
 from nbclassify.exceptions import *
 
+# Default FANN settings.
+ANN_DEFAULTS = {
+    'train_type': 'ordinary',
+    'epochs': 100000,
+    'desired_error': 0.00001,
+    'training_algorithm': 'TRAIN_RPROP',
+    'activation_function_hidden': 'SIGMOID_STEPWISE',
+    'activation_function_output': 'SIGMOID_STEPWISE',
+    'hidden_layers': 1,
+    'hidden_neurons': 8,
+    'learning_rate': 0.7,
+    'connection_rate': 1,
+    'max_neurons': 20,
+    'neurons_between_reports': 1,
+    'cascade_activation_steepnesses': [0.25, 0.50, 0.75, 1.00],
+    'cascade_num_candidate_groups': 2,
+}
+
 def delete_temp_dir(path, recursive=False):
     """Delete a temporary directory.
 
@@ -977,19 +995,13 @@ class TrainANN(object):
     def __init__(self):
         """Set the default attributes."""
         self.ann = None
-        self.connection_rate = 1
-        self.learning_rate = 0.7
-        self.hidden_layers = 1
-        self.hidden_neurons = 8
-        self.max_neurons = 20 # used for cascadetrain only
-        self.epochs = 500000
-        self.iterations_between_reports = self.epochs / 100
-        self.desired_error = 0.0001
-        self.training_algorithm = 'TRAIN_RPROP'
-        self.activation_function_hidden = 'SIGMOID_STEPWISE'
-        self.activation_function_output = 'SIGMOID_STEPWISE'
         self.train_data = None
         self.test_data = None
+
+        # Set the default training settings.
+        for option, val in ANN_DEFAULTS.iteritems():
+            setattr(self, option, val)
+        self.iterations_between_reports = self.epochs / 100
 
     def set_train_data(self, data):
         """Set the training data on which to train the network on.
@@ -1009,38 +1021,85 @@ class TrainANN(object):
         """
         self.set_train_data(data)
 
-        hidden_layers = [self.hidden_neurons] * self.hidden_layers
-        layers = [self.train_data.num_input]
-        layers.extend(hidden_layers)
-        layers.append(self.train_data.num_output)
+        # Check some values.
+        if not self.train_type in ('ordinary','cascade'):
+            raise ValueError("Unknown training type `%s`" % self.train_type)
+        if self.train_type == 'cascade':
+            if not self.training_algorithm in ('TRAIN_RPROP','TRAIN_QUICKPROP'):
+                raise ValueError("Expected TRAIN_RPROP or TRAIN_QUICKPROP "\
+                    "as the training algorithm")
 
-        sys.stderr.write("Network layout:\n")
-        sys.stderr.write("* Neuron layers: %s\n" % layers)
-        sys.stderr.write("* Connection rate: %s\n" % self.connection_rate)
-        if self.training_algorithm not in ('FANN_TRAIN_RPROP',):
-            sys.stderr.write("* Learning rate: %s\n" % self.learning_rate)
-        sys.stderr.write("* Activation function for the hidden layers: %s\n" % \
-            self.activation_function_hidden)
-        sys.stderr.write("* Activation function for the output layer: %s\n" % \
-            self.activation_function_output)
-        sys.stderr.write("* Training algorithm: %s\n" % self.training_algorithm)
-
-        self.ann = libfann.neural_net()
-        self.ann.create_sparse_array(self.connection_rate, layers)
-        self.ann.set_learning_rate(self.learning_rate)
-        self.ann.set_activation_function_hidden(
-            getattr(libfann, self.activation_function_hidden))
-        self.ann.set_activation_function_output(
-            getattr(libfann, self.activation_function_output))
-        self.ann.set_training_algorithm(
-            getattr(libfann, self.training_algorithm))
-
+        # Get FANN train data object.
         fann_train_data = libfann.training_data()
         fann_train_data.set_train_data(self.train_data.get_input(),
             self.train_data.get_output())
 
-        self.ann.train_on_data(fann_train_data, self.epochs,
-            self.iterations_between_reports, self.desired_error)
+        if self.train_type == 'ordinary':
+            hidden_layers = [self.hidden_neurons] * self.hidden_layers
+            layers = [self.train_data.num_input]
+            layers.extend(hidden_layers)
+            layers.append(self.train_data.num_output)
+
+            sys.stderr.write("Ordinary training:\n")
+            sys.stderr.write("* Neuron layers: %s\n" % layers)
+            sys.stderr.write("* Connection rate: %s\n" % self.connection_rate)
+            if not self.training_algorithm in ('FANN_TRAIN_RPROP',):
+                sys.stderr.write("* Learning rate: %s\n" % self.learning_rate)
+            sys.stderr.write("* Activation function for the hidden layers: %s\n" % \
+                self.activation_function_hidden)
+            sys.stderr.write("* Activation function for the output layer: %s\n" % \
+                self.activation_function_output)
+            sys.stderr.write("* Training algorithm: %s\n" % self.training_algorithm)
+
+            self.ann = libfann.neural_net()
+            self.ann.create_sparse_array(self.connection_rate, layers)
+
+            # Set training parameters.
+            self.ann.set_learning_rate(self.learning_rate)
+            self.ann.set_activation_function_hidden(
+                getattr(libfann, self.activation_function_hidden))
+            self.ann.set_activation_function_output(
+                getattr(libfann, self.activation_function_output))
+            self.ann.set_training_algorithm(
+                getattr(libfann, self.training_algorithm))
+
+            # Ordinary training.
+            self.ann.train_on_data(fann_train_data, self.epochs,
+                self.iterations_between_reports, self.desired_error)
+
+        if self.train_type == 'cascade':
+            sys.stderr.write("Cascade training:\n")
+            sys.stderr.write("* Maximum number of neurons: %s\n" % self.max_neurons)
+            sys.stderr.write("* Training algorithm: %s\n" % self.training_algorithm)
+            sys.stderr.write("* Activation function for the hidden layers: %s\n" % \
+                self.activation_function_hidden)
+            sys.stderr.write("* Activation function for the output layer: %s\n" % \
+                self.activation_function_output)
+            sys.stderr.write("* Training algorithm: %s\n" % self.training_algorithm)
+
+            # This algorithm adds neurons to the neural network while training,
+            # which means that it needs to start with an ANN without any hidden
+            # layers.
+            layers = [self.train_data.num_input, self.train_data.num_output]
+            self.ann = libfann.neural_net()
+            self.ann.create_shortcut_array(layers)
+
+            # Set training parameters.
+            self.ann.set_training_algorithm(
+                getattr(libfann, self.training_algorithm))
+            self.ann.set_activation_function_hidden(
+                getattr(libfann, self.activation_function_hidden))
+            self.ann.set_activation_function_output(
+                getattr(libfann, self.activation_function_output))
+            self.ann.set_cascade_activation_steepnesses(
+                self.cascade_activation_steepnesses)
+            self.ann.set_cascade_num_candidate_groups(
+                self.cascade_num_candidate_groups)
+
+            # Cascade training.
+            self.ann.cascadetrain_on_data(fann_train_data, self.max_neurons,
+                self.neurons_between_reports, self.desired_error)
+
         return self.ann
 
     def test(self, data):

@@ -61,20 +61,6 @@ FORCE_OVERWRITE = False
 # some exceptions from being caught.
 DEBUG = False
 
-# Default settings.
-ANN_DEFAULTS = {
-    'connection_rate': 1,
-    'hidden_layers': 1,
-    'hidden_neurons': 8,
-    'max_neurons': 20,
-    'learning_rate': 0.7,
-    'epochs': 100000,
-    'desired_error': 0.00001,
-    'training_algorithm': 'TRAIN_RPROP',
-    'activation_function_hidden': 'SIGMOID_STEPWISE',
-    'activation_function_output': 'SIGMOID_STEPWISE'
-}
-
 def main():
     global DEBUG
 
@@ -1128,7 +1114,7 @@ class MakeAnn(nbc.Common):
             except:
                 pass
 
-        for option, value in ANN_DEFAULTS.iteritems():
+        for option, value in nbc.ANN_DEFAULTS.iteritems():
             if config:
                 value = getattr(config, option, value)
             setattr(trainer, option, value)
@@ -1635,8 +1621,6 @@ class Validator(nbc.Common):
         file `meta_path`.
         """
         super(Validator, self).__init__(config)
-        self.classifications = {}
-        self.classifications_expected = {}
         self.set_cache_path(cache_path)
         self.aivolver_config_path = None
 
