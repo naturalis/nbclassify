@@ -10,9 +10,11 @@ extraction from digital images.
 """
 
 from argparse import Namespace
+from copy import deepcopy
 import csv
 import logging
 import os
+import shelve
 import shutil
 import subprocess
 import sys
@@ -74,28 +76,6 @@ def open_config(path):
     with open(path, 'r') as f:
         config = yaml.load(f)
     return Struct(config)
-
-def combined_hash(*args):
-    """Create a combined hash from one or more hashable objects.
-
-    Each argument must be an hashable object. Can also be used for configuration
-    objects as returned by :meth:`open_config`. Returned hash is a negative or
-    positive integer.
-
-    Example::
-
-        >>> a = Struct({'a': True})
-        >>> b = Struct({'b': False})
-        >>> combined_hash(a,b)
-        6862151379155462073
-    """
-    hash_ = None
-    for obj in args:
-        if hash_ is None:
-            hash_ = hash(obj)
-        else:
-            hash_ ^= hash(obj)
-    return hash_
 
 def test_classification_filter(f):
     """Test the validity of the classification filter `f`.
@@ -179,15 +159,6 @@ class Common(object):
         if not isinstance(config, Struct):
             raise TypeError("Configurations object must be of type Struct, " \
                 "not %s" % type(config))
-
-        try:
-            path = config.preprocess.segmentation.output_folder
-        except:
-            path = None
-        if path and not os.path.isdir(path):
-            logging.error("Found a configuration error")
-            raise IOError("Cannot open %s (no such directory)" % path)
-
         self.config = config
 
     def set_photo_count_min(self, count):
@@ -452,7 +423,6 @@ class Common(object):
             return "%s where %s" % (class_, where_s)
         return "%s" % class_
 
-
 class Phenotyper(object):
     """Extract features from a digital image and return as a phenotype.
 
@@ -616,7 +586,9 @@ class Phenotyper(object):
             cv2.drawContours(self.bin_mask, [contour], 0, 255, -1)
 
             # Save the masked image to the output folder.
-            if output_folder and os.path.isdir(output_folder):
+            if output_folder:
+                if not os.path.isdir(output_folder):
+                    os.makedirs(output_folder)
                 img_masked = cv2.bitwise_and(self.img, self.img, mask=self.bin_mask)
                 fname = os.path.basename(self.path)
                 out_path = os.path.join(output_folder, fname)
@@ -819,6 +791,215 @@ class Phenotyper(object):
         means_sds = np.array(zip(means, sds)).flatten()
 
         return np.append(means_sds, histograms)
+
+class FingerprintCache(Common):
+
+    """Cache an retrieve fingerprints."""
+
+    def __init__(self, config):
+        super(FingerprintCache, self).__init__(config)
+        self._cache = {}
+
+    @staticmethod
+    def combined_hash(*args):
+        """Create a combined hash from one or more hashable objects.
+
+        Each argument must be an hashable object. Can also be used for
+        configuration objects as returned by :meth:`open_config`. Returned hash
+        is a negative or positive integer.
+
+        Example::
+
+            >>> a = Struct({'a': True})
+            >>> b = Struct({'b': False})
+            >>> FingerprintCache.combined_hash(a,b)
+            6862151379155462073
+        """
+        hash_ = None
+        for obj in args:
+            if hash_ is None:
+                hash_ = hash(obj)
+            else:
+                hash_ ^= hash(obj)
+        return hash_
+
+    @staticmethod
+    def stripped_config(**kwargs):
+        """Strip a configurations object from non-feature amending options.
+
+        Some configurations have no effect on feature extraction, and such
+        configurations should be removed from the configuration objects. This
+        function understands only the `preprocess` configuration, and such a
+        configurations object must be passed with the `preprocess` keyword
+        argument. Returns a prepared copy of the configurations object, so the
+        original remains unchanged.
+        """
+        if not len(kwargs) == 1:
+            raise TypeError("Expected one keyword argument")
+        preprocess = kwargs.get('preprocess')
+        if preprocess:
+            preprocess_ = deepcopy(preprocess)
+            try:
+                del preprocess_.segmentation.grabcut.output_folder
+            except:
+                pass
+            return preprocess_
+        return None
+
+    def get_cache(self):
+        """Return the cache as a nested dictionary."""
+        return self._cache
+
+    def make(self, image_dir, cache_dir, update=False):
+        """Cache fingerprints to disk.
+
+        One cache file is created per feature type to be extracted, which are
+        stored in the target directory `cache_dir`. Each cache file is a Python
+        shelve, a persistent, dictionary-like object. If `update` is set to
+        True, existing fingerprints are updated.
+        """
+        session, metadata = db.get_global_session_or_error()
+
+        phenotyper = Phenotyper()
+
+        # Get a list of all the photos in the database.
+        photos = db.get_photos(session, metadata)
+
+        # Get the classification hierarchy.
+        try:
+            hr = self.config.classification.hierarchy
+        except:
+            raise ConfigurationError("classification hierarchy not set")
+
+        # Cache each feature for each photo separately. One cache per
+        # feature type is created, and each cache contains the fingerprints
+        # for all images.
+        hash_pp_ft = self.get_preprocess_feature_combinations(hr)
+        for hash_, preprocess, feature in hash_pp_ft:
+            cache_path = os.path.join(cache_dir, str(hash_))
+
+            logging.info("Caching fingerprints in `{0}`...".format(cache_path))
+
+            # Create a shelve for storing features. Empty existing shelves.
+            cache = shelve.open(cache_path)
+
+            # Cache the fingerprint for each photo.
+            for photo in photos:
+                # Skip fingerprinting if the fingerprint already exists, unless
+                # update is set to True.
+                if not update and str(photo.md5sum) in cache:
+                    continue
+
+                logging.info("Processing photo `%s`..." % photo.id)
+
+                # Construct a new configuration object with a single feature
+                # which we can pass to Phenotyper().
+                config = Struct({
+                    'preprocess': preprocess,
+                    'features': feature
+                })
+
+                # Create a fingerprint and cache it.
+                im_path = os.path.join(image_dir, photo.path)
+                phenotyper.set_image(im_path)
+                phenotyper.set_config(config)
+                cache[str(photo.md5sum)] = phenotyper.make()
+
+            cache.close()
+
+    def get_preprocess_feature_combinations(self, hr):
+        """Return preprocess/feature setting combinations from a classification
+        hierarchy `hr`.
+
+        This is a generator that returns 3-tuples ``(hash, preprocess,
+        {feature_name: feature})``. The hash is unique for each returned
+        preprocess/feature settings combination and can be recreated with
+        :meth:`settings_hash`.
+        """
+        seen_hashes = []
+
+        # Traverse the classification hierarchy for features that need to be
+        # extracted.
+        for level in hr:
+            # Get the preprocess and features settings for this level.
+            try:
+                features = level.features
+            except:
+                raise ConfigurationError("features not set in " \
+                    "classification hierarchy level")
+            try:
+                preprocess = level.preprocess
+            except AttributeError:
+                preprocess = None
+
+            # Get a stripped preprocess config for creating the hash.
+            if preprocess:
+                preprocess_ = self.stripped_config(preprocess=preprocess)
+            else:
+                preprocess_ = None
+
+            for name, feature in vars(features).items():
+                # Create a hash from the preprocessing and feature settings.
+                # Preprocessing needs to be included because this also affects
+                # the outcome of the features extracted. The hash must be
+                # unique for each preprocessing/feature settings combination.
+                hash_ = self.combined_hash(preprocess_, feature)
+                if hash_ not in seen_hashes:
+                    seen_hashes.append(hash_)
+                    yield (hash_, preprocess, {name: feature})
+
+    def get_fingerprints(self, path, hash_):
+        """Return fingerprints from cache for a given hash.
+
+        Looks for caches in the directory `path` with the hash `hash_`. Returns
+        None if the cache could not be found.
+        """
+        try:
+            cache = shelve.open(os.path.join(path, str(hash_)))
+            c = dict(cache)
+            cache.close()
+            return c
+        except:
+            return None
+
+    def load_cache(self, cache_dir, config):
+        """Load cache from `cache_dir` for feature extraction configurations.
+
+        Expects to find the attribute ``features``, and optionally
+        ``preprocess`` in the configurations object `config`.
+        """
+        try:
+            features = config.features
+        except:
+            raise ConfigurationError("features not set")
+
+        try:
+            preprocess = self.stripped_config(preprocess=config.preprocess)
+        except AttributeError:
+            preprocess = None
+
+        self._cache = {}
+        for f_name, f in vars(features).iteritems():
+            hash_ = self.combined_hash(preprocess, f)
+            cache = self.get_fingerprints(cache_dir, hash_)
+            if cache is None:
+                raise ValueError("Cache for hash {0} not found".format(hash_))
+            self._cache[f_name] = cache
+
+    def get_phenotype(self, key):
+        """Return the phenotype for key `key`.
+
+        The `key` is whatever was used as a key for storing the cache. Method
+        :meth:`load_cache` must be called before calling this method.
+        """
+        if not self._cache:
+            raise ValueError("Cache is not loaded")
+
+        phenotype = []
+        for k in sorted(self._cache.keys()):
+            phenotype.extend(self._cache[k][str(key)])
+
+        return phenotype
 
 class TrainData(object):
 

@@ -20,6 +20,7 @@ from sqlalchemy.orm import sessionmaker, configure_mappers
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import exists, functions
 
+from nbclassify.config import conf
 from nbclassify.exceptions import *
 
 # Every photo must have the following ranks set in the meta data.
@@ -49,6 +50,16 @@ def session_scope(db_path):
         raise
     finally:
         session.close()
+
+def get_global_session_or_error():
+    """Get the global database session and metadata.
+
+    Raises a RuntimeError exception if no global session is set.
+    """
+    if not (conf.session and conf.metadata):
+        raise RuntimeError("No database connection found")
+    else:
+        return (conf.session, conf.metadata)
 
 def test_classification_filter(f):
     """Test the validity of the classification filter `f`.

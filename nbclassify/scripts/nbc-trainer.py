@@ -30,7 +30,6 @@ from collections import Counter
 import logging
 import os
 import re
-import shelve
 import sys
 
 import cv2
@@ -411,17 +410,10 @@ def main():
 
     return 0
 
-def set_db_session(session, metadata):
+def set_global_db_session(session, metadata):
     """Set the database session and metadata."""
     conf.session = session
     conf.metadata = metadata
-
-def get_db_session_or_error():
-    """Get the database session and metadata."""
-    if not (conf.session and conf.metadata):
-        raise RuntimeError("No database connection found")
-    else:
-        return (conf.session, conf.metadata)
 
 def meta(config, meta_path, args):
     """Make meta data file for an image directory."""
@@ -429,7 +421,7 @@ def meta(config, meta_path, args):
     db.make_meta_db(meta_path)
 
     with db.session_scope(meta_path) as (session, metadata):
-        set_db_session(session, metadata)
+        set_global_db_session(session, metadata)
 
         mkmeta = MakeMeta(config, args.imdir)
         mkmeta.make()
@@ -442,9 +434,9 @@ def data(config, meta_path, args):
         raise nbc.ConfigurationError("The classification filter is not set")
 
     with db.session_scope(meta_path) as (session, metadata):
-        set_db_session(session, metadata)
+        set_global_db_session(session, metadata)
 
-        cache = FingerprintCache(config)
+        cache = nbc.FingerprintCache(config)
         cache.make(args.imdir, args.cache_dir, update=False)
 
         train_data = MakeTrainData(config, args.cache_dir)
@@ -453,9 +445,9 @@ def data(config, meta_path, args):
 def data_batch(config, meta_path, args):
     """Start batch train data routines."""
     with db.session_scope(meta_path) as (session, metadata):
-        set_db_session(session, metadata)
+        set_global_db_session(session, metadata)
 
-        cache = FingerprintCache(config)
+        cache = nbc.FingerprintCache(config)
         cache.make(args.imdir, args.cache_dir, update=False)
 
         train_data = BatchMakeTrainData(config, args.cache_dir)
@@ -469,7 +461,7 @@ def ann(config, args):
 def ann_batch(config, meta_path, args):
     """Start batch neural network training routines."""
     with db.session_scope(meta_path) as (session, metadata):
-        set_db_session(session, metadata)
+        set_global_db_session(session, metadata)
 
         ann_maker = BatchMakeAnn(config)
         ann_maker.batch_train(args.data, args.output)
@@ -477,7 +469,7 @@ def ann_batch(config, meta_path, args):
 def test_ann(config, meta_path, args):
     """Start neural network testing routines."""
     with db.session_scope(meta_path) as (session, metadata):
-        set_db_session(session, metadata)
+        set_global_db_session(session, metadata)
 
         tester = TestAnn(config)
         tester.test(args.ann, args.test_data)
@@ -493,7 +485,7 @@ def test_ann(config, meta_path, args):
 def test_ann_batch(config, meta_path, args):
     """Start batch neural network testing routines."""
     with db.session_scope(meta_path) as (session, metadata):
-        set_db_session(session, metadata)
+        set_global_db_session(session, metadata)
 
         tester = TestAnn(config)
         tester.test_with_hierarchy(args.test_data, args.anns, args.error)
@@ -506,7 +498,7 @@ def test_ann_batch(config, meta_path, args):
 def classify(config, meta_path, args):
     """Start classification routines."""
     with db.session_scope(meta_path) as (session, metadata):
-        set_db_session(session, metadata)
+        set_global_db_session(session, metadata)
 
         classifier = ImageClassifier(config, args.ann)
         classification = classifier.classify(args.image, args.error)
@@ -523,9 +515,9 @@ def validate(config, meta_path, args):
     FORCE_OVERWRITE = True
 
     with db.session_scope(meta_path) as (session, metadata):
-        set_db_session(session, metadata)
+        set_global_db_session(session, metadata)
 
-        cache = FingerprintCache(config)
+        cache = nbc.FingerprintCache(config)
         cache.make(args.imdir, args.cache_dir, update=False)
 
         validator = Validator(config, args.cache_dir)
@@ -549,181 +541,6 @@ def validate(config, meta_path, args):
             'sd': values.std() * 2
         })
 
-class FingerprintCache(nbc.Common):
-
-    """Cache an retrieve fingerprints."""
-
-    def __init__(self, config):
-        super(FingerprintCache, self).__init__(config)
-        self._cache = {}
-
-    def get_cache(self):
-        """Return the cache as a nested dictionary."""
-        return self._cache
-
-    def combined_hash(self, *args):
-        """Create a combined hash from one or more hashable objects.
-
-        Each argument must be an hashable object. Can also be used for
-        configuration objects as returned by :meth:`open_config`. Returned hash
-        is a negative or positive integer.
-
-        Example::
-
-            >>> a = Struct({'a': True})
-            >>> b = Struct({'b': False})
-            >>> combined_hash(a,b)
-            6862151379155462073
-        """
-        hash_ = None
-        for obj in args:
-            if hash_ is None:
-                hash_ = hash(obj)
-            else:
-                hash_ ^= hash(obj)
-        return hash_
-
-    def make(self, image_dir, cache_dir, update=False):
-        """Cache fingerprints to disk.
-
-        One cache file is created per feature type to be extracted, which are
-        stored in the target directory `cache_dir`. Each cache file is a Python
-        shelve, a persistent, dictionary-like object. If `update` is set to
-        True, existing fingerprints are updated.
-        """
-        session, metadata = get_db_session_or_error()
-
-        phenotyper = nbc.Phenotyper()
-
-        # Get a list of all the photos in the database.
-        photos = db.get_photos(session, metadata)
-
-        # Get the classification hierarchy.
-        try:
-            hr = self.config.classification.hierarchy
-        except:
-            raise nbc.ConfigurationError("classification hierarchy not set")
-
-        # Cache each feature for each photo separately. One cache per
-        # feature type is created, and each cache contains the fingerprints
-        # for all images.
-        hash_pp_ft = self.get_preprocess_feature_combinations(hr)
-        for hash_, preprocess, feature in hash_pp_ft:
-            cache_path = os.path.join(cache_dir, str(hash_))
-
-            logging.info("Caching fingerprints in `{0}`...".format(cache_path))
-
-            # Create a shelve for storing features. Empty existing shelves.
-            cache = shelve.open(cache_path)
-
-            # Cache the fingerprint for each photo.
-            for photo in photos:
-                # Skip fingerprinting if the fingerprint already exists, unless
-                # update is set to True.
-                if not update and str(photo.md5sum) in cache:
-                    continue
-
-                logging.info("Processing photo `%s`..." % photo.id)
-
-                # Construct a new configuration object with a single feature
-                # which we can pass to Phenotyper().
-                config = nbc.Struct({
-                    'preprocess': preprocess,
-                    'features': feature
-                })
-
-                # Create a fingerprint and cache it.
-                im_path = os.path.join(image_dir, photo.path)
-                phenotyper.set_image(im_path)
-                phenotyper.set_config(config)
-                cache[str(photo.md5sum)] = phenotyper.make()
-
-            cache.close()
-
-    def get_preprocess_feature_combinations(self, hr):
-        """Return preprocess/feature setting combinations from a classification
-        hierarchy `hr`.
-
-        This is a generator that returns 3-tuples ``(hash, preprocess,
-        {feature_name: feature})``. The hash is unique for each returned
-        preprocess/feature settings combination and can be recreated with
-        :meth:`settings_hash`.
-        """
-        seen_hashes = []
-
-        # Traverse the classification hierarchy for features that need to be
-        # extracted.
-        for level in hr:
-            # Get the preprocess and features settings for this level.
-            try:
-                features = level.features
-            except:
-                raise nbc.ConfigurationError("features not set in " \
-                    "classification hierarchy level")
-            try:
-                preprocess = level.preprocess
-            except:
-                preprocess = None
-
-            for name, feature in vars(features).items():
-                # Create a hash from the preprocessing and feature settings.
-                # Preprocessing needs to be included because this also affects
-                # the outcome of the features extracted. The hash must be
-                # unique for each preprocessing/feature settings combination.
-                hash_ = self.combined_hash(preprocess, feature)
-                if hash_ not in seen_hashes:
-                    seen_hashes.append(hash_)
-                    yield (hash_, preprocess, {name: feature})
-
-    def get_fingerprints(self, path, hash_):
-        """Return fingerprints from cache for a given hash.
-
-        Looks for caches in the directory `path` with the hash `hash_`. Returns
-        None if the cache could not be found.
-        """
-        try:
-            cache = shelve.open(os.path.join(path, str(hash_)))
-            c = dict(cache)
-            cache.close()
-            return c
-        except:
-            return None
-
-    def load_cache(self, cache_dir, config):
-        """Load cache from `cache_dir` for preprocess/features settings in
-        `config`.
-        """
-        try:
-            features = config.features
-        except:
-            raise nbc.ConfigurationError("features not set")
-        try:
-            preprocess = config.preprocess
-        except:
-            preprocess = None
-
-        self._cache = {}
-        for f_name, f in vars(features).iteritems():
-            hash_ = self.combined_hash(preprocess, f)
-            cache = self.get_fingerprints(cache_dir, hash_)
-            if cache is None:
-                raise ValueError("Cache for hash {0} not found".format(hash_))
-            self._cache[f_name] = cache
-
-    def get_phenotype(self, key):
-        """Return the phenotype for key `key`.
-
-        The `key` is whatever was used as a key for storing the cache. Method
-        :meth:`load_cache` must be called before calling this method.
-        """
-        if not self._cache:
-            raise ValueError("Cache is not loaded")
-
-        phenotype = []
-        for k in sorted(self._cache.keys()):
-            phenotype.extend(self._cache[k][str(key)])
-
-        return phenotype
 
 class MakeMeta(nbc.Common):
 
@@ -784,7 +601,7 @@ class MakeMeta(nbc.Common):
 
     def make(self):
         """Create the meta data database file `meta_path`."""
-        session, metadata = get_db_session_or_error()
+        session, metadata = db.get_global_session_or_error()
 
         sys.stdout.write("Saving meta data for images...\n")
 
@@ -815,7 +632,7 @@ class MakeTrainData(nbc.Common):
         super(MakeTrainData, self).__init__(config)
         self.set_cache_path(cache_path)
         self.subset = None
-        self.cache = FingerprintCache(config)
+        self.cache = nbc.FingerprintCache(config)
 
     def set_cache_path(self, path):
         if not os.path.isdir(path):
@@ -841,7 +658,7 @@ class MakeTrainData(nbc.Common):
         fingerprints are obtained from cache, which must have been created for
         configuration `config`.
         """
-        session, metadata = get_db_session_or_error()
+        session, metadata = db.get_global_session_or_error()
 
         if not FORCE_OVERWRITE and os.path.isfile(filename):
             raise nbc.FileExistsError(filename)
@@ -1026,7 +843,7 @@ class BatchMakeTrainData(MakeTrainData):
         Must be separate from the constructor because
         :meth:`set_photo_count_min` influences the taxon hierarchy.
         """
-        session, metadata = get_db_session_or_error()
+        session, metadata = db.get_global_session_or_error()
 
         if not self.taxon_hr:
             self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
@@ -1167,7 +984,7 @@ class BatchMakeAnn(MakeAnn):
         Must be separate from the constructor because
         :meth:`set_photo_count_min` influences the taxon hierarchy.
         """
-        session, metadata = get_db_session_or_error()
+        session, metadata = db.get_global_session_or_error()
 
         if not self.taxon_hr:
             self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
@@ -1180,7 +997,7 @@ class BatchMakeAnn(MakeAnn):
         data to train on is set in the classification hierarchy of the
         configurations.
         """
-        session, metadata = get_db_session_or_error()
+        session, metadata = db.get_global_session_or_error()
 
         # Must not be loaded in the constructor, in case set_photo_count_min()
         # is used.
@@ -1281,7 +1098,7 @@ class TestAnn(nbc.Common):
         classification filter `filter_`. A bit in a codeword is considered on
         if the mean square error for a bit is less or equal to `error`.
         """
-        session, metadata = get_db_session_or_error()
+        session, metadata = db.get_global_session_or_error()
 
         if self.test_data is None:
             raise RuntimeError("Test data is not set")
@@ -1351,7 +1168,7 @@ class TestAnn(nbc.Common):
 
         Returns a 2-tuple ``(correct,total)``.
         """
-        session, metadata = get_db_session_or_error()
+        session, metadata = db.get_global_session_or_error()
 
         logging.info("Testing the neural networks hierarchy...")
 
@@ -1576,7 +1393,7 @@ class ImageClassifier(nbc.Common):
     """Classify an image."""
 
     def __init__(self, config, ann_file):
-        session, metadata = get_db_session_or_error()
+        session, metadata = db.get_global_session_or_error()
 
         super(ImageClassifier, self).__init__(config)
         self.set_ann(ann_file)
@@ -1646,7 +1463,7 @@ class Validator(nbc.Common):
         raised. If `autoskip` is set to True, only the members for classes with
         at least `k` members are used for the cross validation.
         """
-        session, metadata = get_db_session_or_error()
+        session, metadata = db.get_global_session_or_error()
 
         # Will hold the score of each folds.
         scores = {}
