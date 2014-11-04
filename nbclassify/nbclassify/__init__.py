@@ -24,6 +24,7 @@ import cv2
 import imgpheno as ft
 import numpy as np
 from pyfann import libfann
+from sklearn.preprocessing import MinMaxScaler
 from sqlalchemy import func
 from sqlalchemy import orm
 from sqlalchemy.ext.automap import automap_base
@@ -442,6 +443,7 @@ class Phenotyper(object):
         self.mask = None
         self.bin_mask = None
         self.grabcut_roi = None
+        self.scaler = None
 
     def set_image(self, path, roi=None):
         """Load the image from path `path`.
@@ -467,6 +469,17 @@ class Phenotyper(object):
         self.bin_mask = None
 
         return self.img
+
+    def set_norm_minmax(self, a, b):
+        """Standardize features by scaling each feature to a given range.
+
+        Where possible, the scaler is first fit to the known full feature
+        range before features are scaled. For example, for color intensities
+        of the BGR color space, the scaler is fit to range 0..255.
+        """
+        a = float(a)
+        b = float(b)
+        self.scaler = MinMaxScaler(copy=True, feature_range=(a, b))
 
     def set_grabcut_roi(self, roi):
         """Set the region of interest for the GrabCut algorithm.
@@ -658,9 +671,18 @@ class Phenotyper(object):
 
             hists = ft.color_histograms(img, bins, bin_mask, colorspace)
 
-            for hist in hists:
-                hist = cv2.normalize(hist, None, -1, 1, cv2.NORM_MINMAX)
+            # Get the color space ranges. Correct for the exclusive upper
+            # boundaries.
+            ranges = np.array(ft.CS_RANGE[colorspace]).astype(float) - [0,1]
+
+            for i, hist in enumerate(hists):
+                # Normalize the features if a scaler is set.
+                if self.scaler:
+                    self.scaler.fit(ranges[i])
+                    hist = self.scaler.transform( hist.astype(float) )
+
                 histograms.extend( hist.ravel() )
+
         return histograms
 
     def __get_color_bgr_means(self, src, args, bin_mask=None):
@@ -669,7 +691,8 @@ class Phenotyper(object):
             raise ValueError("Binary mask cannot be None")
 
         # Get the contours from the mask.
-        contour = ft.get_largest_contour(bin_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contour = ft.get_largest_contour(bin_mask.copy(), cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE)
         if contour is None:
             raise ValueError("No contour found for binary image")
 
@@ -678,9 +701,14 @@ class Phenotyper(object):
 
         bins = getattr(args, 'bins', 20)
         output = ft.color_bgr_means(img, contour, bins)
+        output = output.astype(float)
 
-        # Normalize data to range -1 .. 1
-        return output * 2.0 / 255 - 1
+        # Normalize the features if a scaler is set.
+        if self.scaler:
+            self.scaler.fit([0.0, 255.0])
+            output = self.scaler.transform( output )
+
+        return output
 
     def __get_shape_outline(self, args, bin_mask):
         """Executes :meth:`features.shape_outline`."""
@@ -690,7 +718,8 @@ class Phenotyper(object):
         k = getattr(args, 'k', 15)
 
         # Obtain contours (all points) from the mask.
-        contour = ft.get_largest_contour(bin_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        contour = ft.get_largest_contour(bin_mask.copy(), cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_NONE)
         if contour == None:
             raise ValueError("No contour found for binary image")
 
@@ -704,12 +733,13 @@ class Phenotyper(object):
             delta_y = y[0] - y[1]
             shape.append(delta_x)
             shape.append(delta_y)
+        shape = shape.astype(float)
 
-        # Normalize results.
-        shape = np.array(shape, dtype=np.float32)
-        shape = cv2.normalize(shape, None, -1, 1, cv2.NORM_MINMAX)
+        # Normalize the features if a scaler is set.
+        if self.scaler:
+            shape = self.scaler.fit_transform(shape)
 
-        return shape.ravel()
+        return shape
 
     def __get_shape_360(self, args, bin_mask):
         """Executes :meth:`features.shape_360`."""
@@ -722,7 +752,8 @@ class Phenotyper(object):
         output_functions = getattr(args, 'output_functions', {'mean_sd': True})
 
         # Get the largest contour from the binary mask.
-        contour = ft.get_largest_contour(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        contour = ft.get_largest_contour(bin_mask, cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_NONE)
         if contour == None:
             raise ValueError("No contour found for binary image")
 
@@ -731,7 +762,8 @@ class Phenotyper(object):
             box = cv2.fitEllipse(contour)
             rotation = int(box[2])
         if not 0 <= rotation <= 179:
-            raise ValueError("Rotation must be in the range 0 to 179, found %s" % rotation)
+            raise ValueError("Rotation must be in the range 0 to 179, "\
+                "found %s" % rotation)
 
         # Extract shape feature.
         intersects, center = ft.shape_360(contour, rotation, step, t)
@@ -770,22 +802,27 @@ class Phenotyper(object):
                 if f_name == 'color_histograms':
                     # Get a line from the center to the outer intersection point.
                     line = None
-                    if len(intersects[angle]) > 0:
+                    if intersects[angle]:
                         line = ft.extreme_points([center] + intersects[angle])
 
                     # Create a mask for the line, where the line is foreground.
                     line_mask = np.zeros(self.img.shape[:2], dtype=np.uint8)
-                    if line != None:
-                        cv2.line(line_mask, tuple(line[0]), tuple(line[1]), 255, 1)
+                    if line is not None:
+                        cv2.line(line_mask, tuple(line[0]), tuple(line[1]),
+                            255, 1)
 
                     # Create histogram from masked + line masked image.
-                    hists = self.get_color_histograms(img_masked, f_args, line_mask)
+                    hists = self.__get_color_histograms(img_masked, f_args,
+                        line_mask)
                     histograms.append(hists)
 
-        # Normalize results.
-        if 'mean_sd' in output_functions:
-            means = cv2.normalize(np.array(means), None, -1, 1, cv2.NORM_MINMAX)
-            sds = cv2.normalize(np.array(sds), None, -1, 1, cv2.NORM_MINMAX)
+        means = means.astype(float)
+        sds = sds.astype(float)
+
+        # Normalize the features if a scaler is set.
+        if self.scaler and 'mean_sd' in output_functions:
+            means = self.scaler.fit_transform(means)
+            sds = self.scaler.fit_transform(sds)
 
         # Group the means+sds together.
         means_sds = np.array(zip(means, sds)).flatten()
