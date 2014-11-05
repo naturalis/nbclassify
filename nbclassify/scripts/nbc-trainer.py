@@ -436,19 +436,19 @@ def data(config, meta_path, args):
     with db.session_scope(meta_path) as (session, metadata):
         set_global_db_session(session, metadata)
 
-        cache = nbc.FingerprintCache(config)
-        cache.make(args.imdir, args.cache_dir, update=False)
+        cache = nbc.PhenotypeCache()
+        cache.make(args.imdir, args.cache_dir, config, update=False)
 
         train_data = MakeTrainData(config, args.cache_dir)
-        train_data.export(args.output, filter_, config)
+        train_data.export(args.output, filter_)
 
 def data_batch(config, meta_path, args):
     """Start batch train data routines."""
     with db.session_scope(meta_path) as (session, metadata):
         set_global_db_session(session, metadata)
 
-        cache = nbc.FingerprintCache(config)
-        cache.make(args.imdir, args.cache_dir, update=False)
+        cache = nbc.PhenotypeCache()
+        cache.make(args.imdir, args.cache_dir, config, update=False)
 
         train_data = BatchMakeTrainData(config, args.cache_dir)
         train_data.batch_export(args.output)
@@ -517,8 +517,8 @@ def validate(config, meta_path, args):
     with db.session_scope(meta_path) as (session, metadata):
         set_global_db_session(session, metadata)
 
-        cache = nbc.FingerprintCache(config)
-        cache.make(args.imdir, args.cache_dir, update=False)
+        cache = nbc.PhenotypeCache()
+        cache.make(args.imdir, args.cache_dir, config, update=False)
 
         validator = Validator(config, args.cache_dir)
         if args.aivolver_config:
@@ -632,7 +632,7 @@ class MakeTrainData(nbc.Common):
         super(MakeTrainData, self).__init__(config)
         self.set_cache_path(cache_path)
         self.subset = None
-        self.cache = nbc.FingerprintCache(config)
+        self.cache = nbc.PhenotypeCache()
 
     def set_cache_path(self, path):
         if not os.path.isdir(path):
@@ -650,13 +650,13 @@ class MakeTrainData(nbc.Common):
             subset = set(subset)
         self.subset = subset
 
-    def export(self, filename, filter_, config):
+    def export(self, filename, filter_, config=None):
         """Write the training data to `filename`.
 
         Images to be processed are obtained from the database. Which images are
         obtained and with which classes is set by the filter `filter_`. Image
         fingerprints are obtained from cache, which must have been created for
-        configuration `config`.
+        configuration `config` or `self.config`.
         """
         session, metadata = db.get_global_session_or_error()
 
@@ -671,7 +671,7 @@ class MakeTrainData(nbc.Common):
         # Skip train data export if there is only one class for this filter.
         if not len(classes) > 1:
             logging.info("Not enough classes for filter. Skipping export " \
-                "of %s" % filename)
+                "of %s", filename)
             return
 
         # Get the photos and corresponding classification using the filter.
@@ -679,7 +679,7 @@ class MakeTrainData(nbc.Common):
         images = images.all()
 
         if not images:
-            logging.info("No images found for the filter `%s`" % filter_)
+            logging.info("No images found for the filter `%s`", filter_)
             return
 
         if self.get_photo_count_min():
@@ -696,7 +696,7 @@ class MakeTrainData(nbc.Common):
         else:
             n_images = len(images)
 
-        logging.info("Going to process %d photos..." % n_images)
+        logging.info("Going to process %d photos...", n_images)
 
         # Make a codeword for each class.
         codewords = self.get_codewords(classes)
@@ -704,6 +704,10 @@ class MakeTrainData(nbc.Common):
         # Construct the header.
         header_data, header_out = self.__make_header(len(classes))
         header = ["ID"] + header_data + header_out
+
+        # Get the configurations.
+        if not config:
+            config = self.config
 
         # Load the fingerprint cache.
         self.cache.load_cache(self.cache_path, config)
@@ -721,8 +725,8 @@ class MakeTrainData(nbc.Common):
                 if self.subset and photo.id not in self.subset:
                     continue
 
-                logging.info("Processing `%s` of class `%s`..." % (photo.path,
-                    class_))
+                logging.info("Processing `%s` of class `%s`...",
+                    photo.path, class_)
 
                 # Get phenotype for this image from the cache.
                 phenotype = self.cache.get_phenotype(photo.md5sum)
@@ -750,7 +754,7 @@ class MakeTrainData(nbc.Common):
                 row.extend(output.astype(str))
                 fh.write("%s\n" % "\t".join(row))
 
-        logging.info("Training data written to %s" % filename)
+        logging.info("Training data written to %s", filename)
 
     def __make_header(self, n_out):
         """Construct a header from features settings.

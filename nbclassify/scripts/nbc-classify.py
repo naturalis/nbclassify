@@ -229,10 +229,9 @@ class ImageClassifier(nbc.Common):
 
         # Get a hash that that is unique for this image/preprocess/features
         # combination.
-        preprocess_ = nbc.FingerprintCache.stripped_config(
-            preprocess=config.preprocess)
-        hash_ = nbc.FingerprintCache.combined_hash(hasher.hexdigest(),
-            preprocess_, config.features)
+        hashables = nbc.PhenotypeCache.get_config_hashables(config)
+        hash_ = nbc.PhenotypeCache.combined_hash(hasher.hexdigest(),
+            config.features, *hashables)
 
         if hash_ in self.cache:
             phenotype = self.cache[hash_]

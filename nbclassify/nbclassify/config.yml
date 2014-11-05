@@ -13,10 +13,16 @@ directory_hierarchy:
     - species
 
 # Describe training data format.
-data:
+data: &data
     # Prefix of classification columns. When generating training data, this
     # prefix is extended with a number.
     dependent_prefix: "OUT:"
+
+    # Sets how the extracted features should be normalized. Set this according
+    # to the activation functions used for the neurons during training.
+    normalize:
+        # Scale features to lie between a given minimum and maximum value.
+        min_max: [-1, 1]
 
 # Preprocessing steps to perform on images before features are extracted.
 preprocess: &preprocess
@@ -121,6 +127,7 @@ classification:
     # Define the classification hierarchy from top to bottom.
     hierarchy:
         - name: genus
+          data: *data
           preprocess: *preprocess
           features: *features
           ann: *ann_genus
@@ -130,6 +137,7 @@ classification:
           max_error: 0.00001
 
         - name: section
+          data: *data
           preprocess: *preprocess
           features: *features
           ann: *ann
@@ -139,6 +147,7 @@ classification:
           max_error: 0.0001
 
         - name: species
+          data: *data
           preprocess: *preprocess
           features: *features
           ann: *ann
