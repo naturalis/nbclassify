@@ -752,7 +752,7 @@ class Phenotyper(object):
             delta_y = y[0] - y[1]
             shape.append(delta_x)
             shape.append(delta_y)
-        shape = shape.astype(float)
+        shape = np.array(shape, dtype=float)
 
         # Normalize the features if a scaler is set.
         if self.scaler:
