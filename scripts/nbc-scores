@@ -2,31 +2,32 @@
 #
 # nbc-scores --- calculate and print classification scores
 #
-# usage: nbc-scores [depth=N] [genus=S] [section=S] [species=S] FILE [FILE ...]
+# usage: nbc-scores [mode=N] [genus=S] [section=S] [species=S] FILE [FILE ...]
 #
 # arguments:
 #   FILE      TSV file containing test results as exported by `nbc-trainer.py`.
 #
 # variables:
-#   depth     Check for matches op to the given depth. depth = 1 checks genus,
-#             depth = 2 checks genus + section, depth = 3 checks genus +
-#             section + species. Defaults to 1.
-#   genus     Filter by genus name.
-#   section   Filter by section name (if depth >= 2).
-#   species   Filter by species name (if depth >= 3).
+#   mode      A numeric mode is one octal digit (0-7), derived by adding up
+#             the bits with values 1, 2, and 4. The mode sets on which ranks
+#             to check for matches: genus (1), section (2), and species (4). It
+#             defaults to 7.
+#   genus     Filter by genus name (if mode sets genus).
+#   section   Filter by section name (if mode sets section).
+#   species   Filter by species name (if mode sets species).
 #
 # examples:
 #   scores for rank genus (ignoring section and species):
-#     nbc-scores depth=1 results/*.tsv
+#     nbc-scores mode=1 results/*.tsv
 #
 #   scores for species `Cypripedium flavum`:
-#     nbc-scores depth=3 genus=Cypripedium species=flavum results/*.tsv
+#     nbc-scores mode=5 genus=Cypripedium species=flavum results/*.tsv
 
 gawk '
 BEGIN {
 	FS = "\t"
 	i = 0
-	depth = 1
+	mode = 7
 }
 
 BEGINFILE {
@@ -35,16 +36,16 @@ BEGINFILE {
 
 FNR > 1 {
 	is_match = 1
-	if (genus && $2 != genus) is_match = 0
-	if (depth >= 2 && section && $3 != section) is_match = 0
-	if (depth >= 3 && species && $4 != species) is_match = 0
+	if ( and(mode, 1) == 1 && genus && $2 != genus ) is_match = 0
+	if ( and(mode, 2) == 2 && section && $3 != section ) is_match = 0
+	if ( and(mode, 4) == 4 && species && $4 != species) is_match = 0
 	if (is_match) total++
 }
 
 FNR > 1 && is_match {
-	if ($5 !~ $2) is_match = 0
-	if (depth >= 2 && $6 !~ $3) is_match = 0
-	if (depth >= 3 && $7 !~ $4) is_match = 0
+	if ( and(mode, 1) == 1 && $5 !~ $2) is_match = 0
+	if ( and(mode, 2) == 2 && $6 !~ $3) is_match = 0
+	if ( and(mode, 4) == 4 && $7 !~ $4) is_match = 0
 	if (is_match) matches++
 }
 
