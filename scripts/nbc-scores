@@ -1,0 +1,69 @@
+#!/bin/sh
+#
+# nbc-scores --- calculate and print classification scores
+#
+# usage: nbc-scores [depth=N] [genus=S] [section=S] [species=S] FILE [FILE ...]
+#
+# arguments:
+#   FILE      TSV file containing test results as exported by `nbc-trainer.py`.
+#
+# variables:
+#   depth     Check for matches op to the given depth. depth = 1 checks genus,
+#             depth = 2 checks genus + section, depth = 3 checks genus +
+#             section + species. Defaults to 1.
+#   genus     Filter by genus name.
+#   section   Filter by section name (if depth >= 2).
+#   species   Filter by species name (if depth >= 3).
+#
+# examples:
+#   scores for rank genus (ignoring section and species):
+#     nbc-scores depth=1 results/*.tsv
+#
+#   scores for species `Cypripedium flavum`:
+#     nbc-scores depth=3 genus=Cypripedium species=flavum results/*.tsv
+
+gawk '
+BEGIN {
+	FS = "\t"
+	i = 0
+	depth = 1
+}
+
+BEGINFILE {
+	total = matches = 0
+}
+
+FNR > 1 {
+	is_match = 1
+	if (genus && $2 != genus) is_match = 0
+	if (depth >= 2 && section && $3 != section) is_match = 0
+	if (depth >= 3 && species && $4 != species) is_match = 0
+	if (is_match) total++
+}
+
+FNR > 1 && is_match {
+	if ($5 !~ $2) is_match = 0
+	if (depth >= 2 && $6 !~ $3) is_match = 0
+	if (depth >= 3 && $7 !~ $4) is_match = 0
+	if (is_match) matches++
+}
+
+ENDFILE {
+	if (total) {
+		means[i] = matches / total
+		printf "%s: %s/%s (%.2f%%)\n", FILENAME, matches, total, means[i] * 100
+		i++
+	}
+}
+
+END {
+	if (total) {
+		n = length(means)
+		for ( i=0; i < n; i++ ) sum += means[i]
+		printf "overall: %.2f%%\n", sum / n * 100
+	}
+	else
+		print "No data matches your criteria"
+}' $@
+
+return $?

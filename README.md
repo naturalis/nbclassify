@@ -8,6 +8,7 @@ is as follows:
   the `nbclassify` package.
 * `nbclassify/`: A Python package for image fingerprinting (using the
   [ImgPheno][1] package) and recognition via artificial neural networks.
+* `scripts/`: Other scripts.
 
 [![Build Status](https://travis-ci.org/naturalis/nbclassify.svg?branch=master)](https://travis-ci.org/naturalis/nbclassify)
 
