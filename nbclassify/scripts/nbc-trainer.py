@@ -525,14 +525,8 @@ def validate(config, meta_path, args):
             validator.set_aivolver_config_path(args.aivolver_config)
         scores = validator.k_fold_xval_stratified(args.k, args.autoskip)
 
-    paths = (
-        "genus",
-        "genus/section",
-        "genus/section/species",
-    )
-
     print
-    for path in paths:
+    for path in sorted(scores.keys()):
         values = np.array(scores[path])
 
         print "Accuracy[{path}]: {mean:.2%} (+/- {sd:.2%})".format(**{
@@ -667,12 +661,6 @@ class MakeTrainData(nbc.Common):
         classes = self.get_classes_from_filter(session, metadata, filter_)
         assert len(classes) > 0, \
             "No classes found for filter `%s`" % filter_
-
-        # Skip train data export if there is only one class for this filter.
-        if not len(classes) > 1:
-            logging.info("Not enough classes for filter. Skipping export " \
-                "of %s", filename)
-            return
 
         # Get the photos and corresponding classification using the filter.
         images = db.get_filtered_photos_with_taxon(session, metadata, filter_)
@@ -1034,8 +1022,8 @@ class BatchMakeAnn(MakeAnn):
 
             # Skip train data export if there is only one class for this filter.
             if not len(classes) > 1:
-                logging.info("Not enough classes for filter. Skipping training " \
-                    "of %s" % ann_file)
+                logging.debug("Only one class for this filter. Skipping " \
+                    "training of %s" % ann_file)
                 continue
 
             # Train the ANN.
@@ -1226,19 +1214,13 @@ class TestAnn(nbc.Common):
             assert len(classes) > 0, \
                 "No classes found for filter `%s`" % filter_
 
-            # Skip test if there is only one class for this filter. Result
-            # will be missing from the test results output.
-            if not len(classes) > 1:
-                logging.info("Not enough classes for filter. Skipping " \
-                    "testing of %s" % ann_file)
-                continue
-
             # Get the codeword for each class.
             codewords = self.get_codewords(classes)
 
             # Load the ANN.
-            ann = libfann.neural_net()
-            ann.create_from_file(str(ann_file))
+            if len(classes) > 1:
+                ann = libfann.neural_net()
+                ann.create_from_file(str(ann_file))
 
             # Load the test data.
             test_data = nbc.TrainData()
@@ -1262,6 +1244,16 @@ class TestAnn(nbc.Common):
                 except:
                     raise RuntimeError("Failed to obtain the photo ID from " \
                         "the sample label")
+
+                # Skip classification if there is only one class for this
+                # filter and assume the only possible classification.
+                if not len(classes) > 1:
+                    logging.debug("Not enough classes for filter. Skipping " \
+                        "testing of %s" % ann_file)
+
+                    self.classifications[photo_id][level_name] = list(classes)
+                    self.classifications_expected[photo_id][level_name] = list(classes)
+                    continue
 
                 # Set the expected class.
                 class_expected = self.get_classification(codewords, output,

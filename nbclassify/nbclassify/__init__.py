@@ -274,7 +274,7 @@ class Common(object):
         MetaData object `metadata`.
 
         The unique set of classes for the classification filter `filter_` are
-        returned. Filters are those as returned by
+        returned as a set. Filters are those as returned by
         :meth:`classification_hierarchy_filters`.
         """
         levels = ['genus','section','species']
@@ -1106,8 +1106,8 @@ class TrainData(object):
         self.num_input = n
 
     def set_num_output(self, n):
-        if not n > 1:
-            raise ValueError("The number of output columns must be at least 2")
+        if not n > 0:
+            raise ValueError("The number of output columns must be at least 1")
         self.num_output = n
 
     def read_from_file(self, path, dependent_prefix="OUT:"):
@@ -1143,8 +1143,8 @@ class TrainData(object):
 
             if not self.num_input > 0:
                 raise ValueError("No input columns found in training data")
-            if not self.num_output > 1:
-                raise ValueError("Training data needs at least 2 output " \
+            if not self.num_output > 0:
+                raise ValueError("Training data needs at least 1 output " \
                     "columns, found %d" % self.num_output)
 
             input_end = input_start + self.num_input
