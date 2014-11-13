@@ -12,16 +12,16 @@
 #             the bits with values 1, 2, and 4. The mode sets on which ranks
 #             to check for matches: genus (1), section (2), and species (4). It
 #             defaults to 7.
-#   genus     Filter by genus name (if mode sets genus).
-#   section   Filter by section name (if mode sets section).
-#   species   Filter by species name (if mode sets species).
+#   genus     Filter by genus name.
+#   section   Filter by section name.
+#   species   Filter by species name.
 #
 # examples:
 #   scores for rank genus (ignoring section and species):
 #     nbc-scores mode=1 results/*.tsv
 #
 #   scores for species `Cypripedium flavum`:
-#     nbc-scores mode=5 genus=Cypripedium species=flavum results/*.tsv
+#     nbc-scores mode=7 genus=Cypripedium species=flavum results/*.tsv
 
 gawk '
 BEGIN {
@@ -36,16 +36,16 @@ BEGINFILE {
 
 FNR > 1 {
 	is_match = 1
-	if ( and(mode, 1) == 1 && genus && $2 != genus ) is_match = 0
-	if ( and(mode, 2) == 2 && section && $3 != section ) is_match = 0
-	if ( and(mode, 4) == 4 && species && $4 != species) is_match = 0
+	if ( genus && $2 != genus ) is_match = 0
+	if ( section && $3 != section ) is_match = 0
+	if ( species && $4 != species ) is_match = 0
 	if (is_match) total++
 }
 
 FNR > 1 && is_match {
-	if ( and(mode, 1) == 1 && $5 !~ $2) is_match = 0
-	if ( and(mode, 2) == 2 && $6 !~ $3) is_match = 0
-	if ( and(mode, 4) == 4 && $7 !~ $4) is_match = 0
+	if ( and(mode, 1) == 1 && $5 !~ $2 ) is_match = 0
+	if ( and(mode, 2) == 2 && $6 !~ $3 ) is_match = 0
+	if ( and(mode, 4) == 4 && $7 !~ $4 ) is_match = 0
 	if (is_match) matches++
 }
 
@@ -56,6 +56,7 @@ ENDFILE {
 		i++
 	}
 }
+
 
 END {
 	if (total) {
