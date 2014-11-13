@@ -1246,13 +1246,13 @@ class TestAnn(nbc.Common):
                         "the sample label")
 
                 # Skip classification if there is only one class for this
-                # filter and assume the only possible classification.
+                # filter.
                 if not len(classes) > 1:
                     logging.debug("Not enough classes for filter. Skipping " \
                         "testing of %s" % ann_file)
 
-                    self.classifications[photo_id][level_name] = list(classes)
-                    self.classifications_expected[photo_id][level_name] = list(classes)
+                    self.classifications[photo_id][level_name] = ['']
+                    self.classifications_expected[photo_id][level_name] = ['']
                     continue
 
                 # Set the expected class.
@@ -1367,7 +1367,7 @@ class TestAnn(nbc.Common):
         for photo_id, class_exp in self.classifications_expected.iteritems():
             match = True
             for level in levels:
-                if level_filter and not level in level_filter:
+                if level_filter and level not in level_filter:
                     continue
 
                 try:
