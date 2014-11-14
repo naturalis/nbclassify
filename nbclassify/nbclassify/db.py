@@ -3,7 +3,7 @@
 
 """Database routines.
 
-Uses SQLAlchmy for object relational mapping.
+Uses SQLAlchemy for object relational mapping.
 """
 
 from contextlib import contextmanager
@@ -518,7 +518,8 @@ def get_taxa_photo_count(session, metadata):
         join(Photo.taxa_collection, Taxon.ranks).\
         filter(Rank.name == 'species').subquery()
 
-    q = session.query('genus', 'section', 'species', functions.count(Photo.id)).\
+    q = session.query('genus', 'section', 'species',
+            functions.count(Photo.id).label('photos')).\
         select_from(Photo).\
         join(stmt_genus, stmt_genus.c.id == Photo.id).\
         outerjoin(stmt_section, stmt_section.c.id == Photo.id).\
