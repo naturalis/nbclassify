@@ -1,6 +1,31 @@
 ---
+# This is an example configurations file for trainer.py and classify.py.
+
+# The directory hierarchy describes how images are organized on the local
+# hard drive. Each item in the list corresponds to a rank name in the database.
+# The directory name will be stored as the taxonomic name for that rank.
+# If the directory name is "None", that rank will not be saved in the database.
+# Directory levels can be ignored by setting the corresponding rank in the
+# directory hierarchy to "__ignore__".
+directory_hierarchy:
+    - genus
+    - section
+    - species
+
+# Describe training data format.
+data: &data
+    # Prefix of classification columns. When generating training data, this
+    # prefix is extended with a number.
+    dependent_prefix: "OUT:"
+
+    # Sets how the extracted features should be normalized. Set this according
+    # to the activation functions used for the neurons during training.
+    normalize:
+        # Scale features to lie between a given minimum and maximum value.
+        min_max: [-1, 1]
+
 # Preprocessing steps to perform on images before features are extracted.
-preprocess: &preprocess_std
+preprocess: &preprocess
     # Limit the maximum perimeter for input images (optional). The input
     # image is scaled down if the image perimeter, calculated as width +
     # height, exeeds this value. The input images on disk stay unmodified.
@@ -21,7 +46,7 @@ preprocess: &preprocess_std
             margin: 1
 
 # Features to be extracted from the images.
-features: &features_std
+features: &features
     # Describes the BGR color frequencies along horizontal and vertical axis.
     color_bgr_means:
         # Each axis is divided into equal size bins. The color frequencies for
@@ -29,19 +54,11 @@ features: &features_std
         bins: 50
 
 # Parameters for training artificial neural networks.
-ann: &ann_std
-    # Number of hidden neuron layers. Default is 1
-    hidden_layers: 1
-    # Number of hidden neurons per hidden layer. Default is 8
-    hidden_neurons: 20
-    # Maximum number of epochs. Default is 100000
-    epochs: 100000
-    # Desired error. Default is 0.00001
-    error: 0.00001
-    # Learning rate. Default is 0.7
-    learning_rate: 0.7
-    # Connection rate. Default is 1, a fully connected network.
-    connection_rate: 1
+ann: &ann
+    # 'ordinary' or 'cascade' training.
+    train_type: ordinary
+    # Desired error. Defaults to 0.00001.
+    desired_error: 0.00001
     # The training algorithm used for training. Default is TRAIN_RPROP.
     # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_train_enum
     training_algorithm: TRAIN_RPROP
@@ -52,44 +69,89 @@ ann: &ann_std
     # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
     activation_function_output: SIGMOID_SYMMETRIC
 
-ann_genus: &ann_genus
-    hidden_layers: 1
-    hidden_neurons: 50
+    # Ordinary training:
+
+    # Maximum number of epochs. Defaults to 100000.
     epochs: 100000
-    error: 0.00001
+    # Number of hidden neuron layers. Defaults to 1.
+    hidden_layers: 1
+    # Number of hidden neurons per hidden layer. Defaults to 8.
+    hidden_neurons: 20
+    # Learning rate. Defaults to 0.7.
     learning_rate: 0.7
+    # Connection rate. Defaults to 1, a fully connected network.
     connection_rate: 1
+
+    # Cascade training:
+
+    # The maximum number of neurons to be added to neural network.
+    max_neurons: 100
+    # The number of neurons between printing a status report.
+    neurons_between_reports: 1
+    # List of the different activation functions used by the candidates.
+    # See http://leenissen.dk/fann/html/files/fann_cascade-h.html#fann_get_cascade_activation_steepnesses
+    cascade_activation_steepnesses: [ 0.25, 0.50, 0.75, 1.00 ]
+    # The number of groups of identical candidates which will be used during training.
+    # See http://leenissen.dk/fann/html/files/fann_cascade-h.html#fann_set_cascade_num_candidate_groups
+    cascade_num_candidate_groups: 2
+
+ann_genus: &ann_genus
+    train_type: ordinary
+    desired_error: 0.00001
     training_algorithm: TRAIN_RPROP
     activation_function_hidden: SIGMOID_SYMMETRIC
     activation_function_output: SIGMOID_SYMMETRIC
+    # Ordinary training:
+    epochs: 100000
+    hidden_layers: 1
+    hidden_neurons: 50
+    learning_rate: 0.7
+    connection_rate: 1
+    # Cascade training:
+    max_neurons: 100
+    neurons_between_reports: 1
+    cascade_activation_steepnesses: [ 0.25, 0.50, 0.75, 1.00 ]
+    cascade_num_candidate_groups: 2
 
 # Configurations for classification.
 classification:
+    # Simplified query for filtering photos with corresponding classification
+    # from the database.
+    filter:
+        where:
+            genus: Cypripedium
+            section: Arietinum
+        class:
+            species
+
     # Define the classification hierarchy from top to bottom.
     hierarchy:
         - name: genus
-          preprocess: *preprocess_std
-          features: *features_std
+          data: *data
+          preprocess: *preprocess
+          features: *features
           ann: *ann_genus
           train_file: genus.tsv
           test_file: genus.tsv
           ann_file: genus.ann
-          max_error: 0.01
+          max_error: 0.00001
 
         - name: section
-          preprocess: *preprocess_std
-          features: *features_std
-          ann: *ann_std
+          data: *data
+          preprocess: *preprocess
+          features: *features
+          ann: *ann
           train_file: __genus__.section.tsv
           test_file: __genus__.section.tsv
           ann_file: __genus__.section.ann
-          max_error: 0.01
+          max_error: 0.0001
 
         - name: species
-          preprocess: *preprocess_std
-          features: *features_std
-          ann: *ann_std
+          data: *data
+          preprocess: *preprocess
+          features: *features
+          ann: *ann
           train_file: __genus__.__section__.species.tsv
           test_file: __genus__.__section__.species.tsv
           ann_file: __genus__.__section__.species.ann
-          max_error: 0.01
+          max_error: 0.001

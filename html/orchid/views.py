@@ -4,16 +4,16 @@ import re
 import urllib
 import urllib2
 
-import nbclassify as nbc
-
 from django.http import HttpResponse, HttpResponseRedirect, Http404, HttpResponseServerError
 from django.core.urlresolvers import reverse
 from django.shortcuts import render, get_object_or_404
 from django.core.context_processors import csrf
 from django.conf import settings
+from nbclassify import open_config
+
 from orchid.forms import UploadPictureForm
 from orchid.models import Photo, Identity
-from orchid.classify import ImageClassifier, open_yaml
+from orchid.classify import ImageClassifier
 
 CONFIG_FILE = os.path.join(settings.BASE_DIR, 'orchid', 'config.yml')
 TAXA_DB = os.path.join(settings.BASE_DIR, 'orchid', 'taxa.db')
@@ -89,7 +89,7 @@ def identify(request, photo_id):
             roi = None
 
         # Classify the photo.
-        config = open_yaml(CONFIG_FILE)
+        config = open_config(CONFIG_FILE)
         classifier = ImageClassifier(config, TAXA_DB)
         classifier.set_roi(roi)
 
@@ -331,7 +331,9 @@ def eol_orchid_species_info(request, query):
         try:
             if obj['title'] == "IUCNConservationStatus":
                 data['iucn'] = obj
-                data['iucn']['danger_status'] = iucn_status.search(obj['description']).group(1) in ('LC','NT','VU','EN','CR','EW')
+                data['iucn']['danger_status'] = iucn_status.\
+                    search(obj['description']).\
+                    group(1) in ('VU','EN','CR','EW','EX')
                 continue
         except:
             pass

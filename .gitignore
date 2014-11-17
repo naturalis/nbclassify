@@ -6,6 +6,9 @@
 # Where user uploads are stored.
 html/media/
 
+# Virtualenv
+html/env/
+
 # Build directories
 _build/
 dist/

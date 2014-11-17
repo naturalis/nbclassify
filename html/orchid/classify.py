@@ -11,36 +11,7 @@ import yaml
 
 import imgpheno as ft
 import nbclassify as nbc
-
-def get_object(d):
-    """Return an object from a dictionary."""
-    if not isinstance(d, dict):
-        raise TypeError("Argument 'd' is not a dictionary")
-    return nbc.Struct(d)
-
-def open_yaml(path):
-    """Read a YAML file and return as an object."""
-    with open(path, 'r') as f:
-        config = yaml.load(f)
-    return get_object(config)
-
-@contextmanager
-def session_scope(db_path):
-    """Provide a transactional scope around a series of operations."""
-    engine = sqlalchemy.create_engine('sqlite:///%s' % os.path.abspath(db_path),
-        echo=False)
-    Session = sqlalchemy.orm.sessionmaker(bind=engine)
-    session = Session()
-    metadata = sqlalchemy.MetaData()
-    metadata.reflect(bind=engine)
-    try:
-        yield (session, metadata)
-        session.commit()
-    except:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+import nbclassify.db as db
 
 class ImageClassifier(nbc.Common):
     """Classify an image."""
@@ -59,7 +30,7 @@ class ImageClassifier(nbc.Common):
             raise nbc.ConfigurationError("missing `classification.hierarchy`")
 
         # Get the classification hierarchy from the database.
-        with session_scope(db_path) as (session, metadata):
+        with db.session_scope(db_path) as (session, metadata):
             self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
     def set_db_path(self, path):
@@ -120,7 +91,8 @@ class ImageClassifier(nbc.Common):
             hasher.update(buf)
 
         # Create a hash of the feature extraction options.
-        hash_ = "%s.%s.%s" % (hasher.hexdigest(), hash(config.preprocess), hash(config.features))
+        hash_ = "%s.%s.%s" % (hasher.hexdigest(), hash(config.preprocess),
+            hash(config.features))
 
         if hash_ in self.cache:
             phenotype = self.cache[hash_]
@@ -187,9 +159,13 @@ class ImageClassifier(nbc.Common):
             raise ValueError("Classes for level `%s` are not set" % level.name)
 
         if level_classes == [None]:
-            # No need to classify if there are no classes set.
+            # No need to classify if there are no classes for current level.
             classes = level_classes
-            class_errors = (0.0,)
+            class_errors = [0.0]
+        elif len(level_classes) == 1:
+            # Also no need to classify if there is only one class.
+            classes = level_classes
+            class_errors = [0.0]
         else:
             # Get the codewords for the classes.
             class_codewords = self.get_codewords(level_classes)
@@ -212,10 +188,7 @@ class ImageClassifier(nbc.Common):
             else:
                 class_errors = classes = []
 
-        # Print some info messages.
-        path_s = [str(p) for p in path]
-        path_s = '/'.join(path_s)
-
+        # Return the classification if classification failed on current level.
         if len(classes) == 0:
             return ([path], [path_error])
 
