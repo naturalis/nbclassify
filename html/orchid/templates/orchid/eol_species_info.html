@@ -7,7 +7,7 @@
                 {% if iucn.danger_status %}
                 <div class="alert alert-danger" role="alert">IUCN threat status: <a href="{{ iucn.source }}" class="alert-link">{{ iucn.description }}</a></div>
                 {% else %}
-                <div class="alert alert-info" role="alert">IUCN threat status: <a href="{{ iucn.source }}" class="alert-link">{{ iucn.description }}</a></div>
+                <div class="alert alert-success" role="alert">IUCN threat status: <a href="{{ iucn.source }}" class="alert-link">{{ iucn.description }}</a></div>
                 {% endif %}
             {% endif %}
 
