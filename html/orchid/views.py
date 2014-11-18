@@ -342,6 +342,10 @@ def eol_orchid_species_info(request, query):
             data['imageObjects'].append(obj)
 
         elif "Text" in obj['dataType']:
+            # Skip non-English texts for now.
+            if 'language' in obj and obj['language'] != 'en':
+                continue
+
             data['textObjects'].append(obj)
 
     return render(request, "orchid/eol_species_info.html", data)
