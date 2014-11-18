@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """Methods for image classification using artificial neural networks."""
@@ -10,11 +9,14 @@ import sys
 
 from pyfann import libfann
 
-import nbclassify as nbc
-from nbclassify.db import session_scope
+from nbclassify.base import Common
+from nbclassify.data import PhenotypeCache, Phenotyper
+import nbclassify.db as db
+from nbclassify.exceptions import *
+from nbclassify.functions import (get_childs_from_hierarchy,
+    get_classification, get_codewords)
 
-
-class ImageClassifier(nbc.Common):
+class ImageClassifier(Common):
 
     """Classify an image."""
 
@@ -28,11 +30,11 @@ class ImageClassifier(nbc.Common):
         try:
             self.class_hr = self.config.classification.hierarchy
         except:
-            raise nbc.ConfigurationError("classification hierarchy not set")
+            raise ConfigurationError("classification hierarchy not set")
 
         # Get the taxon hierarchy from the database.
-        with session_scope(meta_path) as (session, metadata):
-            self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
+        with db.session_scope(meta_path) as (session, metadata):
+            self.taxon_hr = db.get_taxon_hierarchy(session, metadata)
 
     def set_meta_path(self, path):
         """Set the path to the meta file."""
@@ -81,9 +83,9 @@ class ImageClassifier(nbc.Common):
         if not os.path.isfile(ann_path):
             raise IOError("Cannot open %s (no such file)" % ann_path)
         if 'preprocess' not in config:
-            raise nbc.ConfigurationError("preprocess settings not set")
+            raise ConfigurationError("preprocess settings not set")
         if 'features' not in config:
-            raise nbc.ConfigurationError("features settings not set")
+            raise ConfigurationError("features settings not set")
 
         ann = libfann.neural_net()
         ann.create_from_file(str(ann_path))
@@ -96,14 +98,14 @@ class ImageClassifier(nbc.Common):
 
         # Get a hash that that is unique for this image/preprocess/features
         # combination.
-        hashables = nbc.PhenotypeCache.get_config_hashables(config)
-        hash_ = nbc.PhenotypeCache.combined_hash(hasher.hexdigest(),
+        hashables = PhenotypeCache.get_config_hashables(config)
+        hash_ = PhenotypeCache.combined_hash(hasher.hexdigest(),
             config.features, *hashables)
 
         if hash_ in self.cache:
             phenotype = self.cache[hash_]
         else:
-            phenotyper = nbc.Phenotyper()
+            phenotyper = Phenotyper()
             phenotyper.set_image(im_path)
             if self.roi:
                 y, y2, x, x2 = self.roi
@@ -159,7 +161,7 @@ class ImageClassifier(nbc.Common):
             ann_file = ann_file.replace("__%s__" % key, val)
 
         # Get the class names for this node in the taxonomic hierarchy.
-        level_classes = self.get_childs_from_hierarchy(self.taxon_hr, path)
+        level_classes = get_childs_from_hierarchy(self.taxon_hr, path)
 
         # Some levels must have classes set.
         if level_classes == [None] and level.name in ('genus','species'):
@@ -175,7 +177,7 @@ class ImageClassifier(nbc.Common):
             class_errors = [0.0]
         else:
             # Get the codewords for the classes.
-            class_codewords = self.get_codewords(level_classes)
+            class_codewords = get_codewords(level_classes)
 
             # Classify the image and obtain the codeword.
             ann_path = os.path.join(ann_base_path, ann_file)
@@ -188,7 +190,7 @@ class ImageClassifier(nbc.Common):
                 max_error = self.error
 
             # Get the class name associated with this codeword.
-            classes = self.get_classification(class_codewords,
+            classes = get_classification(class_codewords,
                 codeword, max_error)
             if classes:
                 class_errors, classes = zip(*classes)

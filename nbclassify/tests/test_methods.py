@@ -7,73 +7,15 @@ import sys
 import tempfile
 import unittest
 
+from context import base
 from context import db
-from context import nbc
+from context import functions
 from context import nbc_trainer
 
 CONF_FILE  = "config.yml"
 IMAGE_DIR = "images"
 META_FILE = ".meta.db"
 
-#@unittest.skip("Debugging")
-class TestCommon(unittest.TestCase):
-
-    """Unit tests for the Common class."""
-
-    @classmethod
-    def setUpClass(cls):
-        """Remove an existing metadata file and create a new one.
-
-        This is executed before any test is started.
-        """
-        meta_file = os.path.join(IMAGE_DIR, META_FILE)
-        if os.path.isfile(meta_file):
-            os.remove(meta_file)
-
-        sys.argv = [
-            'nbc-trainer.py',
-            CONF_FILE,
-            'meta',
-            IMAGE_DIR
-        ]
-        nbc_trainer.main()
-
-    def setUp(self):
-        """Prepare the testing environment."""
-        config = nbc.open_config('config.yml')
-        self.cmn = nbc.Common(config)
-
-        # Create the metadata file if it does not exist.
-        self.meta_file = os.path.join(IMAGE_DIR, META_FILE)
-        if not os.path.isfile(self.meta_file):
-            self.make_meta_db()
-
-    def test_get_taxon_hierarchy(self):
-        """Test the get_taxon_hierarchy() method."""
-        expected = {
-            u'Paphiopedilum': {
-                u'Brachypetalum': [u'godefroyae', u'wenshanense']
-            },
-            u'Selenipedium': {
-                None: [u'palmifolium']
-            },
-            u'Mexipedium': {
-                None: [u'xerophyticum']
-            },
-            u'Cypripedium': {
-                u'Trigonopedia': [u'fargesii', u'sichuanense'],
-                u'Obtusipetala': [u'flavum'],
-                u'Arietinum': [u'plectrochilum']
-            },
-            u'Phragmipedium': {
-                u'Micropetalum': [u'besseae']
-            }
-        }
-
-        with db.session_scope(self.meta_file) as (session, metadata):
-            hier = self.cmn.get_taxon_hierarchy(session, metadata)
-
-        self.assertEqual(str(hier), str(expected))
 
 #@unittest.skip("Debugging")
 class TestDatabaseMethods(unittest.TestCase):
@@ -141,6 +83,33 @@ class TestDatabaseMethods(unittest.TestCase):
             for photo, genus, section, species in ret:
                 class_ = [genus, section, species]
                 self.assertEqual(class_, self.expected_taxa[photo.md5sum])
+
+    def test_get_taxon_hierarchy(self):
+        """Test the get_taxon_hierarchy() method."""
+        expected = {
+            u'Paphiopedilum': {
+                u'Brachypetalum': [u'godefroyae', u'wenshanense']
+            },
+            u'Selenipedium': {
+                None: [u'palmifolium']
+            },
+            u'Mexipedium': {
+                None: [u'xerophyticum']
+            },
+            u'Cypripedium': {
+                u'Trigonopedia': [u'fargesii', u'sichuanense'],
+                u'Obtusipetala': [u'flavum'],
+                u'Arietinum': [u'plectrochilum']
+            },
+            u'Phragmipedium': {
+                u'Micropetalum': [u'besseae']
+            }
+        }
+
+        with db.session_scope(self.meta_file) as (session, metadata):
+            hier = db.get_taxon_hierarchy(session, metadata)
+
+        self.assertEqual(str(hier), str(expected))
 
     def test_get_taxa_photo_count(self):
         """Test the get_taxa_photo_count() method."""

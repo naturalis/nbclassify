@@ -9,8 +9,8 @@ from django.core.urlresolvers import reverse
 from django.shortcuts import render, get_object_or_404
 from django.core.context_processors import csrf
 from django.conf import settings
-from nbclassify import open_config
 from nbclassify.classify import ImageClassifier
+from nbclassify.functions import open_config
 
 from orchid.forms import UploadPictureForm
 from orchid.models import Photo, Identity

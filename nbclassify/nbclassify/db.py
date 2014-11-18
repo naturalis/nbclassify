@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """Database routines.
@@ -9,6 +8,7 @@ Uses SQLAlchemy for object relational mapping.
 from contextlib import contextmanager
 import hashlib
 import os
+import re
 import sys
 
 import sqlalchemy
@@ -20,14 +20,19 @@ from sqlalchemy.orm import sessionmaker, configure_mappers
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import exists, functions
 
+from nbclassify.base import Common
 from nbclassify.config import conf
 from nbclassify.exceptions import *
+from nbclassify.functions import get_childs_from_hierarchy, path_from_filter
+
+# Ranks order.
+RANKS = ('genus','section','species')
 
 # Every photo must have the following ranks set in the meta data.
-REQUIRED_RANKS = ['genus','species']
+REQUIRED_RANKS = ('genus','species')
 
-# Show verbose database messages.
-ORM_VERBOSE = False
+# Show verbose database/ORM messages.
+VERBOSE = False
 
 @contextmanager
 def session_scope(db_path):
@@ -37,7 +42,7 @@ def session_scope(db_path):
     SQLite database `db_path`.
     """
     engine = sqlalchemy.create_engine('sqlite:///{0}'.format(db_path),
-        echo=ORM_VERBOSE)
+        echo=VERBOSE)
     Session = sessionmaker(bind=engine)
     session = Session()
     metadata = sqlalchemy.MetaData()
@@ -82,7 +87,7 @@ def make_meta_db(db_path):
         raise FileExistsError(db_path)
 
     engine = sqlalchemy.create_engine('sqlite:///{0}'.format(db_path),
-        echo=ORM_VERBOSE)
+        echo=VERBOSE)
 
     Base = declarative_base()
 
@@ -477,9 +482,6 @@ def get_filtered_photos_with_taxon(session, metadata, filter_):
 def get_classes_from_filter(session, metadata, filter_):
     """Return the classes for a classification filter.
 
-    Requires access to a database via an SQLAlchemy Session `session` and
-    MetaData object `metadata`.
-
     The unique set of classes for the classification filter `filter_` are
     returned. Filters are those as returned by
     :meth:`classification_hierarchy_filters`.
@@ -490,7 +492,7 @@ def get_classes_from_filter(session, metadata, filter_):
     class_ = filter_.get('class')
     q = get_filtered_photos_with_taxon(session, metadata, filter_)
     q = q.group_by(class_)
-    classes = [class_ for photo,class_ in q.all()]
+    classes = [class_ for photo,class_ in q]
     return set(classes)
 
 def get_taxa_photo_count(session, metadata):
@@ -559,3 +561,105 @@ def get_photos_with_taxa(session, metadata):
         join(stmt_species, stmt_species.c.id == Photo.id)
 
     return q
+
+def get_taxon_hierarchy(session, metadata):
+    """Return the taxanomic hierarchy for photos in the metadata database.
+
+    The hierarchy is returned as a dictionary in the format ``{genus: {section:
+    [species, ..], ..}, ..}``. If the global configuration
+    ``nbclassify.config.conf.photo_count_min`` is set to a positive value, only
+    taxa with a minimum photo count of `photo_count_min` are used to construct
+    the hierarchy.
+
+    Returned hierarchies can be used as input for methods like
+    :meth:`nbclassify.base.classification_hierarchy_filters` and
+    :meth:`nbclassify.base.get_childs_from_hierarchy`.
+    """
+    hierarchy = {}
+    for genus, section, species, count in get_taxa_photo_count(session, metadata):
+        if conf.photo_count_min and count < conf.photo_count_min:
+            continue
+        if genus not in hierarchy:
+            hierarchy[genus] = {}
+        if section not in hierarchy[genus]:
+            hierarchy[genus][section] = []
+        hierarchy[genus][section].append(species)
+    return hierarchy
+
+
+class MakeMeta(Common):
+
+    """Create a meta data database for an image directory.
+
+    The images in the image directory must be stored in a directory hierarchy
+    which corresponds to the directory hierarchy set in the configurations.
+    The meta data is created in the same directory. If a meta data file already
+    exists, a FileExistsError is raised.
+    """
+
+    def __init__(self, config, image_dir):
+        """Expects a configurations object `config` and a path to the directory
+        containing the images `image_dir`.
+        """
+        super(MakeMeta, self).__init__(config)
+        self.set_image_dir(image_dir)
+
+        try:
+            directory_hierarchy = list(config.directory_hierarchy)
+        except:
+            raise nbc.ConfigurationError("directory hierarchy is not set")
+
+        # Set the ranks.
+        self.ranks = []
+        for rank in directory_hierarchy:
+            if rank == "__ignore__":
+                rank = None
+            self.ranks.append(rank)
+
+    def set_image_dir(self, path):
+        """Set the image directory."""
+        if not os.path.isdir(path):
+            raise IOError("Cannot open %s (no such directory)" % path)
+        self.image_dir = os.path.abspath(path)
+
+    def get_image_files(self, root, ranks, classes=[]):
+        """Return image paths and their classes.
+
+        Images are returned as 2-tuples ``(path, {rank: class, ...})`` where
+        each class is the directory name for each rank in `ranks`, a list of
+        ranks. List `classes` is used internally to keep track of the classes.
+        """
+        if len(classes) > len(ranks):
+            return
+
+        for item in os.listdir(root):
+            path = os.path.join(root, item)
+            if os.path.isdir(path):
+                # The current directory name is the class name.
+                class_ = os.path.basename(path.strip(os.sep))
+                if class_ in ("None", "NULL", "_"):
+                    class_ = None
+                for image in self.get_image_files(path, ranks, classes+[class_]):
+                    yield image
+            elif os.path.isfile(path) and classes:
+                yield (path, dict(zip(ranks, classes)))
+
+    def make(self):
+        """Create the meta data database file `meta_path`."""
+        session, metadata = get_global_session_or_error()
+
+        sys.stdout.write("Saving meta data for images...\n")
+
+        for path, classes in self.get_image_files(self.image_dir, self.ranks):
+            # Get the path relative to self.image_dir
+            path_rel = re.sub(self.image_dir, "", path)
+            if path_rel.startswith(os.sep):
+                path_rel = path_rel[1:]
+
+            # Save the meta data.
+            insert_new_photo(session, metadata,
+                root=self.image_dir,
+                path=path_rel,
+                taxa=classes)
+
+        sys.stdout.write("Done\n")

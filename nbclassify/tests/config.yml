@@ -32,9 +32,9 @@ preprocess: &preprocess
     maximum_perimeter: 1000
 
     # Perform color enhancement on images.
-    color_enhancement:
+    #color_enhancement:
         # A hue preserving linear transformation with maximum possible contrast.
-        naik_murthy_linear: {}
+        #naik_murthy_linear: {}
 
     # Perform segmentation on the image, where the background is removed.
     segmentation:
@@ -58,7 +58,7 @@ ann: &ann
     # 'ordinary' or 'cascade' training.
     train_type: ordinary
     # Desired error. Defaults to 0.00001.
-    desired_error: 0.00001
+    desired_error: 0.000001
     # The training algorithm used for training. Default is TRAIN_RPROP.
     # See http://leenissen.dk/fann/html/files/fann_data-h.html#fann_train_enum
     training_algorithm: TRAIN_RPROP
@@ -97,7 +97,7 @@ ann: &ann
 
 ann_genus: &ann_genus
     train_type: ordinary
-    desired_error: 0.00001
+    desired_error: 0.000001
     training_algorithm: TRAIN_RPROP
     activation_function_hidden: SIGMOID_SYMMETRIC
     activation_function_output: SIGMOID_SYMMETRIC
@@ -133,7 +133,7 @@ classification:
           train_file: genus.tsv
           test_file: genus.tsv
           ann_file: genus.ann
-          max_error: 0.00001
+          max_error: 0.001
 
         - name: section
           data: *data
@@ -143,7 +143,7 @@ classification:
           train_file: __genus__.section.tsv
           test_file: __genus__.section.tsv
           ann_file: __genus__.section.ann
-          max_error: 0.0001
+          max_error: 0.001
 
         - name: species
           data: *data

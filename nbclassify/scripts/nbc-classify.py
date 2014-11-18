@@ -34,9 +34,8 @@ from pyfann import libfann
 import sqlalchemy
 import yaml
 
-import nbclassify as nbc
+import nbclassify import open_config
 from nbclassify.classify import ImageClassifier
-from nbclassify.db import session_scope
 
 # File name of the meta data file.
 META_FILE = ".meta.db"
@@ -110,7 +109,7 @@ def main():
     # Get path to meta data file.
     meta_path = os.path.join(args.imdir, META_FILE)
 
-    config = nbc.open_config(args.conf)
+    config = open_config(args.conf)
     classifier = ImageClassifier(config, meta_path)
     classifier.set_error(args.error)
 

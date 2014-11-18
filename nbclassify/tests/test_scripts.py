@@ -7,20 +7,13 @@ import sys
 import tempfile
 import unittest
 
-from context import nbc
+from context import config
 from context import nbc_trainer
 
 CONF_FILE  = "config.yml"
-META_FILE = ".meta.db"
 
 # Temporary directory.
 TEMP_DIR = os.path.join(tempfile.gettempdir(), 'nbclassify-{0}'.format(os.getuid()))
-
-# Disable FileExistsError exceptions.
-nbc_trainer.FORCE_OVERWRITE = True
-
-# Raise exceptions which would otherwise be caught.
-nbc_trainer.DEBUG = True
 
 def delete_temp_dir(path, recursive=False):
     """Delete temporary directory with content."""
@@ -48,11 +41,11 @@ class TestTrainer(unittest.TestCase):
 
         This is executed before any test is started.
         """
-        delete_temp_dir(TEMP_DIR, recursive=True)
+        #delete_temp_dir(TEMP_DIR, recursive=True)
         if not os.path.isdir(TEMP_DIR):
             os.mkdir(TEMP_DIR)
 
-        meta_file = os.path.join('images', META_FILE)
+        meta_file = os.path.join('images', config.META_FILE)
         if os.path.isfile(meta_file):
             os.remove(meta_file)
 
@@ -63,7 +56,7 @@ class TestTrainer(unittest.TestCase):
 
         # Set paths.
         self.train_file = os.path.join(TEMP_DIR, 'train_data.tsv')
-        self.ann_file = os.path.join(TEMP_DIR, 'Arietinum_species.ann')
+        self.ann_file = os.path.join(TEMP_DIR, 'Cypripedium_section.ann')
         self.test_result = os.path.join(TEMP_DIR, 'test_result.tsv')
         self.train_dir = os.path.join(TEMP_DIR, 'train_data')
         self.ann_dir = os.path.join(TEMP_DIR, 'ann_dir')
