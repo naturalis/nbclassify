@@ -32,9 +32,9 @@ preprocess: &preprocess
     maximum_perimeter: 1000
 
     # Perform color enhancement on images.
-    color_enhancement:
+    #color_enhancement:
         # A hue preserving linear transformation with maximum possible contrast.
-        naik_murthy_linear: {}
+        #naik_murthy_linear: {}
 
     # Perform segmentation on the image, where the background is removed.
     segmentation:
@@ -44,6 +44,8 @@ preprocess: &preprocess
             # The margin of the region of interest from the edges of the image.
             # Default is 1.
             margin: 1
+            # Where masked images are saved (optional).
+            #output_folder: /tmp/orchid/masked/
 
 # Features to be extracted from the images.
 features: &features
