@@ -29,9 +29,7 @@
                     {% endif %}
                 </td>
                 <td>
-                    <abbr title="{{ id.error|stringformat:"e" }}">
-                        <span class="{% if id.error <= mse_low %}text-success{% endif %}">{{ id.error|floatformat:6 }}</span>
-                    </abbr>
+                    <span class="{% if id.error <= mse_low %}text-success{% endif %}" title="{{ id.error|stringformat:"e" }}">{{ id.error|floatformat:6 }}</span>
                 </td>
             </tr>
             {% endfor %}
