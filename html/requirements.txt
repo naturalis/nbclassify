@@ -2,5 +2,6 @@ django>=1.6
 numpy
 pillow
 pyyaml
+scikit-learn>=0.15
 sorl-thumbnail
 sqlalchemy>=0.9.1
