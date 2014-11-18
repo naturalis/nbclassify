@@ -266,7 +266,7 @@ def javascript(request):
 def query_eol(query, options, taxon_concept=None, exact=False):
     """Return species info from EOL.org.
 
-    Searches EOL with `query` and returns each result in JSON format. Search
+    This generator searches EOL with `query` and returns each result. Search
     results can be filtered by taxon concept ID `taxon_concept`.
     """
     params = {
