@@ -1,43 +1,44 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from contextlib import contextmanager
+"""Methods for image classification using artificial neural networks."""
+
 import hashlib
+import logging
 import os
+import sys
 
 from pyfann import libfann
-import sqlalchemy
-import yaml
 
-import imgpheno as ft
 import nbclassify as nbc
-import nbclassify.db as db
+from nbclassify.db import session_scope
+
 
 class ImageClassifier(nbc.Common):
+
     """Classify an image."""
 
-    def __init__(self, config, db_path):
+    def __init__(self, config, meta_path):
         super(ImageClassifier, self).__init__(config)
-
-        self.set_db_path(db_path)
         self.error = 0.0001
         self.cache = {}
         self.roi = None
+        self.set_meta_path(meta_path)
 
         try:
             self.class_hr = self.config.classification.hierarchy
         except:
-            raise nbc.ConfigurationError("missing `classification.hierarchy`")
+            raise nbc.ConfigurationError("classification hierarchy not set")
 
-        # Get the classification hierarchy from the database.
-        with db.session_scope(db_path) as (session, metadata):
+        # Get the taxon hierarchy from the database.
+        with session_scope(meta_path) as (session, metadata):
             self.taxon_hr = self.get_taxon_hierarchy(session, metadata)
 
-    def set_db_path(self, path):
-        """Set the path to the database file."""
+    def set_meta_path(self, path):
+        """Set the path to the meta file."""
         if not os.path.isfile(path):
             raise IOError("Cannot open %s (no such file)" % path)
-        self.db_path = path
+        self.meta_path = path
 
     def set_error(self, error):
         """Set the default maximum error for classification."""
@@ -58,7 +59,10 @@ class ImageClassifier(nbc.Common):
             raise ValueError("ROI must be a list of four integers")
         for x in roi:
             if not isinstance(x, int):
-                raise ValueError("Found a non-integer in the ROI")
+                raise TypeError("Found a non-integer in the ROI")
+        y, y2, x, x2 = roi
+        if not y < y2 or not x < x2:
+            raise ValueError("ROI must be a (y,y2,x,x2) coordinates tuple")
         self.roi = roi
 
     def get_classification_hierarchy_levels(self):
@@ -77,22 +81,24 @@ class ImageClassifier(nbc.Common):
         if not os.path.isfile(ann_path):
             raise IOError("Cannot open %s (no such file)" % ann_path)
         if 'preprocess' not in config:
-            raise nbc.ConfigurationError("missing `preprocess`")
+            raise nbc.ConfigurationError("preprocess settings not set")
         if 'features' not in config:
-            raise nbc.ConfigurationError("missing `features`")
+            raise nbc.ConfigurationError("features settings not set")
 
         ann = libfann.neural_net()
         ann.create_from_file(str(ann_path))
 
-        # Get the MD5 hash.
+        # Get the MD5 hash for the image.
         hasher = hashlib.md5()
         with open(im_path, 'rb') as fh:
             buf = fh.read()
             hasher.update(buf)
 
-        # Create a hash of the feature extraction options.
-        hash_ = "%s.%s.%s" % (hasher.hexdigest(), hash(config.preprocess),
-            hash(config.features))
+        # Get a hash that that is unique for this image/preprocess/features
+        # combination.
+        hashables = nbc.PhenotypeCache.get_config_hashables(config)
+        hash_ = nbc.PhenotypeCache.combined_hash(hasher.hexdigest(),
+            config.features, *hashables)
 
         if hash_ in self.cache:
             phenotype = self.cache[hash_]
@@ -108,6 +114,7 @@ class ImageClassifier(nbc.Common):
             # Cache the phenotypes, in case they are needed again.
             self.cache[hash_] = phenotype
 
+        logging.debug("Using ANN `%s`" % ann_path)
         codeword = ann.run(phenotype)
 
         return codeword
@@ -188,9 +195,28 @@ class ImageClassifier(nbc.Common):
             else:
                 class_errors = classes = []
 
+        # Print some info messages.
+        path_s = '/'.join([str(p) for p in path])
+
         # Return the classification if classification failed on current level.
         if len(classes) == 0:
+            logging.debug("Failed to classify on level `%s` at node `/%s`" % (
+                level.name,
+                path_s)
+            )
             return ([path], [path_error])
+        elif len(classes) > 1:
+            logging.debug("Branching in level `%s` at node '/%s' into `%s`" % (
+                level.name,
+                path_s,
+                ', '.join(classes))
+            )
+        else:
+            logging.debug("Level `%s` at node `/%s` classified as `%s`" % (
+                level.name,
+                path_s,
+                classes[0])
+            )
 
         for class_, mse in zip(classes, class_errors):
             # Recurse into lower hierarchy levels.

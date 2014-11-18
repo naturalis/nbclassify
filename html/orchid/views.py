@@ -10,10 +10,10 @@ from django.shortcuts import render, get_object_or_404
 from django.core.context_processors import csrf
 from django.conf import settings
 from nbclassify import open_config
+from nbclassify.classify import ImageClassifier
 
 from orchid.forms import UploadPictureForm
 from orchid.models import Photo, Identity
-from orchid.classify import ImageClassifier
 
 CONFIG_FILE = os.path.join(settings.BASE_DIR, 'orchid', 'config.yml')
 TAXA_DB = os.path.join(settings.BASE_DIR, 'orchid', 'taxa.db')

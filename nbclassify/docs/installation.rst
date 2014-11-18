@@ -26,7 +26,7 @@ NBClassify has the following dependencies:
 
 * PyYAML_
 
-* scikit-learn_ (>=0.13)
+* scikit-learn_ (>=0.15)
 
 * SQLAlchemy_ (>=0.9.1)
 

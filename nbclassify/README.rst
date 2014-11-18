@@ -42,7 +42,7 @@ This Python package has the following dependencies:
 
 * PyYAML_
 
-* scikit-learn_
+* scikit-learn_ (>=0.15)
 
 * SQLAlchemy_ (>=0.9.1)
 

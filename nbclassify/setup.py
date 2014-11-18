@@ -34,7 +34,7 @@ setup(
         'flickrapi',
         'imgpheno',
         'numpy',
-        'scikit-learn',
+        'scikit-learn>=0.15',
         'sqlalchemy>=0.9.1',
         'pyyaml'
     ],
