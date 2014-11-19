@@ -9,64 +9,6 @@ import tempfile
 
 import yaml
 
-def delete_temp_dir(path, recursive=False):
-    """Delete a temporary directory.
-
-    As a safeguard, this function only removes directories and files that are
-    within the system's temporary directory (e.g. /tmp on Unix). Setting
-    `recursive` to True also deletes its contents.
-    """
-    path = os.path.abspath(str(path))
-    if os.path.isdir(path):
-        if path.startswith(tempfile.gettempdir()):
-            if recursive:
-                shutil.rmtree(path)
-            else:
-                os.rmdir(path)
-        else:
-            raise ValueError("Cannot delete non-temporary directories")
-
-def open_config(path):
-    """Read a configurations file and return as a nested :class:`Struct` object.
-
-    The configurations file is in the YAML format and is loaded from file path
-    `path`.
-    """
-    with open(path, 'r') as f:
-        config = yaml.load(f)
-    return Struct(config)
-
-def test_classification_filter(f):
-    """Test the validity of the classification filter `f`.
-
-    Raises a ValueError if the filter is not valid.
-    """
-    if isinstance(f, dict):
-        f = Struct(f)
-    if 'class' not in f:
-        raise ValueError("Attribute `class` not set")
-    for key in vars(f):
-        if key not in ('where', 'class'):
-            raise ValueError("Unknown key `%s` in filter" % key)
-
-def path_from_filter(filter_, levels):
-    """Return the path from a classification filter.
-
-    Example:
-
-        >>> f = {'where': {'section': 'Micropetalum', 'genus': 'Phragmipedium'},
-        ... 'class': 'species'}
-        >>> path_from_filter(f, ('genus','section','species'))
-        ['Phragmipedium', 'Micropetalum']
-    """
-    path = []
-    for name in levels:
-        try:
-            path.append(filter_['where'][name])
-        except:
-            return path
-    return path
-
 def classification_hierarchy_filters(levels, hr, path=[]):
     """Return the classification filter for each path in a hierarchy.
 
@@ -136,6 +78,24 @@ def classification_hierarchy_filters(levels, hr, path=[]):
                 path+[c]):
             yield f
 
+def delete_temp_dir(path, recursive=False):
+    """Delete a temporary directory.
+
+    As a safeguard, this function only removes directories and files that are
+    within the system's temporary directory (e.g. /tmp on Unix). Setting
+    `recursive` to True also deletes its contents.
+    """
+    path = os.path.abspath(str(path))
+    tmp_dir = tempfile.gettempdir()
+    if os.path.isdir(path):
+        if path.startswith(tmp_dir):
+            if recursive:
+                shutil.rmtree(path)
+            else:
+                os.rmdir(path)
+        else:
+            raise ValueError("Path is not a subdirectory of %s" % tmp_dir)
+
 def get_childs_from_hierarchy(hr, path=[]):
     """Return the child node names for a node in a hierarchy.
 
@@ -181,24 +141,6 @@ def get_childs_from_hierarchy(hr, path=[]):
 
     return names
 
-def get_codewords(classes, on=1, off=-1):
-    """Return codewords for a list of classes.
-
-    Takes a list of class names `classes`. The class list is sorted, and a
-    codeword is created for each class. Each codeword is a list of
-    ``len(classes)`` bits, where all bits have an `off` value, except for
-    one, which has an `on` value. Returns a dictionary ``{class: codeword,
-    ..}``. The same set of classes always returns the same codeword for
-    each class.
-    """
-    n = len(classes)
-    codewords = {}
-    for i, class_ in enumerate(sorted(classes)):
-        cw = [off] * n
-        cw[i] = on
-        codewords[class_] = cw
-    return codewords
-
 def get_classification(codewords, codeword, error=0.01, on=1.0):
     """Return the human-readable classification for a codeword.
 
@@ -226,6 +168,64 @@ def get_classification(codewords, codeword, error=0.01, on=1.0):
                     classes.append((mse, class_))
                 break
     return sorted(classes)
+
+def get_codewords(classes, on=1, off=-1):
+    """Return codewords for a list of classes.
+
+    Takes a list of class names `classes`. The class list is sorted, and a
+    codeword is created for each class. Each codeword is a list of
+    ``len(classes)`` bits, where all bits have an `off` value, except for
+    one, which has an `on` value. Returns a dictionary ``{class: codeword,
+    ..}``. The same set of classes always returns the same codeword for
+    each class.
+    """
+    n = len(classes)
+    codewords = {}
+    for i, class_ in enumerate(sorted(classes)):
+        cw = [off] * n
+        cw[i] = on
+        codewords[class_] = cw
+    return codewords
+
+def open_config(path):
+    """Read a configurations file and return as a nested :class:`Struct` object.
+
+    The configurations file is in the YAML format and is loaded from file path
+    `path`.
+    """
+    with open(path, 'r') as f:
+        config = yaml.load(f)
+    return Struct(config)
+
+def path_from_filter(filter_, levels):
+    """Return the path from a classification filter.
+
+    Example:
+
+        >>> f = {'where': {'section': 'Micropetalum', 'genus': 'Phragmipedium'},
+        ... 'class': 'species'}
+        >>> path_from_filter(f, ('genus','section','species'))
+        ['Phragmipedium', 'Micropetalum']
+    """
+    path = []
+    for name in levels:
+        try:
+            path.append(filter_['where'][name])
+        except:
+            return path
+    return path
+
+def filter_is_valid(f):
+    """Return True if the classification filter `f` is valid."""
+    if not isinstance(f, dict):
+        return False
+    if 'class' not in f:
+        return False
+    for key in f:
+        if key not in ('where', 'class'):
+            return False
+    return True
+
 
 class Struct(Namespace):
 
