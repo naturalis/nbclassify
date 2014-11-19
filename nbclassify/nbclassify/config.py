@@ -2,6 +2,8 @@
 
 """Global configurations."""
 
+from .functions import singleton
+
 # Default FANN training settings. These can be overwritten with the
 # configurations file.
 ANN_DEFAULTS = {
@@ -21,6 +23,7 @@ ANN_DEFAULTS = {
     'cascade_num_candidate_groups': 2,
 }
 
+@singleton
 class ConfigManager(object):
 
     """Manage global configurations.

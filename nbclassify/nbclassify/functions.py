@@ -226,6 +226,15 @@ def filter_is_valid(f):
             return False
     return True
 
+def singleton(cls):
+    """Decorator for using classes as singleton."""
+    instances = {}
+    def get_instance():
+        if cls not in instances:
+            instances[cls] = cls()
+        return instances[cls]
+    return get_instance
+
 
 class Struct(Namespace):
 
