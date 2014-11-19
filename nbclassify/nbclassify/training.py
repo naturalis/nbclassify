@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Train data and ANN training routines."""
+"""ANN training routines."""
 
 import logging
 import os
@@ -12,12 +12,12 @@ from pyfann import libfann
 import yaml
 
 from nbclassify.base import Common, Struct
-from nbclassify.classify import get_codewords, get_classification
-from nbclassify.config import *
+from nbclassify.config import conf, ANN_DEFAULTS
 from nbclassify.data import TrainData
 import nbclassify.db as db
 from nbclassify.exceptions import *
-from nbclassify.functions import classification_hierarchy_filters
+from nbclassify.functions import (get_codewords, get_classification,
+    classification_hierarchy_filters)
 
 class TrainANN(object):
 
@@ -229,7 +229,7 @@ class MakeAnn(Common):
         """
         if not os.path.isfile(train_file):
             raise IOError("Cannot open %s (no such file)" % train_file)
-        if not FORCE_OVERWRITE and os.path.isfile(ann_file):
+        if not conf.force_overwrite and os.path.isfile(ann_file):
             raise FileExistsError(ann_file)
         if config and not isinstance(config, Struct):
             raise TypeError("Expected an nbclassify.Struct instance for `config`")

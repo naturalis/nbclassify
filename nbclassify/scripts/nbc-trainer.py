@@ -32,14 +32,12 @@ import sys
 
 import numpy as np
 
-from nbclassify.config import *
+from nbclassify.config import conf
 from nbclassify.db import session_scope
 from nbclassify.exceptions import *
 from nbclassify.functions import open_config
 
 def main():
-    global DEBUG
-
     parser = argparse.ArgumentParser(
         description="Generate training data and train artificial neural "\
         "networks."
@@ -339,7 +337,7 @@ def main():
     # Print debug messages if the -d flag is set for the Python interpreter.
     if sys.flags.debug:
         log_level = logging.DEBUG
-        DEBUG = True
+        conf.debug = True
     else:
         log_level = logging.INFO
 
@@ -347,7 +345,7 @@ def main():
 
     # Get path to meta data file.
     try:
-        meta_path = os.path.join(args.imdir, META_FILE)
+        meta_path = os.path.join(args.imdir, conf.meta_file)
     except:
         meta_path = None
 
@@ -381,7 +379,7 @@ def main():
         logging.error("An output file already exists: %s", e)
         return 1
     except Exception as e:
-        if DEBUG: raise
+        if conf.debug: raise
         logging.error(e)
         return 1
 
@@ -519,8 +517,7 @@ def validate(config, meta_path, args):
 
     # Any existing training data or neural networks must be regenerated during
     # the validation process.
-    global FORCE_OVERWRITE
-    FORCE_OVERWRITE = True
+    conf.force_overwrite = True
 
     with session_scope(meta_path) as (session, metadata):
         set_global_db_session(session, metadata)

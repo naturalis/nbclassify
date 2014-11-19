@@ -2,19 +2,16 @@
 # -*- coding: utf-8 -*-
 
 import os
-import shutil
 import sys
-import tempfile
 import unittest
 
-from context import base
+from context import conf
 from context import db
-from context import functions
 from context import nbc_trainer
 
 CONF_FILE  = "config.yml"
 IMAGE_DIR = "images"
-META_FILE = ".meta.db"
+META_FILE = conf.meta_file
 
 
 #@unittest.skip("Debugging")

@@ -2,7 +2,8 @@
 
 """Global configurations."""
 
-# Default FANN training settings.
+# Default FANN training settings. These can be overwritten with the
+# configurations file.
 ANN_DEFAULTS = {
     'train_type': 'ordinary',
     'epochs': 100000,
@@ -20,23 +21,8 @@ ANN_DEFAULTS = {
     'cascade_num_candidate_groups': 2,
 }
 
-# Switch to True whilst debugging. It is automatically set to True when the
-# -d switch is set on the Python interpreter. Setting this to True prevents
-# some exceptions from being caught.
-DEBUG = False
-
-# Force overwrite of files. If set to False, an nbclassify.FileExistsError is
-# raised when an existing file is encountered. When set to True, any existing
-# files are overwritten without warning.
-FORCE_OVERWRITE = False
-
-# File name of the meta data file.
-META_FILE = ".meta.db"
-
-# Prefix for output columns in training data.
-OUTPUT_PREFIX = "OUT:"
-
 class ConfigManager(object):
+
     """Manage global configurations.
 
     An instance of this class provides access to a set of variables that need to
@@ -48,8 +34,30 @@ class ConfigManager(object):
     an attribute that does not exist returns None, so this never raises an
     AttributeError.
     """
+
     def __init__(self):
-        super(ConfigManager, self).__init__()
+        # Switch to True whilst debugging. It is automatically set to True when
+        # the environment variable PYTHONDEBUG is set. Setting this to True
+        # prevents some exceptions from being caught by the scripts.
+        self.debug = False
+
+        # Force overwrite of files. If set to False, existing files are not
+        # touched. When set to True, any existing files are overwritten without
+        # warning.
+        self.force_overwrite = False
+
+        # File name of the meta data file. This file is created for an image
+        # directory with the `meta` subcommand for the nbc-trainer script. This
+        # file is needed for training and classification.
+        self.meta_file = ".meta.db"
+
+        # Prefix for output columns in training data. It is used for exporting
+        # and reading training data.
+        self.output_prefix = "OUT:"
+
+        # If set to a positive integer, only the classifications (i.e. genus,
+        # section, species combination) with a photo count of at least
+        # `photo_count_min` are used to build the taxon hierarchy.
         self.photo_count_min = 0
 
     def __getattribute__(self, name):

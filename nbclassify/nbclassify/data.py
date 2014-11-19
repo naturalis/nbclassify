@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Train data and ANN training routines."""
+"""Train data routines."""
 
 from copy import deepcopy
 import csv
@@ -13,7 +13,7 @@ import imgpheno as ft
 import numpy as np
 
 from nbclassify.base import Common, Struct
-from nbclassify.config import *
+from nbclassify.config import conf
 import nbclassify.db as db
 from nbclassify.exceptions import *
 from nbclassify.functions import (get_codewords,
@@ -877,7 +877,7 @@ class MakeTrainData(Common):
         """
         session, metadata = db.get_global_session_or_error()
 
-        if not FORCE_OVERWRITE and os.path.isfile(filename):
+        if not conf.force_overwrite and os.path.isfile(filename):
             raise FileExistsError(filename)
 
         # Get the classification categories from the database.

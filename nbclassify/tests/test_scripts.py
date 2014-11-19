@@ -7,13 +7,14 @@ import sys
 import tempfile
 import unittest
 
-from context import config
+from context import conf
 from context import nbc_trainer
 
 CONF_FILE  = "config.yml"
 
 # Temporary directory.
-TEMP_DIR = os.path.join(tempfile.gettempdir(), 'nbclassify-{0}'.format(os.getuid()))
+TEMP_DIR = os.path.join(tempfile.gettempdir(),
+    'nbclassify-{0}'.format(os.getuid()))
 
 def delete_temp_dir(path, recursive=False):
     """Delete temporary directory with content."""
@@ -41,11 +42,11 @@ class TestTrainer(unittest.TestCase):
 
         This is executed before any test is started.
         """
-        #delete_temp_dir(TEMP_DIR, recursive=True)
+        delete_temp_dir(TEMP_DIR, recursive=True)
         if not os.path.isdir(TEMP_DIR):
             os.mkdir(TEMP_DIR)
 
-        meta_file = os.path.join('images', config.META_FILE)
+        meta_file = os.path.join('images', conf.meta_file)
         if os.path.isfile(meta_file):
             os.remove(meta_file)
 

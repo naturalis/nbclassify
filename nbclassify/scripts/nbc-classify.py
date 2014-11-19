@@ -34,11 +34,12 @@ from pyfann import libfann
 import sqlalchemy
 import yaml
 
-import nbclassify import open_config
 from nbclassify.classify import ImageClassifier
+from nbclassify.config import conf
+from nbclassify.functions import open_config
 
 # File name of the meta data file.
-META_FILE = ".meta.db"
+META_FILE = conf.meta_file
 
 # ANSI colors.
 GREEN = '\033[32m'
