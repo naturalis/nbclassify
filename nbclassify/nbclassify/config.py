@@ -63,6 +63,10 @@ class ConfigManager(object):
         # `photo_count_min` are used to build the taxon hierarchy.
         self.photo_count_min = 0
 
+        # The ranks that must be set for each photo in the meta data. An error
+        # is raised if a photo is found without any of the ranks.
+        self.required_ranks = ('genus','species')
+
     def __getattribute__(self, name):
         try:
             return object.__getattribute__(self, name)

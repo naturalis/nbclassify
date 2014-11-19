@@ -12,12 +12,12 @@ import cv2
 import imgpheno as ft
 import numpy as np
 
-from nbclassify.base import Common, Struct
-from nbclassify.config import conf
+from . import conf
+from .base import Common, Struct
+from .exceptions import *
+from .functions import (get_codewords, classification_hierarchy_filters,
+    readable_filter)
 import nbclassify.db as db
-from nbclassify.exceptions import *
-from nbclassify.functions import (get_codewords,
-    classification_hierarchy_filters)
 
 class PhenotypeCache(object):
 
@@ -1085,7 +1085,7 @@ class BatchMakeTrainData(MakeTrainData):
 
             # Generate and export the training data.
             logging.info("Exporting train data for classification on %s" % \
-                self.readable_filter(filter_))
+                readable_filter(filter_))
             try:
                 self.export(train_file, filter_, config)
             except FileExistsError as e:

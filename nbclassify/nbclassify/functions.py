@@ -215,16 +215,44 @@ def path_from_filter(filter_, levels):
             return path
     return path
 
-def filter_is_valid(f):
-    """Return True if the classification filter `f` is valid."""
-    if not isinstance(f, dict):
+def filter_is_valid(filter_):
+    """Return True if the classification filter `filter_` is valid."""
+    if not isinstance(filter_, dict):
         return False
-    if 'class' not in f:
+    if 'class' not in filter_:
         return False
-    for key in f:
+    for key in filter_:
         if key not in ('where', 'class'):
             return False
     return True
+
+def readable_filter(filter_):
+    """Return a human-readable description of a classification filter.
+
+    Classification filters are those as returned by
+    :meth:`classification_hierarchy_filters`.
+
+    Example:
+
+        >>> f = {'where': {'section': 'Lorifolia', 'genus': 'Phragmipedium'},
+        ... 'class': 'species'}
+        >>> readable_filter(f)
+        'species where section is Lorifolia and genus is Phragmipedium'
+    """
+    class_ = filter_['class']
+    where = filter_.get('where', {})
+    where_n = len(where)
+    where_s = ""
+    for i, (k,v) in enumerate(where.items()):
+        if i > 0 and i < where_n - 1:
+            where_s += ", "
+        elif where_n > 1 and i == where_n - 1:
+            where_s += " and "
+        where_s += "%s is %s" % (k,v)
+
+    if where_n > 0:
+        return "%s where %s" % (class_, where_s)
+    return "%s" % class_
 
 def singleton(cls):
     """Decorator for using classes as singleton."""

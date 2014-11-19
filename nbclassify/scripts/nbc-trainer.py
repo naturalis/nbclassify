@@ -32,10 +32,9 @@ import sys
 
 import numpy as np
 
-from nbclassify.config import conf
+from nbclassify import conf, open_config
 from nbclassify.db import session_scope
 from nbclassify.exceptions import *
-from nbclassify.functions import open_config
 
 def main():
     parser = argparse.ArgumentParser(

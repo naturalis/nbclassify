@@ -20,19 +20,10 @@ from sqlalchemy.orm import sessionmaker, configure_mappers
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import exists, functions
 
-from nbclassify.base import Common
-from nbclassify.config import conf
-from nbclassify.exceptions import *
-from nbclassify.functions import get_childs_from_hierarchy, path_from_filter
-
-# Ranks order.
-RANKS = ('genus','section','species')
-
-# Every photo must have the following ranks set in the meta data.
-REQUIRED_RANKS = ('genus','species')
-
-# Show verbose database/ORM messages.
-VERBOSE = False
+from . import conf
+from .base import Common
+from .exceptions import *
+from .functions import get_childs_from_hierarchy, path_from_filter
 
 @contextmanager
 def session_scope(db_path):
@@ -42,7 +33,7 @@ def session_scope(db_path):
     SQLite database `db_path`.
     """
     engine = sqlalchemy.create_engine('sqlite:///{0}'.format(db_path),
-        echo=VERBOSE)
+        echo=conf.debug)
     Session = sessionmaker(bind=engine)
     session = Session()
     metadata = sqlalchemy.MetaData()
@@ -87,7 +78,7 @@ def make_meta_db(db_path):
         raise FileExistsError(db_path)
 
     engine = sqlalchemy.create_engine('sqlite:///{0}'.format(db_path),
-        echo=VERBOSE)
+        echo=conf.debug)
 
     Base = declarative_base()
 
@@ -395,10 +386,10 @@ def insert_new_photo(session, metadata, root, path, update=False, **kwargs):
         processed_ranks.append(rank.name)
 
     # Make sure that the required ranks are set for each photo.
-    if REQUIRED_RANKS:
-        assert set(REQUIRED_RANKS).issubset(processed_ranks), \
+    if conf.required_ranks:
+        assert set(conf.required_ranks).issubset(processed_ranks), \
             "Every photo must at least have the ranks {0}".\
-                format(REQUIRED_RANKS)
+                format(conf.required_ranks)
 
     # Set the tags for this photo.
     for tag_name in tags:

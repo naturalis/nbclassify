@@ -8,9 +8,9 @@ import os
 import numpy as np
 from sklearn import cross_validation
 
-from nbclassify.base import Common
-from nbclassify.data import BatchMakeTrainData
-from nbclassify.training import BatchMakeAnn, TestAnn
+from .base import Common
+from .data import BatchMakeTrainData
+from .training import BatchMakeAnn, TestAnn
 import nbclassify.db as db
 
 class Validator(Common):

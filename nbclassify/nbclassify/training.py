@@ -11,13 +11,13 @@ import sys
 from pyfann import libfann
 import yaml
 
-from nbclassify.base import Common, Struct
-from nbclassify.config import conf, ANN_DEFAULTS
-from nbclassify.data import TrainData
+from . import conf, ANN_DEFAULTS
+from .base import Common, Struct
+from .data import TrainData
+from .exceptions import *
+from .functions import (get_codewords, get_classification,
+    classification_hierarchy_filters, readable_filter)
 import nbclassify.db as db
-from nbclassify.exceptions import *
-from nbclassify.functions import (get_codewords, get_classification,
-    classification_hierarchy_filters)
 
 class TrainANN(object):
 
@@ -512,7 +512,7 @@ class TestAnn(Common):
         # Get the expected and recognized classification for each sample in
         # the test data.
         for filter_ in classification_hierarchy_filters(levels, self.taxon_hr):
-            logging.info("Classifying on %s" % self.readable_filter(filter_))
+            logging.info("Classifying on %s" % readable_filter(filter_))
 
             level_name = filter_.get('class')
             level_n = levels.index(level_name)

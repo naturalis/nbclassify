@@ -9,11 +9,11 @@ import sys
 
 from pyfann import libfann
 
-from nbclassify.base import Common
-from nbclassify.data import PhenotypeCache, Phenotyper
-import nbclassify.db as db
-from nbclassify.exceptions import *
-from nbclassify.functions import (get_childs_from_hierarchy,
+from .base import Common
+from .data import PhenotypeCache, Phenotyper
+from .db import session_scope, get_taxon_hierarchy
+from .exceptions import *
+from .functions import (get_childs_from_hierarchy,
     get_classification, get_codewords)
 
 class ImageClassifier(Common):
@@ -33,8 +33,8 @@ class ImageClassifier(Common):
             raise ConfigurationError("classification hierarchy not set")
 
         # Get the taxon hierarchy from the database.
-        with db.session_scope(meta_path) as (session, metadata):
-            self.taxon_hr = db.get_taxon_hierarchy(session, metadata)
+        with session_scope(meta_path) as (session, metadata):
+            self.taxon_hr = get_taxon_hierarchy(session, metadata)
 
     def set_meta_path(self, path):
         """Set the path to the meta file."""
