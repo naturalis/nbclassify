@@ -34,7 +34,7 @@ jQuery(function( $ ) {
     // Initialize Jcrop.
     $('#photo').Jcrop({
         onSelect: function(c) {
-            $('#roi').val(parseInt(c.y)+','+parseInt(c.y2)+','+parseInt(c.x)+','+parseInt(c.x2));
+            $('#roi').val(parseInt(c.x)+','+parseInt(c.y)+','+parseInt(c.w)+','+parseInt(c.h));
         },
         onRelease: function() {
             $('#roi').val('');

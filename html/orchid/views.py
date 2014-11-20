@@ -126,8 +126,9 @@ def identify(request, photo_id):
 
         # Get the ROI.
         if photo.roi:
-            y,y2,x,x2 = photo.roi.split(",")
-            data['roi'] = {'y':y, 'y2':y2, 'x':x, 'x2':x2}
+            roi = photo.roi.split(",")
+            x,y,w,h = [int(x) for x in roi]
+            data['roi'] = {'x':x, 'y':y, 'w':w, 'h':h, 'x2':x+w, 'y2':y+h}
 
         return render(request, "orchid/identify.html", data)
 

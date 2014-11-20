@@ -52,19 +52,14 @@ class ImageClassifier(Common):
         """Set the region of interest for the image.
 
         If a region of interest is set, only that region is used for image
-        processing. The ROI must be a ``(y,y2,x,x2)`` coordinates tuple.
+        processing. The ROI must be a ``(x, y, w, h)`` coordinates tuple.
         """
-        if roi is None:
-            self.roi = roi
-            return
-        if roi and len(roi) != 4:
-            raise ValueError("ROI must be a list of four integers")
-        for x in roi:
-            if not isinstance(x, int):
-                raise TypeError("Found a non-integer in the ROI")
-        y, y2, x, x2 = roi
-        if not y < y2 or not x < x2:
-            raise ValueError("ROI must be a (y,y2,x,x2) coordinates tuple")
+        if roi is not None:
+            if len(roi) != 4:
+                raise ValueError("ROI must be a list of four integers")
+            for x in roi:
+                if not (isinstance(x, int) and x >= 0):
+                    raise ValueError("ROI must be a (x, y, w, h) tuple")
         self.roi = roi
 
     def get_classification_hierarchy_levels(self):
@@ -108,8 +103,8 @@ class ImageClassifier(Common):
             phenotyper = Phenotyper()
             phenotyper.set_image(im_path)
             if self.roi:
-                y, y2, x, x2 = self.roi
-                phenotyper.set_grabcut_roi((x, y, x2-x, y2-y))
+                x, y, w, h = self.roi
+                phenotyper.set_grabcut_roi((x, y, w, h))
             phenotyper.set_config(config)
             phenotype = phenotyper.make()
 

@@ -274,27 +274,31 @@ class Phenotyper(object):
         If GrabCut is set as the segmentation algorithm, then GrabCut is
         executed with this region of interest.
 
-        The ROI must be a 4-tuple ``(x,y,width,height)``.
+        The ROI must be a 4-tuple ``(x, y, width, height)``.
         """
-        if len(roi) != 4:
-            raise ValueError("ROI must be a list of four integers")
+        if roi is not None:
+            if len(roi) != 4:
+                raise ValueError("ROI must be a list of four integers")
+            for x in roi:
+                if not (isinstance(x, int) and x >= 0):
+                    raise ValueError("ROI must be a (x, y, w, h) tuple")
         self.grabcut_roi = roi
 
     def __grabcut(self, img, iters=5, roi=None, margin=5):
         """Wrapper for OpenCV's grabCut function.
 
-        Runs the GrabCut algorithm for segmentation. Returns an 8-bit
-        single-channel mask. Its elements may have the following values:
+        Runs the GrabCut algorithm for segmentation. Returns an 8-bit single-
+        channel mask. Its elements may have the following values:
 
         * ``cv2.GC_BGD`` defines an obvious background pixel
         * ``cv2.GC_FGD`` defines an obvious foreground pixel
         * ``cv2.GC_PR_BGD`` defines a possible background pixel
         * ``cv2.GC_PR_FGD`` defines a possible foreground pixel
 
-        The GrabCut algorithm is executed with `iters` iterations. The region
-        of interest `roi` can be a 4-tuple ``(x,y,width,height)``. If the ROI
-        is not set, the ROI is set to the entire image, with a margin of
-        `margin` pixels from the borders.
+        The GrabCut algorithm is executed with `iters` iterations. The region of
+        interest `roi` can be a 4-tuple ``(x, y, width, height)``. If the ROI is
+        not set, the ROI is set to the entire image, with a margin of `margin`
+        pixels from the borders.
 
         This method is indirectly executed by :meth:`make`.
         """
@@ -304,10 +308,12 @@ class Phenotyper(object):
 
         # Use the margin to set the ROI if the ROI was not provided.
         if not roi:
-            roi = (margin, margin, img.shape[1]-margin*2, img.shape[0]-margin*2)
+            h, w = img.shape[:2]
+            roi = (margin, margin, w - margin * 2, h - margin * 2)
 
         cv2.grabCut(img, mask, roi, bgdmodel, fgdmodel, iters,
             cv2.GC_INIT_WITH_RECT)
+
         return mask
 
     def __preprocess(self):
