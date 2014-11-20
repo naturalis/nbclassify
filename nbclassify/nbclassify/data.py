@@ -15,8 +15,8 @@ import numpy as np
 from . import conf
 from .base import Common, Struct
 from .exceptions import *
-from .functions import (get_codewords, classification_hierarchy_filters,
-    readable_filter)
+from .functions import (combined_hash, classification_hierarchy_filters,
+    get_codewords, get_config_hashables, readable_filter)
 import nbclassify.db as db
 
 class PhenotypeCache(object):
@@ -26,64 +26,7 @@ class PhenotypeCache(object):
     def __init__(self):
         self._cache = {}
 
-    @staticmethod
-    def combined_hash(*args):
-        """Create a combined hash from one or more hashable objects.
-
-        Each argument must be an hashable object. Can also be used for
-        configuration objects as returned by :meth:`open_config`. Returned hash
-        is a negative or positive integer.
-
-        Example::
-
-            >>> a = Struct({'a': True})
-            >>> b = Struct({'b': False})
-            >>> PhenotypeCache.combined_hash(a,b)
-            6862151379155462073
-        """
-        hash_ = None
-        for obj in args:
-            if hash_ is None:
-                hash_ = hash(obj)
-            else:
-                hash_ ^= hash(obj)
-        return hash_
-
-    @staticmethod
-    def get_config_hashables(config):
-        """Return configuration objects for creating cache hashes.
-
-        This returns those configuration objects that are needed for creating
-        unique hashes for the feature caches. Returns a list ``[data,
-        preprocess]``. Some options for these configurations have no effect on
-        the features extracted, and these are stripped from the returned
-        objects. Original configuration stays unchanged.
-        """
-        data = getattr(config, 'data', None)
-        preprocess = getattr(config, 'preprocess', None)
-
-        if data:
-            data = deepcopy(data)
-            try:
-                del data.dependent_prefix
-            except:
-                pass
-
-        if preprocess:
-            preprocess = deepcopy(preprocess)
-            try:
-                del preprocess.segmentation.grabcut.output_folder
-            except:
-                pass
-
-        hashables = []
-        hashables.append(data)
-        hashables.append(preprocess)
-
-        return hashables
-
-    @staticmethod
-    def get_single_feature_configurations(config):
+    def get_single_feature_configurations(self, config):
         """Return each configuration together with each feature separately.
 
         Normally, a configuration contains ``features``, a list of all the
@@ -125,11 +68,11 @@ class PhenotypeCache(object):
 
                 # Get those configuration objects that are suitable for creating
                 # hashes for the feature caches.
-                hashables = PhenotypeCache.get_config_hashables(c)
+                hashables = get_config_hashables(c)
 
                 # Create a hash from the configurations. The hash must be
                 # different for different configurations.
-                hash_ = PhenotypeCache.combined_hash(feature, *hashables)
+                hash_ = combined_hash(feature, *hashables)
 
                 if hash_ not in seen_hashes:
                     seen_hashes.append(hash_)
@@ -233,8 +176,8 @@ class PhenotypeCache(object):
 
         self._cache = {}
         for name, feature in vars(features).iteritems():
-            hashables = self.get_config_hashables(config)
-            hash_ = self.combined_hash(feature, *hashables)
+            hashables = get_config_hashables(config)
+            hash_ = combined_hash(feature, *hashables)
             cache = self.get_features(cache_dir, hash_)
             if not cache:
                 raise IOError("Cache {0} not found".format(hash_))

@@ -10,11 +10,11 @@ import sys
 from pyfann import libfann
 
 from .base import Common
-from .data import PhenotypeCache, Phenotyper
+from .data import Phenotyper
 from .db import session_scope, get_taxon_hierarchy
 from .exceptions import *
-from .functions import (get_childs_from_hierarchy,
-    get_classification, get_codewords)
+from .functions import (combined_hash, get_childs_from_hierarchy,
+    get_classification, get_codewords, get_config_hashables)
 
 class ImageClassifier(Common):
 
@@ -98,8 +98,8 @@ class ImageClassifier(Common):
 
         # Get a hash that that is unique for this image/preprocess/features
         # combination.
-        hashables = PhenotypeCache.get_config_hashables(config)
-        hash_ = PhenotypeCache.combined_hash(hasher.hexdigest(),
+        hashables = get_config_hashables(config)
+        hash_ = combined_hash(hasher.hexdigest(),
             config.features, *hashables)
 
         if hash_ in self.cache:

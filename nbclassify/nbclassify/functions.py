@@ -3,6 +3,7 @@
 """General functions."""
 
 from argparse import Namespace
+from copy import deepcopy
 import os
 import shutil
 import tempfile
@@ -77,6 +78,27 @@ def classification_hierarchy_filters(levels, hr, path=[]):
         for f in classification_hierarchy_filters(levels, hr,
                 path+[c]):
             yield f
+
+def combined_hash(*args):
+    """Create a combined hash from one or more hashable objects.
+
+    Each argument must be an hashable object. Returned hash is a negative or
+    positive integer.
+
+    Example::
+
+        >>> a = Struct({'a': True})
+        >>> b = Struct({'b': False})
+        >>> combined_hash(a,b)
+        6862151379155462073
+    """
+    hash_ = None
+    for obj in args:
+        if hash_ is None:
+            hash_ = hash(obj)
+        else:
+            hash_ ^= hash(obj)
+    return hash_
 
 def delete_temp_dir(path, recursive=False):
     """Delete a temporary directory.
@@ -186,6 +208,38 @@ def get_codewords(classes, on=1, off=-1):
         cw[i] = on
         codewords[class_] = cw
     return codewords
+
+def get_config_hashables(config):
+    """Return configuration objects for creating cache hashes.
+
+    This returns those configuration objects that are needed for creating
+    unique hashes for the feature caches. Returns a list ``[data,
+    preprocess]``. Some options for these configurations have no effect on
+    the features extracted, and these are stripped from the returned
+    objects. Original configuration stays unchanged.
+    """
+    data = getattr(config, 'data', None)
+    preprocess = getattr(config, 'preprocess', None)
+
+    if data:
+        data = deepcopy(data)
+        try:
+            del data.dependent_prefix
+        except:
+            pass
+
+    if preprocess:
+        preprocess = deepcopy(preprocess)
+        try:
+            del preprocess.segmentation.grabcut.output_folder
+        except:
+            pass
+
+    hashables = []
+    hashables.append(data)
+    hashables.append(preprocess)
+
+    return hashables
 
 def open_config(path):
     """Read a configurations file and return as a nested :class:`Struct` object.
