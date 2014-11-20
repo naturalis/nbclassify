@@ -42,8 +42,8 @@ setup(
         'nbclassify': ['config.yml'],
     },
     scripts=[
-        'scripts/nbc-classify.py',
-        'scripts/nbc-harvest-images.py',
-        'scripts/nbc-trainer.py'
+        'scripts/nbc-classify',
+        'scripts/nbc-harvest-images',
+        'scripts/nbc-trainer'
     ]
 )

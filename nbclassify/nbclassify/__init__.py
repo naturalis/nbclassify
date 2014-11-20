@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-"""Image classification package for Python.
+"""A Python package for image fingerprinting and recognition via artificial
+neural networks.
 
-Provides scripts for training and classification. This package depends on the
+Provides scripts for training and classification. This package uses the
 `imgpheno <https://github.com/naturalis/imgpheno>`_ package for image feature
 extraction.
 """
