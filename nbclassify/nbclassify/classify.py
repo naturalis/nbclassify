@@ -103,8 +103,7 @@ class ImageClassifier(Common):
             phenotyper = Phenotyper()
             phenotyper.set_image(im_path)
             if self.roi:
-                x, y, w, h = self.roi
-                phenotyper.set_grabcut_roi((x, y, w, h))
+                phenotyper.set_roi(self.roi)
             phenotyper.set_config(config)
             phenotype = phenotyper.make()
 

@@ -201,7 +201,7 @@ class Phenotyper(object):
         self.img = None
         self.mask = None
         self.bin_mask = None
-        self.grabcut_roi = None
+        self.roi = None
         self.scaler = None
 
     def set_image(self, path, roi=None):
@@ -268,8 +268,8 @@ class Phenotyper(object):
         b = float(b)
         self.scaler = MinMaxScaler(copy=True, feature_range=(a, b))
 
-    def set_grabcut_roi(self, roi):
-        """Set the region of interest for the GrabCut algorithm.
+    def set_roi(self, roi):
+        """Set the region of interest for the image.
 
         If GrabCut is set as the segmentation algorithm, then GrabCut is
         executed with this region of interest.
@@ -282,7 +282,7 @@ class Phenotyper(object):
             for x in roi:
                 if not (isinstance(x, int) and x >= 0):
                     raise ValueError("ROI must be a (x, y, w, h) tuple")
-        self.grabcut_roi = roi
+        self.roi = roi
 
     def __grabcut(self, img, iters=5, roi=None, margin=5):
         """Wrapper for OpenCV's grabCut function.
@@ -332,14 +332,25 @@ class Phenotyper(object):
         if 'preprocess' not in self.config:
             return
 
-        # Scale the image down if its perimeter exceeds the maximum (if set).
+        # Scale the image down if its perimeter (width+height) exceeds the
+        # maximum. If a ROI is set, use the perimeter of the ROI instead, or
+        # else we might end up with a very small ROI.
+        if self.roi:
+            perim = sum(self.roi[2:4])
+        else:
+            perim = sum(self.img.shape[:2])
+
         rf = 1.0
-        perim = sum(self.img.shape[:2])
         max_perim = getattr(self.config.preprocess, 'maximum_perimeter', None)
         if max_perim and perim > max_perim:
             logging.info("Scaling down...")
             rf = float(max_perim) / perim
             self.img = cv2.resize(self.img, None, fx=rf, fy=rf)
+
+        # Account for the resizing factor if a ROI is set.
+        if self.roi:
+            self.roi = [int(x*rf) for x in self.roi]
+            self.roi = tuple(self.roi)
 
         # Perform color enhancement.
         color_enhancement = getattr(self.config.preprocess,
@@ -365,14 +376,8 @@ class Phenotyper(object):
             margin = getattr(segmentation, 'margin', 1)
             output_folder = getattr(segmentation, 'output_folder', None)
 
-            if self.grabcut_roi:
-                # Account for the resizing factor when setting the ROI.
-                self.grabcut_roi = [int(x*rf) for x in self.grabcut_roi]
-                self.grabcut_roi = tuple(self.grabcut_roi)
-
             # Get the main contour.
-            self.mask = self.__grabcut(self.img, iters, self.grabcut_roi,
-                margin)
+            self.mask = self.__grabcut(self.img, iters, self.roi, margin)
             self.bin_mask = np.where((self.mask==cv2.GC_FGD) + \
                 (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
             contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL,
