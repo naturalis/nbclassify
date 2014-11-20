@@ -1,7 +1,7 @@
-include *.txt *.rst
+include Makefile *.txt *.rst
 recursive-include nbclassify *.yml
 recursive-include scripts *.py
 graft docs
 prune docs/_build
 graft tests
-global-exclude *.pyc
+global-exclude *.pyc .meta.db

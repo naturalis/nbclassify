@@ -21,8 +21,9 @@ from nbclassify.training import MakeAnn, TestAnn, BatchMakeAnn
 from nbclassify.validate import Validator
 import nbclassify.db as db
 
-CONF_FILE  = "config.yml"
-IMAGE_DIR = "images"
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+CONF_FILE  = os.path.join(BASE_DIR, "config.yml")
+IMAGE_DIR = os.path.join(BASE_DIR, "images")
 META_FILE = os.path.join(IMAGE_DIR, conf.meta_file)
 TEMP_DIR = os.path.join(tempfile.gettempdir(),
     'nbclassify-{0}'.format(os.getuid()))
@@ -129,7 +130,8 @@ class TestTrainer(unittest.TestCase):
     def test_trainer_ad(self):
         """Test the `classify` subcommands."""
         filter_ = self.config.classification.filter.as_dict()
-        image = "images/Cypripedium/Arietinum/plectrochilum/14990382409.jpg"
+        image = os.path.join(IMAGE_DIR,
+            "Cypripedium/Arietinum/plectrochilum/14990382409.jpg")
 
         with db.session_scope(META_FILE) as (session, metadata):
             classes = db.get_classes_from_filter(session, metadata, filter_)

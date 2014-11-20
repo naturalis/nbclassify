@@ -19,7 +19,7 @@ install:
   - pip install https://github.com/naturalis/imgpheno/archive/master.zip
 
 before_script:
-  - cd $root/nbclassify/tests/
+  - cd $root/nbclassify/
 
 script:
-  - make
+  - make test
