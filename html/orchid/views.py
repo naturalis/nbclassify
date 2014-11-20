@@ -10,6 +10,7 @@ from django.shortcuts import render, get_object_or_404
 from django.core.context_processors import csrf
 from django.conf import settings
 from nbclassify.classify import ImageClassifier
+from nbclassify.db import session_scope
 from nbclassify.functions import open_config
 
 from orchid.forms import UploadPictureForm
@@ -90,13 +91,14 @@ def identify(request, photo_id):
 
         # Classify the photo.
         config = open_config(CONFIG_FILE)
-        classifier = ImageClassifier(config, TAXA_DB)
-        classifier.set_roi(roi)
+        with session_scope(TAXA_DB) as (session, metadata):
+            classifier = ImageClassifier(config)
+            classifier.set_roi(roi)
 
-        try:
-            classes = classify_image(classifier, photo.image.path, ANN_DIR)
-        except Exception as e:
-            return HttpResponseServerError(e)
+            try:
+                classes = classify_image(classifier, photo.image.path, ANN_DIR)
+            except Exception as e:
+                return HttpResponseServerError(e)
 
         # Identify this photo.
         for c in classes:

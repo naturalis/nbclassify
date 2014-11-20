@@ -384,11 +384,6 @@ def main():
 
     return 0
 
-def set_global_db_session(session, metadata):
-    """Set the database session and metadata."""
-    conf.session = session
-    conf.metadata = metadata
-
 def meta(config, meta_path, args):
     """Make meta data file for an image directory."""
     from nbclassify.db import MakeMeta, make_meta_db
@@ -397,10 +392,8 @@ def meta(config, meta_path, args):
     make_meta_db(meta_path)
 
     with session_scope(meta_path) as (session, metadata):
-        set_global_db_session(session, metadata)
-
         mkmeta = MakeMeta(config, args.imdir)
-        mkmeta.make()
+        mkmeta.make(session, metadata)
 
 def data(config, meta_path, args):
     """Start train data routines."""
@@ -412,8 +405,6 @@ def data(config, meta_path, args):
         raise ConfigurationError("The classification filter is not set")
 
     with session_scope(meta_path) as (session, metadata):
-        set_global_db_session(session, metadata)
-
         cache = PhenotypeCache()
         cache.make(args.imdir, args.cache_dir, config, update=False)
 
@@ -425,8 +416,6 @@ def data_batch(config, meta_path, args):
     from nbclassify.data import PhenotypeCache, BatchMakeTrainData
 
     with session_scope(meta_path) as (session, metadata):
-        set_global_db_session(session, metadata)
-
         cache = PhenotypeCache()
         cache.make(args.imdir, args.cache_dir, config, update=False)
 
@@ -445,8 +434,6 @@ def ann_batch(config, meta_path, args):
     from nbclassify.training import BatchMakeAnn
 
     with session_scope(meta_path) as (session, metadata):
-        set_global_db_session(session, metadata)
-
         ann_maker = BatchMakeAnn(config)
         ann_maker.batch_train(args.data, args.output)
 
@@ -455,8 +442,6 @@ def test_ann(config, meta_path, args):
     from nbclassify.training import TestAnn
 
     with session_scope(meta_path) as (session, metadata):
-        set_global_db_session(session, metadata)
-
         tester = TestAnn(config)
         tester.test(args.ann, args.test_data)
 
@@ -473,8 +458,6 @@ def test_ann_batch(config, meta_path, args):
     from nbclassify.training import TestAnn
 
     with session_scope(meta_path) as (session, metadata):
-        set_global_db_session(session, metadata)
-
         tester = TestAnn(config)
         tester.test_with_hierarchy(args.test_data, args.anns, args.error)
 
@@ -495,14 +478,12 @@ def classify(config, meta_path, args):
         raise ConfigurationError("The classification filter is not set")
 
     with session_scope(meta_path) as (session, metadata):
-        set_global_db_session(session, metadata)
-
         classes = get_classes_from_filter(session, metadata, filter_)
         if not classes:
             raise ValueError("No classes found for filter `%s`" % filter_)
         codewords = get_codewords(classes)
 
-        classifier = ImageClassifier(config, meta_path)
+        classifier = ImageClassifier(config)
         codeword = classifier.classify_image(args.image, args.ann, config)
         classification = get_classification(codewords, codeword, args.error)
 
@@ -519,8 +500,6 @@ def validate(config, meta_path, args):
     conf.force_overwrite = True
 
     with session_scope(meta_path) as (session, metadata):
-        set_global_db_session(session, metadata)
-
         cache = PhenotypeCache()
         cache.make(args.imdir, args.cache_dir, config, update=False)
 

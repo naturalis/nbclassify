@@ -275,7 +275,10 @@ class MakeAnn(Common):
 
 class BatchMakeAnn(MakeAnn):
 
-    """Generate training data."""
+    """Generate training data.
+
+    Must be instantiated within a database session scope.
+    """
 
     def __init__(self, config):
         """Constructor for training data generator.
@@ -300,7 +303,7 @@ class BatchMakeAnn(MakeAnn):
         Must be separate from the constructor because
         :meth:`set_photo_count_min` influences the taxon hierarchy.
         """
-        session, metadata = db.get_global_session_or_error()
+        session, metadata = db.get_session_or_error()
 
         if not self.taxon_hr:
             self.taxon_hr = db.get_taxon_hierarchy(session, metadata)
@@ -313,7 +316,7 @@ class BatchMakeAnn(MakeAnn):
         data to train on is set in the classification hierarchy of the
         configurations.
         """
-        session, metadata = db.get_global_session_or_error()
+        session, metadata = db.get_session_or_error()
 
         # Must not be loaded in the constructor, in case set_photo_count_min()
         # is used.
@@ -361,7 +364,10 @@ class BatchMakeAnn(MakeAnn):
 
 class TestAnn(Common):
 
-    """Test an artificial neural network."""
+    """Test an artificial neural network.
+
+    Must be instantiated within a database session scope.
+    """
 
     def __init__(self, config):
         super(TestAnn, self).__init__(config)
@@ -414,7 +420,7 @@ class TestAnn(Common):
         classification filter `filter_`. A bit in a codeword is considered on
         if the mean square error for a bit is less or equal to `error`.
         """
-        session, metadata = db.get_global_session_or_error()
+        session, metadata = db.get_session_or_error()
 
         if self.test_data is None:
             raise RuntimeError("Test data is not set")
@@ -484,7 +490,7 @@ class TestAnn(Common):
 
         Returns a 2-tuple ``(correct,total)``.
         """
-        session, metadata = db.get_global_session_or_error()
+        session, metadata = db.get_session_or_error()
 
         logging.info("Testing the neural networks hierarchy...")
 

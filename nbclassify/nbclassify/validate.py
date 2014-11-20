@@ -15,7 +15,10 @@ import nbclassify.db as db
 
 class Validator(Common):
 
-    """Validate artificial neural networks."""
+    """Validate artificial neural networks.
+
+    Must be instantiated within a database session scope.
+    """
 
     def __init__(self, config, cache_path):
         """Constructor for the validator.
@@ -50,7 +53,7 @@ class Validator(Common):
         raised. If `autoskip` is set to True, only the members for classes with
         at least `k` members are used for the cross validation.
         """
-        session, metadata = db.get_global_session_or_error()
+        session, metadata = db.get_session_or_error()
 
         # Will hold the score of each folds.
         scores = {}

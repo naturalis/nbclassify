@@ -7,6 +7,7 @@ import csv
 import logging
 import os
 import shelve
+import sys
 
 import cv2
 import imgpheno as ft
@@ -21,7 +22,10 @@ import nbclassify.db as db
 
 class PhenotypeCache(object):
 
-    """Cache and retrieve phenotypes."""
+    """Cache and retrieve phenotypes.
+
+    Must be instantiated within a database session scope.
+    """
 
     def __init__(self):
         self._cache = {}
@@ -124,7 +128,7 @@ class PhenotypeCache(object):
         are updated. Method :meth:`get_phenotype` can then be used to retrieve
         these features and combined them to phenotypes.
         """
-        session, metadata = db.get_global_session_or_error()
+        session, metadata = db.get_session_or_error()
 
         phenotyper = Phenotyper()
 
@@ -136,7 +140,7 @@ class PhenotypeCache(object):
         # for all images.
         for hash_, c in self.get_single_feature_configurations(config):
             cache_path = os.path.join(cache_dir, str(hash_))
-            logging.info("Caching features in `%s`...", cache_path)
+            sys.stderr.write("Caching features in `%s`...\n" % cache_path)
 
             # Create a shelve for storing features. Empty existing shelves.
             cache = shelve.open(cache_path)
@@ -792,7 +796,10 @@ class TrainData(object):
 
 class MakeTrainData(Common):
 
-    """Generate training data."""
+    """Generate training data.
+
+    Must be instantiated within a database session scope.
+    """
 
     def __init__(self, config, cache_path):
         """Constructor for training data generator.
@@ -829,7 +836,7 @@ class MakeTrainData(Common):
         fingerprints are obtained from cache, which must have been created for
         configuration `config` or `self.config`.
         """
-        session, metadata = db.get_global_session_or_error()
+        session, metadata = db.get_session_or_error()
 
         if not conf.force_overwrite and os.path.isfile(filename):
             raise FileExistsError(filename)
@@ -987,7 +994,10 @@ class MakeTrainData(Common):
 
 class BatchMakeTrainData(MakeTrainData):
 
-    """Generate training data."""
+    """Generate training data.
+
+    Must be instantiated within a database session scope.
+    """
 
     def __init__(self, config, cache_path):
         """Constructor for training data generator.
@@ -1012,7 +1022,7 @@ class BatchMakeTrainData(MakeTrainData):
         Must be separate from the constructor because
         :meth:`set_photo_count_min` influences the taxon hierarchy.
         """
-        session, metadata = db.get_global_session_or_error()
+        session, metadata = db.get_session_or_error()
 
         if not self.taxon_hr:
             self.taxon_hr = db.get_taxon_hierarchy(session, metadata)

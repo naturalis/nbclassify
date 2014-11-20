@@ -29,33 +29,38 @@ from .functions import get_childs_from_hierarchy, path_from_filter
 def session_scope(db_path):
     """Provide a transactional scope around a series of operations.
 
-    This is a decorator that yields a 2-tuple ``(session, metadata)`` for the
-    SQLite database `db_path`.
+    This is a factory function for ``with`` statements that yields a 2-tuple
+    ``(session, metadata)`` for the SQLite database `db_path`.
     """
+    if conf.session:
+        raise RuntimeError("Only one database session is allowed at a time")
+
     engine = sqlalchemy.create_engine('sqlite:///{0}'.format(db_path),
         echo=conf.debug)
     Session = sessionmaker(bind=engine)
-    session = Session()
-    metadata = sqlalchemy.MetaData()
-    metadata.reflect(bind=engine)
+    conf.session = Session()
+    conf.metadata = sqlalchemy.MetaData()
+    conf.metadata.reflect(bind=engine)
     try:
-        yield (session, metadata)
-        session.commit()
+        yield (conf.session, conf.metadata)
+        conf.session.commit()
     except:
-        session.rollback()
+        conf.session.rollback()
         raise
     finally:
-        session.close()
+        conf.session.close()
+        conf.session = conf.metadata = None
 
-def get_global_session_or_error():
-    """Get the global database session and metadata.
+def get_session_or_error():
+    """Return the database session and metadata objects.
 
-    Raises a RuntimeError exception if no global session is set.
+    Returns a ``(session, metadata)`` tuple. Raises a RuntimeError exception if
+    not in a database session is set.
     """
-    if not (conf.session and conf.metadata):
-        raise RuntimeError("No database connection found")
-    else:
+    if (conf.session and conf.metadata):
         return (conf.session, conf.metadata)
+    else:
+        raise RuntimeError("Not in a database session")
 
 def test_classification_filter(f):
     """Test the validity of the classification filter `f`.
@@ -635,11 +640,9 @@ class MakeMeta(Common):
             elif os.path.isfile(path) and classes:
                 yield (path, dict(zip(ranks, classes)))
 
-    def make(self):
+    def make(self, session, metadata):
         """Create the meta data database file `meta_path`."""
-        session, metadata = get_global_session_or_error()
-
-        sys.stdout.write("Saving meta data for images...\n")
+        sys.stdout.write("Setting meta data for images...\n")
 
         for path, classes in self.get_image_files(self.image_dir, self.ranks):
             # Get the path relative to self.image_dir

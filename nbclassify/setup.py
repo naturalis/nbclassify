@@ -13,7 +13,7 @@ setup(
     version='0.1.0',
     description='Train artificial neural networks and image classification',
     long_description=long_description,
-    url='https://github.com/naturalis/img-classify',
+    url='https://github.com/naturalis/nbclassify',
     author='Naturalis Biodiversity Center',
     author_email='serrano.pereira@naturalis.nl',
     license='MIT',

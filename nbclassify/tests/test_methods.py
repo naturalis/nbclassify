@@ -1,18 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import logging
 import os
 import sys
 import unittest
 
-from context import conf
-from context import db
-from context import nbc_trainer
+sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('.'))
+
+from nbclassify import conf, open_config
+import nbclassify.db as db
 
 CONF_FILE  = "config.yml"
 IMAGE_DIR = "images"
-META_FILE = conf.meta_file
+META_FILE = os.path.join(IMAGE_DIR, conf.meta_file)
 
+logging.basicConfig(level=logging.DEBUG)
 
 #@unittest.skip("Debugging")
 class TestDatabaseMethods(unittest.TestCase):
@@ -25,19 +29,17 @@ class TestDatabaseMethods(unittest.TestCase):
 
         This is executed before any test is started.
         """
-        meta_file = os.path.join(IMAGE_DIR, META_FILE)
-        if not os.path.isfile(meta_file):
-            sys.argv = [
-                'nbc-trainer.py',
-                CONF_FILE,
-                'meta',
-                IMAGE_DIR
-            ]
-            nbc_trainer.main()
+        config = open_config(CONF_FILE)
+        if not os.path.isfile(META_FILE):
+            sys.stdout.write("Initializing database...\n")
+            db.make_meta_db(META_FILE)
+
+            with db.session_scope(META_FILE) as (session, metadata):
+                mkmeta = db.MakeMeta(config, IMAGE_DIR)
+                mkmeta.make(session, metadata)
 
     def setUp(self):
         """Prepare the testing environment."""
-        self.meta_file = os.path.join(IMAGE_DIR, META_FILE)
         self.expected_taxa = {
             "40dde798989d9ea3b05140bc218d929a": ['Cypripedium','Obtusipetala','flavum'],
             "ae1cb63196cb236ae27accec4e7861cc": ['Cypripedium','Obtusipetala','flavum'],
@@ -73,7 +75,7 @@ class TestDatabaseMethods(unittest.TestCase):
 
     def test_get_photos_with_taxa(self):
         """Test the get_photos_with_taxa() method."""
-        with db.session_scope(self.meta_file) as (session, metadata):
+        with db.session_scope(META_FILE) as (session, metadata):
             q = db.get_photos_with_taxa(session, metadata)
             ret = q.all()
             self.assertEqual(len(ret), len(self.expected_taxa))
@@ -103,7 +105,7 @@ class TestDatabaseMethods(unittest.TestCase):
             }
         }
 
-        with db.session_scope(self.meta_file) as (session, metadata):
+        with db.session_scope(META_FILE) as (session, metadata):
             hier = db.get_taxon_hierarchy(session, metadata)
 
         self.assertEqual(str(hier), str(expected))
@@ -122,7 +124,7 @@ class TestDatabaseMethods(unittest.TestCase):
             'Phragmipedium_Micropetalum_besseae': 4
         }
 
-        with db.session_scope(self.meta_file) as (session, metadata):
+        with db.session_scope(META_FILE) as (session, metadata):
             q = db.get_taxa_photo_count(session, metadata)
             ret = q.all()
             self.assertEqual(len(ret), len(expected))
@@ -155,7 +157,7 @@ class TestDatabaseMethods(unittest.TestCase):
             }
         }
 
-        with db.session_scope(self.meta_file) as (session, metadata):
+        with db.session_scope(META_FILE) as (session, metadata):
             classes = db.get_classes_from_filter(session, metadata,
                 filter_genera)
             self.assertEqual(classes, set(['Cypripedium','Mexipedium',
@@ -218,7 +220,7 @@ class TestDatabaseMethods(unittest.TestCase):
             'class': 'genus'
         }
 
-        with db.session_scope(self.meta_file) as (session, metadata):
+        with db.session_scope(META_FILE) as (session, metadata):
             q = db.get_filtered_photos_with_taxon(session, metadata,
                 filter_mexi_species).all()
             self.assertEqual(len(q), 3)
