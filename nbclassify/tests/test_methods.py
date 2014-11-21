@@ -86,30 +86,47 @@ class TestDatabaseMethods(unittest.TestCase):
 
     def test_get_taxon_hierarchy(self):
         """Test the get_taxon_hierarchy() method."""
-        expected = {
-            u'Paphiopedilum': {
-                u'Brachypetalum': [u'godefroyae', u'wenshanense']
-            },
-            u'Selenipedium': {
-                None: [u'palmifolium']
-            },
-            u'Mexipedium': {
-                None: [u'xerophyticum']
-            },
-            u'Cypripedium': {
-                u'Trigonopedia': [u'fargesii', u'sichuanense'],
-                u'Obtusipetala': [u'flavum'],
-                u'Arietinum': [u'plectrochilum']
-            },
-            u'Phragmipedium': {
-                u'Micropetalum': [u'besseae']
-            }
-        }
-
         with db.session_scope(META_FILE) as (session, metadata):
-            hier = db.get_taxon_hierarchy(session, metadata)
+            expected = {
+                u'Paphiopedilum': {
+                    u'Brachypetalum': [u'godefroyae', u'wenshanense']
+                },
+                u'Selenipedium': {
+                    None: [u'palmifolium']
+                },
+                u'Mexipedium': {
+                    None: [u'xerophyticum']
+                },
+                u'Cypripedium': {
+                    u'Trigonopedia': [u'fargesii', u'sichuanense'],
+                    u'Obtusipetala': [u'flavum'],
+                    u'Arietinum': [u'plectrochilum']
+                },
+                u'Phragmipedium': {
+                    u'Micropetalum': [u'besseae']
+                }
+            }
 
-        self.assertEqual(str(hier), str(expected))
+            hier = db.get_taxon_hierarchy(session, metadata)
+            self.assertEqual(str(hier), str(expected))
+
+            # Setting `photo_count_min` to 4 should only return the species with
+            # at least 4 photos.
+            conf.photo_count_min = 4
+            expected = {
+                u'Paphiopedilum': {
+                    u'Brachypetalum': [u'godefroyae']
+                },
+                u'Cypripedium': {
+                    u'Obtusipetala': [u'flavum']
+                },
+                u'Phragmipedium': {
+                    u'Micropetalum': [u'besseae']
+                }
+            }
+
+            hier = db.get_taxon_hierarchy(session, metadata)
+            self.assertEqual(str(hier), str(expected))
 
     def test_get_taxa_photo_count(self):
         """Test the get_taxa_photo_count() method."""
