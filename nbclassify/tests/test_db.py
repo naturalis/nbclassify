@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
+"""Unit tests for the database module."""
+
 import os
 import sys
 import unittest
@@ -9,15 +10,11 @@ import unittest
 sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('.'))
 
+from context import *
 from nbclassify import conf, open_config
 import nbclassify.db as db
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-CONF_FILE  = os.path.join(BASE_DIR, "config.yml")
-IMAGE_DIR = os.path.join(BASE_DIR, "images")
 META_FILE = os.path.join(IMAGE_DIR, conf.meta_file)
-
-logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s')
 
 #@unittest.skip("Debugging")
 class TestDatabaseMethods(unittest.TestCase):

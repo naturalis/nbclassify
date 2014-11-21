@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
+"""Unit tests for the training and classification routines.
+
+Tests whether the routines run without raising unexpected exceptions. Outputs
+and results are not checked here.
+"""
+
 import os
-import shutil
 import sys
-import tempfile
 import unittest
 
 import numpy as np
@@ -13,37 +16,23 @@ import numpy as np
 sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('.'))
 
+from context import *
 from nbclassify import conf, open_config
 from nbclassify.classify import ImageClassifier
 from nbclassify.data import PhenotypeCache, MakeTrainData, BatchMakeTrainData
-from nbclassify.functions import get_classification, get_codewords
+from nbclassify.functions import (delete_temp_dir, get_classification,
+    get_codewords)
 from nbclassify.training import MakeAnn, TestAnn, BatchMakeAnn
 from nbclassify.validate import Validator
 import nbclassify.db as db
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-CONF_FILE  = os.path.join(BASE_DIR, "config.yml")
-IMAGE_DIR = os.path.join(BASE_DIR, "images")
 META_FILE = os.path.join(IMAGE_DIR, conf.meta_file)
-TEMP_DIR = os.path.join(tempfile.gettempdir(),
-    'nbclassify-{0}'.format(os.getuid()))
 
 # Disable FileExistsError exceptions.
 conf.force_overwrite = True
 
 # Raise exceptions which would otherwise be caught.
 conf.debug = True
-
-logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s')
-
-def delete_temp_dir(path, recursive=False):
-    """Delete temporary directory with content."""
-    if os.path.isdir(str(path)):
-        if path.startswith(tempfile.gettempdir()):
-            if recursive:
-                shutil.rmtree(path)
-            else:
-                os.rmdir(path)
 
 def validate(config, k, autoskip=False):
     """Start validation routines."""
