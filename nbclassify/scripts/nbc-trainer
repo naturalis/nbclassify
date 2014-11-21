@@ -348,9 +348,8 @@ def main():
     args = parser.parse_args()
 
     # Print debug messages if the -d flag is set for the Python interpreter.
-    if sys.flags.debug:
+    if conf.debug:
         log_level = logging.DEBUG
-        conf.debug = True
     else:
         log_level = logging.INFO
 

@@ -2,6 +2,8 @@
 
 """Global configurations."""
 
+import sys
+
 from .functions import singleton
 
 # Default FANN training settings. These can be overwritten with the
@@ -42,7 +44,7 @@ class ConfigManager(object):
         # Switch to True whilst debugging. It is automatically set to True when
         # the environment variable PYTHONDEBUG is set. Setting this to True
         # prevents some exceptions from being caught by the scripts.
-        self.debug = False
+        self.debug = sys.flags.debug
 
         # Force overwrite of files. If set to False, existing files are not
         # touched. When set to True, any existing files are overwritten without
@@ -53,6 +55,9 @@ class ConfigManager(object):
         # directory with the `meta` subcommand for the nbc-trainer script. This
         # file is needed for training and classification.
         self.meta_file = ".meta.db"
+
+        # Display verbose messages of the ORM.
+        self.orm_verbose = False
 
         # Prefix for output columns in training data. It is used for exporting
         # and reading training data.

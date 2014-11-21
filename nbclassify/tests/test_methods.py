@@ -17,7 +17,7 @@ CONF_FILE  = os.path.join(BASE_DIR, "config.yml")
 IMAGE_DIR = os.path.join(BASE_DIR, "images")
 META_FILE = os.path.join(IMAGE_DIR, conf.meta_file)
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s')
 
 #@unittest.skip("Debugging")
 class TestDatabaseMethods(unittest.TestCase):

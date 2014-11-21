@@ -34,7 +34,7 @@ conf.force_overwrite = True
 # Raise exceptions which would otherwise be caught.
 conf.debug = True
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s')
 
 def delete_temp_dir(path, recursive=False):
     """Delete temporary directory with content."""

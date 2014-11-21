@@ -375,7 +375,7 @@ def make_meta_db(db_path):
         raise FileExistsError(db_path)
 
     engine = sqlalchemy.create_engine('sqlite:///{0}'.format(db_path),
-        echo=conf.debug)
+        echo=conf.orm_verbose)
 
     Base = declarative_base()
 
@@ -543,7 +543,7 @@ def session_scope(db_path):
         raise RuntimeError("Only one database session is allowed at a time")
 
     engine = sqlalchemy.create_engine('sqlite:///{0}'.format(db_path),
-        echo=conf.debug)
+        echo=conf.orm_verbose)
     Session = sessionmaker(bind=engine)
     conf.session = Session()
     conf.metadata = sqlalchemy.MetaData()
