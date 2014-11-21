@@ -11,4 +11,4 @@ extraction.
 from .config import conf, ANN_DEFAULTS
 from .functions import open_config
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'

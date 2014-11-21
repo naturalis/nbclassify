@@ -10,7 +10,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='nbclassify',
-    version='0.1.0',
+    version='0.1.1',
     description='Train artificial neural networks and image classification',
     long_description=long_description,
     url='https://github.com/naturalis/nbclassify',
