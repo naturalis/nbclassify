@@ -157,3 +157,52 @@ classification:
           test_file: __genus__.__section__.species.tsv
           ann_file: __genus__.__section__.species.ann
           max_error: 0.001
+
+    # The taxon hierarchy to be used for classification. This must be the same
+    # classification hierarchy used while training the set of artificial neural
+    # networks being used for classification. Setting this option allows image
+    # classification without the need for a metadata database.
+    taxa:
+        Cypripedium:
+            Acaulia: [acaule]
+            Arietinum: [arietinum, plectrochilum]
+            Bifolia: [guttatum, yatabeanum]
+            Cypripedium: [calceolus, calcicola, farreri, parviflorum,
+                shanxiense, tibeticum, yunnanense]
+            Enantiopedilum: [fasciculatum]
+            Flabellinervia: [formosanum, japonicum]
+            Macrantha: [franchetii]
+            Obtusipetala: [flavum, reginae]
+            Sinopedilum: [bardolphianum, forrestii]
+            Subtropica: [subtropicum, wardii]
+            Trigonopedia: [fargesii, sichuanense]
+        Mexipedium:
+            Mexipedium: [xerophyticum]
+        Paphiopedilum:
+            Barbata: [acmodontum, appletonianum, argus, barbatum, boungainvilleanum,
+                bullenianum, callosum, ciliolare, dayanum, fowliei, hennisianum,
+                hookerae, javanicum, lawrenceanum, mastersianum, papuanum,
+                purpuratum, sangii, schoseri, sukhakulii, superbiens,
+                tonsum, urbanianum, venustum, violascens, wardii, wentworthianum]
+            Brachypetalum: [bellatulum, concolor, godefroyae, niveum,
+                thaianum, wenshanense]
+            Cochlopetalum: [glaucophyllum, liemianum, primulinum, victoria-mariae,
+                victoria-regina]
+            Coryopedilum: [adductum, gigantifolium, glanduliferum, kolopakingii,
+                philippinense, randsii, rothschildianum, stonei, supardii,
+                wilhelminiae]
+            Paphiopedilum: [barbigerum, charlesworthii, druryi, exul,
+                fairrieanum, gratrixianum, helenae, henryanum, hirsutissimum,
+                insigne, spicerianum, tigrinum, villosum]
+            Pardalopetalum: [dianthum, haynaldianum, lowii, parishii]
+            Parvisepalum: [armeniacum, delenatii, emersonii, malipoense,
+                micranthum, vietnamense]
+        Phragmipedium:
+            Lorifolia: [boissierianum, hirtzii, longifolium, pearcei,
+                vittatum]
+            Micropetalum: [andreettae, besseae, fischeri, schlimii]
+            Phragmipedium: [caricinum, caudatum, christiansenianum, exstaminodium,
+                klotzschianum, lindenii, ritchteri, warscewiczianum]
+            Platypetalum: [lindelayanum, sargentianum]
+        Selenipedium:
+            Selenipedium: [palmifolium]

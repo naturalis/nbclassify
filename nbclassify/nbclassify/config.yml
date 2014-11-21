@@ -155,3 +155,10 @@ classification:
           test_file: __genus__.__section__.species.tsv
           ann_file: __genus__.__section__.species.ann
           max_error: 0.001
+
+    # The taxon hierarchy to be used for classification. This must be the same
+    # classification hierarchy used while training the set of artificial neural
+    # networks being used for classification. Setting this option allows image
+    # classification without the need for a metadata database.
+    #taxa:
+    #   ...

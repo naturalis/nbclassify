@@ -3,7 +3,9 @@
 """Base classes."""
 
 from . import conf
+from .exceptions import DatabaseSessionError
 from .functions import Struct
+import nbclassify.db as db
 
 class Common(object):
 
@@ -40,3 +42,16 @@ class Common(object):
     def get_photo_count_min(self):
         """Return the minimum for photos count per species."""
         return int(conf.photo_count_min)
+
+    def get_taxon_hierarchy(self):
+        """Return the taxon hierarchy.
+
+        First tries to get the taxon hierarchy from the metadata database. If
+        that fails, it will try to get it from the configuration file.
+        """
+        try:
+            session, metadata = db.get_session_or_error()
+            hr = db.get_taxon_hierarchy(session, metadata)
+        except DatabaseSessionError:
+            hr = self.config.classification.taxa.as_dict()
+        return hr

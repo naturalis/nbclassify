@@ -91,14 +91,13 @@ def identify(request, photo_id):
 
         # Classify the photo.
         config = open_config(CONFIG_FILE)
-        with session_scope(TAXA_DB) as (session, metadata):
-            classifier = ImageClassifier(config)
-            classifier.set_roi(roi)
+        classifier = ImageClassifier(config)
+        classifier.set_roi(roi)
 
-            try:
-                classes = classify_image(classifier, photo.image.path, ANN_DIR)
-            except Exception as e:
-                return HttpResponseServerError(e)
+        try:
+            classes = classify_image(classifier, photo.image.path, ANN_DIR)
+        except Exception as e:
+            return HttpResponseServerError(e)
 
         # Identify this photo.
         for c in classes:
@@ -153,10 +152,10 @@ def classify_image(classifier, image_path, ann_dir):
     artificial neural networks `ann_dir` for the specified classfication
     hierarchy set in `classifier`.
 
-    Returns the classfications as a list of dictionaries, where each
-    dictionary maps each level to the corresponding classfication. An
-    additional key ``error`` specifies the mean square error for the entire
-    classfication.
+    Returns the classfications as a list of dictionaries, where each dictionary
+    maps each rank to the corresponding taxon. An additional key ``error``
+    specifies the mean square error for the entire classfication. The
+    classifications returned are ordered by mean square error.
     """
     classes, errors = classifier.classify_with_hierarchy(image_path, ann_dir)
 
@@ -168,14 +167,14 @@ def classify_image(classifier, image_path, ann_dir):
     errors_classes = [(sum(e)/len(e),c) for e,c in zip(errors, classes)]
 
     # Get the level names.
-    levels = classifier.get_classification_hierarchy_levels()
+    ranks = classifier.get_classification_hierarchy_levels()
 
     # Create a list of all classifications.
     classes = []
     for error, classes_ in sorted(errors_classes):
         class_dict = {'error': error}
-        for level, class_ in zip(levels, classes_):
-            class_dict[level] = class_
+        for rank, taxon in zip(ranks, classes_):
+            class_dict[rank] = taxon
         classes.append(class_dict)
 
     return classes

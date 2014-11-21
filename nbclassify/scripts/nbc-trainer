@@ -96,7 +96,7 @@ def main():
     parser_data.add_argument(
         "imdir",
         metavar="PATH",
-        help="Base directory where Flickr harvested images are stored.")
+        help="Top most directory where images are stored with meta data.")
 
     # Create an argument parser for sub-command 'data-batch'.
     help_data_batch = """Create training data for a classification hierarchy.
@@ -124,7 +124,7 @@ def main():
     parser_data_batch.add_argument(
         "imdir",
         metavar="PATH",
-        help="Base directory where Flickr harvested images are stored.")
+        help="Top most directory where images are stored with meta data.")
 
     # Create an argument parser for sub-command 'ann'.
     help_ann = """Train an artificial neural network.
@@ -177,7 +177,7 @@ def main():
     parser_ann_batch.add_argument(
         "imdir",
         metavar="PATH",
-        help="Base directory where Flickr harvested images are stored.")
+        help="Top most directory where images are stored with meta data.")
 
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann = "Test an artificial neural network."
@@ -217,7 +217,7 @@ def main():
     parser_test_ann.add_argument(
         "imdir",
         metavar="PATH",
-        help="Base directory where Flickr harvested images are stored.")
+        help="Top most directory where images are stored with meta data.")
 
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann_batch = "Test the neural networks for a classification " \
@@ -257,7 +257,7 @@ def main():
     parser_test_ann_batch.add_argument(
         "imdir",
         metavar="PATH",
-        help="Base directory where Flickr harvested images are stored.")
+        help="Top most directory where images are stored with meta data.")
 
     # Create an argument parser for sub-command 'classify'.
     help_classify = """Classify a digital photo.
@@ -287,7 +287,7 @@ def main():
         "--imdir",
         metavar="PATH",
         required=True,
-        help="Base directory where Flickr harvested images are stored.")
+        help="Top most directory where images are stored with meta data.")
     parser_classify.add_argument(
         "image",
         metavar="IMAGE_FILE",
@@ -328,7 +328,21 @@ def main():
     parser_validate.add_argument(
         "imdir",
         metavar="PATH",
-        help="Base directory where the Flickr harvested images are stored.")
+        help="Top most directory where images are stored with meta data.")
+
+    # Create an argument parser for sub-command 'taxa'.
+    help_taxa = "Print the taxon hierarcy for the meta data. It can be used " \
+        "to get the taxon hierarcy for the `classification.taxa` configuration."
+
+    parser_validate = subparsers.add_parser(
+        "taxa",
+        help=help_taxa,
+        description=help_taxa
+    )
+    parser_validate.add_argument(
+        "imdir",
+        metavar="PATH",
+        help="Top most directory where images are stored with meta data.")
 
     # Parse arguments.
     args = parser.parse_args()
@@ -371,6 +385,8 @@ def main():
             classify(config, meta_path, args)
         elif args.task == 'validate':
             validate(config, meta_path, args)
+        elif args.task == 'taxa':
+            taxa(meta_path, args)
     except ConfigurationError as e:
         logging.error("A configurational error was detected: %s", e)
         return 1
@@ -517,6 +533,19 @@ def validate(config, meta_path, args):
             'mean': values.mean(),
             'sd': values.std() * 2
         })
+
+def taxa(meta_path, args):
+    """Print the taxon hierarchy from the metadata."""
+    from pprint import pprint
+    import yaml
+    from nbclassify.db import get_taxon_hierarchy
+
+    with session_scope(meta_path) as (session, metadata):
+        hr = get_taxon_hierarchy(session, metadata)
+
+    print "-----BEGIN TAXON HIERARCHY-----"
+    print yaml.safe_dump(hr, width=60, indent=4)
+    print "-----END TAXON HIERARCHY-----"
 
 if __name__ == "__main__":
     main()

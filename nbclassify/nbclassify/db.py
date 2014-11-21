@@ -21,9 +21,9 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import exists, functions
 
 from . import conf
-from .base import Common
 from .exceptions import *
-from .functions import get_childs_from_hierarchy, path_from_filter
+from .functions import Struct, get_childs_from_hierarchy, path_from_filter
+
 
 def get_classes_from_filter(session, metadata, filter_):
     """Return the classes for a classification filter.
@@ -137,13 +137,13 @@ def get_photos_with_taxa(session, metadata):
 def get_session_or_error():
     """Return the database session and metadata objects.
 
-    Returns a ``(session, metadata)`` tuple. Raises a RuntimeError exception if
-    not in a database session is set.
+    Returns a ``(session, metadata)`` tuple. Raises a DatabaseSessionError
+    exception if not in a database session is set.
     """
     if (conf.session and conf.metadata):
         return (conf.session, conf.metadata)
     else:
-        raise RuntimeError("Not in a database session")
+        raise DatabaseSessionError("Not in a database session")
 
 def get_taxa_photo_count(session, metadata):
     """Return the photo count for each (genus, section, species) combination.
@@ -185,9 +185,9 @@ def get_taxon_hierarchy(session, metadata):
 
     The hierarchy is returned as a dictionary in the format ``{genus: {section:
     [species, ..], ..}, ..}``. If the global configuration
-    ``nbclassify.config.conf.photo_count_min`` is set to a positive value, only
-    taxa with a minimum photo count of `photo_count_min` are used to construct
-    the hierarchy.
+    ``nbclassify.conf.photo_count_min`` is set to a positive value, only taxa
+    with a minimum photo count of `photo_count_min` are used to construct the
+    hierarchy.
 
     Returned hierarchies can be used as input for methods like
     :meth:`nbclassify.base.classification_hierarchy_filters` and
@@ -575,7 +575,7 @@ def set_default_ranks(session, metadata):
     session.commit()
 
 
-class MakeMeta(Common):
+class MakeMeta(object):
 
     """Populate a meta data database for an image directory.
 
@@ -589,26 +589,36 @@ class MakeMeta(Common):
         """Expects a configurations object `config` and a path to the directory
         containing the images `image_dir`.
         """
-        super(MakeMeta, self).__init__(config)
+        self.ranks = []
+        self.set_config(config)
         self.set_image_dir(image_dir)
 
         try:
-            directory_hierarchy = list(config.directory_hierarchy)
+            hr = list(self.config.directory_hierarchy)
         except:
-            raise nbc.ConfigurationError("directory hierarchy is not set")
+            raise ConfigurationError("directory hierarchy is not set")
+        self.set_ranks(hr)
 
-        # Set the ranks.
-        self.ranks = []
-        for rank in directory_hierarchy:
-            if rank == "__ignore__":
-                rank = None
-            self.ranks.append(rank)
+    def set_config(self, config):
+        """Set the configurations object `config`."""
+        if not isinstance(config, Struct):
+            raise TypeError("Configurations object must be of type Struct, " \
+                "not %s" % type(config))
+        self.config = config
 
     def set_image_dir(self, path):
         """Set the image directory."""
         if not os.path.isdir(path):
             raise IOError("Cannot open %s (no such directory)" % path)
         self.image_dir = os.path.abspath(path)
+
+    def set_ranks(self, hr):
+        """Set the ranks from the directory hierarchy `hr`."""
+        self.ranks = []
+        for rank in hr:
+            if rank == "__ignore__":
+                rank = None
+            self.ranks.append(rank)
 
     def get_image_files(self, root, ranks, classes=[]):
         """Return image paths and their classes.

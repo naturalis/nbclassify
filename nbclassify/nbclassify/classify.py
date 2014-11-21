@@ -11,17 +11,13 @@ from pyfann import libfann
 
 from .base import Common
 from .data import Phenotyper
-from .db import get_session_or_error, get_taxon_hierarchy, session_scope
 from .exceptions import *
 from .functions import (combined_hash, get_childs_from_hierarchy,
     get_classification, get_codewords, get_config_hashables)
 
 class ImageClassifier(Common):
 
-    """Classify an image.
-
-    Must be instantiated within a database session scope.
-    """
+    """Classify an image."""
 
     def __init__(self, config):
         super(ImageClassifier, self).__init__(config)
@@ -34,9 +30,8 @@ class ImageClassifier(Common):
         except:
             raise ConfigurationError("classification hierarchy not set")
 
-        # Get the taxon hierarchy from the database.
-        session, metadata = get_session_or_error()
-        self.taxon_hr = get_taxon_hierarchy(session, metadata)
+        # Get the taxon hierarchy.
+        self.taxon_hr = self.get_taxon_hierarchy()
 
     def set_error(self, error):
         """Set the default maximum error for classification."""
