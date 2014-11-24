@@ -1,6 +1,15 @@
 nbclassify package
 ==================
 
+Module contents
+---------------
+
+.. automodule:: nbclassify
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 Submodules
 ----------
 
@@ -72,15 +81,6 @@ nbclassify.validate module
 --------------------------
 
 .. automodule:: nbclassify.validate
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: nbclassify
     :members:
     :undoc-members:
     :show-inheritance:
