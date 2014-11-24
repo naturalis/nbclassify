@@ -7,7 +7,7 @@ Configuration
 =============
 
 This document describes the configurations file that is used by the scripts
-:ref:`nbc-trainer-py` and :ref:`nbc-classify-py`. This configurations file is
+:ref:`nbc-trainer` and :ref:`nbc-classify`. This configurations file is
 in the YAML_ format and specifies what preprocessing needs to be done on
 images, what features need to be extracted from the images, what the
 classification hierarchy looks like, and how the neural networks are trained.
@@ -16,10 +16,31 @@ See config.yml_ for an example configurations file.
 The following settings exists in this configurations file:
 
 
+.. _config-directory_hierarchy:
+
+directory_hierarchy
+===================
+
+The directory hierarchy describes how images are organized in an image directory
+on the local hard drive, and is needed for :ref:`compiling the metadata file
+<nbc-trainer-meta>` for an image directory. Each item in the list corresponds to
+a taxonomic rank. The directory name will be stored as the taxonomic name for
+that rank. If the directory name is "None", that rank will not be saved in the
+database. Directory levels can be ignored by setting the corresponding rank in
+the directory hierarchy to ``__ignore__``.
+
+Example::
+
+    directory_hierarchy:
+        - genus
+        - section
+        - species
+
+
 .. _config-data:
 
 data
-=====================
+====
 
 Describe training data format. The file format for training data is tab
 separated. The header row describes the columns in the data file. A minimal
@@ -377,6 +398,20 @@ max_error
   value. A default error threshold can be set with the ``--error`` option.
 
 Options marked with an asterisk (*) are required.
+
+
+.. _config-classification.taxa:
+
+classification.taxa
+-------------------
+
+The taxon hierarchy to be used for classification. This must be the same taxon
+hierarchy used while training the set of artificial neural networks being used
+for classification. Setting this option allows image classification without the
+need for a metadata database.
+
+The taxon hierarchy for the metadata of an image collection can be obtained with
+the :ref:`nbc-trainer-taxa` subcommand of the train script.
 
 ----
 

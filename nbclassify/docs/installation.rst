@@ -28,7 +28,7 @@ NBClassify has the following dependencies:
 
 * scikit-learn_ (>=0.15)
 
-* SciPy
+* SciPy_
 
 * SQLAlchemy_ (>=0.9.1)
 
@@ -46,8 +46,8 @@ Package Index::
 The ImgPheno_ package can be installed from the GitHub repository::
 
     git clone https://github.com/naturalis/imgpheno.git
-    cd imgpheno/
-    python setup.py install
+    pip install imgpheno/
+
 
 Installing NBClassify
 ---------------------
@@ -55,8 +55,7 @@ Installing NBClassify
 From the GitHub repository::
 
     git clone https://github.com/naturalis/nbclassify.git
-    cd nbclassify/nbclassify/
-    python setup.py install
+    pip install nbclassify/nbclassify/
 
 Or if you have a source archive file::
 
@@ -71,4 +70,5 @@ Or if you have a source archive file::
 .. _`Python Flickr API`: https://pypi.python.org/pypi/flickrapi
 .. _PyYAML: https://pypi.python.org/pypi/PyYAML
 .. _scikit-learn: http://scikit-learn.org
+.. _SciPy: http://www.scipy.org/
 .. _SQLAlchemy: http://www.sqlalchemy.org/

@@ -10,21 +10,22 @@ networks.
 This script depends on configurations from a configuration file. See config.yml
 for an example configuration file.
 
-The script also depends on an SQLite database file with meta data for a
+The script also depends on an SQLite database file with metadata for a
 collection of digital photographs. This database is created by the
 `nbc-harvest-images` script or with the `meta` subcommand.
 
 The following subcommands are available:
 
-* meta: Construct a meta data file for a directory of images.
+* meta: Compile a metadata file for a directory of images.
 * data: Create a tab separated file with training data.
 * data-batch: Create training data for a classification hierarchy.
 * ann: Train an artificial neural network.
 * ann-batch: Train neural networks for a classification hierarchy.
-* classify: Classify a digital photo.
-* test-ann: Test the neural networks for a classification hierarchy.
+* test-ann: Test an artificial neural network.
+* test-ann-batch: Test the neural networks for a classification hierarchy.
 * validate: Test the performance of trained neural networks.
-* taxa: Print the taxon hierarcy for the meta data.
+* classify: Classify a digital photo.
+* taxa: Print the taxon hierarcy for the metadata of an image collection.
 
 See the --help option for any of these subcommands for more information.
 """
@@ -56,10 +57,10 @@ def main():
     )
 
     # Create an argument parser for sub-command 'meta'.
-    help_meta = """Construct a meta data file for a directory of images.
+    help_meta = """Compile a metadata file for a directory of images.
 
     Images must be stored in a directory hierarchy, which is described in the
-    configurations file. The meta data file is saved in the image directory.
+    configurations file. The metadata file is saved in the image directory.
     """
 
     parser_meta = subparsers.add_parser(
@@ -100,7 +101,7 @@ def main():
     parser_data.add_argument(
         "imdir",
         metavar="PATH",
-        help="Top most directory where images are stored with meta data.")
+        help="Top most directory where images are stored with metadata.")
 
     # Create an argument parser for sub-command 'data-batch'.
     help_data_batch = """Create training data for a classification hierarchy.
@@ -128,7 +129,7 @@ def main():
     parser_data_batch.add_argument(
         "imdir",
         metavar="PATH",
-        help="Top most directory where images are stored with meta data.")
+        help="Top most directory where images are stored with metadata.")
 
     # Create an argument parser for sub-command 'ann'.
     help_ann = """Train an artificial neural network.
@@ -181,7 +182,7 @@ def main():
     parser_ann_batch.add_argument(
         "imdir",
         metavar="PATH",
-        help="Top most directory where images are stored with meta data.")
+        help="Top most directory where images are stored with metadata.")
 
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann = "Test an artificial neural network."
@@ -221,7 +222,7 @@ def main():
     parser_test_ann.add_argument(
         "imdir",
         metavar="PATH",
-        help="Top most directory where images are stored with meta data.")
+        help="Top most directory where images are stored with metadata.")
 
     # Create an argument parser for sub-command 'test-ann'.
     help_test_ann_batch = "Test the neural networks for a classification " \
@@ -261,7 +262,7 @@ def main():
     parser_test_ann_batch.add_argument(
         "imdir",
         metavar="PATH",
-        help="Top most directory where images are stored with meta data.")
+        help="Top most directory where images are stored with metadata.")
 
     # Create an argument parser for sub-command 'classify'.
     help_classify = """Classify a digital photo.
@@ -291,7 +292,7 @@ def main():
         "--imdir",
         metavar="PATH",
         required=True,
-        help="Top most directory where images are stored with meta data.")
+        help="Top most directory where images are stored with metadata.")
     parser_classify.add_argument(
         "image",
         metavar="IMAGE_FILE",
@@ -332,11 +333,12 @@ def main():
     parser_validate.add_argument(
         "imdir",
         metavar="PATH",
-        help="Top most directory where images are stored with meta data.")
+        help="Top most directory where images are stored with metadata.")
 
     # Create an argument parser for sub-command 'taxa'.
-    help_taxa = "Print the taxon hierarcy for the meta data. It can be used " \
-        "to get the taxon hierarcy for the `classification.taxa` configuration."
+    help_taxa = "Print the taxon hierarcy for the metadata of an image " \
+        "collection. It can be used to get the taxon hierarchy for the " \
+        "`classification.taxa` configuration."
 
     parser_validate = subparsers.add_parser(
         "taxa",
@@ -346,7 +348,7 @@ def main():
     parser_validate.add_argument(
         "imdir",
         metavar="PATH",
-        help="Top most directory where images are stored with meta data.")
+        help="Top most directory where images are stored with metadata.")
 
     # Parse arguments.
     args = parser.parse_args()
@@ -359,7 +361,7 @@ def main():
 
     logging.basicConfig(level=log_level, format='%(levelname)s %(message)s')
 
-    # Get path to meta data file.
+    # Get path to metadata file.
     try:
         meta_path = os.path.join(args.imdir, conf.meta_file)
     except:
@@ -404,7 +406,7 @@ def main():
     return 0
 
 def meta(config, meta_path, args):
-    """Make meta data file for an image directory."""
+    """Make metadata file for an image directory."""
     from nbclassify.db import MakeMeta, make_meta_db
 
     sys.stdout.write("Initializing database...\n")
