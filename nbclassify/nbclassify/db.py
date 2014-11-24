@@ -30,7 +30,7 @@ def get_classes_from_filter(session, metadata, filter_):
 
     The unique set of classes for the classification filter `filter_` are
     returned. Filters are those as returned by
-    :meth:`classification_hierarchy_filters`.
+    :meth:`~nbclassify.functions.classification_hierarchy_filters`.
     """
     if not isinstance(filter_, dict):
         ValueError("Expected a dict as filter")
@@ -47,8 +47,9 @@ def get_filtered_photos_with_taxon(session, metadata, filter_):
     Returns all photos with corresponding taxon, as filterd by `filter_`. The
     taxon returned per photo is defined by the `class` attribute of the filter.
     Taxa to filter photos by is set in the `where` attribute of the filter.
-    Filters are those as returned by :meth:`classification_hierarchy_filters`.
-    Returned rows are 2-tuples ``(photo, taxon_name)``.
+    Filters are those as returned by
+    :meth:`~nbclassify.functions.classification_hierarchy_filters`. Returned
+    rows are 2-tuples ``(photo, taxon_name)``.
     """
     if not isinstance(filter_, dict):
         ValueError("Expected a dict as filter")
@@ -190,8 +191,8 @@ def get_taxon_hierarchy(session, metadata):
     hierarchy.
 
     Returned hierarchies can be used as input for methods like
-    :meth:`nbclassify.base.classification_hierarchy_filters` and
-    :meth:`nbclassify.base.get_childs_from_hierarchy`.
+    :meth:`~nbclassify.functions.classification_hierarchy_filters` and
+    :meth:`~nbclassify.functions.get_childs_from_hierarchy`.
     """
     hierarchy = {}
     for genus, section, species, count in get_taxa_photo_count(session, metadata):
