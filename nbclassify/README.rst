@@ -44,6 +44,8 @@ This Python package has the following dependencies:
 
 * scikit-learn_ (>=0.15)
 
+* SciPy
+
 * SQLAlchemy_ (>=0.9.1)
 
 On Debian (based) systems, most dependencies can be installed from the

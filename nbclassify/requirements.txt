@@ -2,4 +2,5 @@ flickrapi
 numpy
 pyyaml
 scikit-learn>=0.15
+scipy
 sqlalchemy>=0.9.1

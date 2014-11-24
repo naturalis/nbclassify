@@ -28,13 +28,15 @@ NBClassify has the following dependencies:
 
 * scikit-learn_ (>=0.15)
 
+* SciPy
+
 * SQLAlchemy_ (>=0.9.1)
 
 On Debian (based) systems, most dependencies can be installed from the
 software repository::
 
     apt-get install python-flickrapi python-numpy python-opencv python-pyfann \
-    python-sklearn python-sqlalchemy python-yaml
+    python-scipy python-sklearn python-sqlalchemy python-yaml
 
 More recent versions of some Python packages can be obtained via the Python
 Package Index::
