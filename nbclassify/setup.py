@@ -39,7 +39,7 @@ setup(
         'pyyaml'
     ],
     package_data={
-        'nbclassify': ['config.yml'],
+        'nbclassify': ['config.yml', 'config_aivolver.yml'],
     },
     scripts=[
         'scripts/nbc-classify',
