@@ -1,26 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""This script can be used to extract digital phenotypes from digital
-photographs, export these to training data files, and train and test
-artificial neural networks.
+"""Train artificial neural networks.
 
-This script depends on configurations from a configuration file. See
-config.yml for an example configuration file.
+This script can be used to extract digital phenotypes from digital photographs,
+export these to training data files, and train and test artificial neural
+networks.
+
+This script depends on configurations from a configuration file. See config.yml
+for an example configuration file.
 
 The script also depends on an SQLite database file with meta data for a
-collection of digital photographs. This database is created by
-harvest-images.py, which is also responsible for compiling the collection of
-digital photographs.
+collection of digital photographs. This database is created by the
+`nbc-harvest-images` script or with the `meta` subcommand.
 
 The following subcommands are available:
 
+* meta: Construct a meta data file for a directory of images.
 * data: Create a tab separated file with training data.
-* data-batch: Batch create tab separated files with training data.
+* data-batch: Create training data for a classification hierarchy.
 * ann: Train an artificial neural network.
-* ann-batch: Batch train artificial neural networks.
-* test-ann: Test the performance of an artificial neural network.
-* classify: Classify an image using an artificial neural network.
+* ann-batch: Train neural networks for a classification hierarchy.
+* classify: Classify a digital photo.
+* test-ann: Test the neural networks for a classification hierarchy.
+* validate: Test the performance of trained neural networks.
+* taxa: Print the taxon hierarcy for the meta data.
 
 See the --help option for any of these subcommands for more information.
 """
@@ -347,7 +351,7 @@ def main():
     # Parse arguments.
     args = parser.parse_args()
 
-    # Print debug messages if the -d flag is set for the Python interpreter.
+    # Set logging level.
     if conf.debug:
         log_level = logging.DEBUG
     else:
