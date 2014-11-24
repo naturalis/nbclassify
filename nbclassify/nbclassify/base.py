@@ -33,7 +33,8 @@ class Common(object):
         section, species combination) with a photo count of at least `count` are
         used to build the taxon hierarchy.
 
-        This setting influences the output of :meth:`db.get_taxon_hierarchy`.
+        This setting influences the output of
+        :meth:`~nbclassify.db.get_taxon_hierarchy`.
         """
         if not isinstance(count, int):
             raise TypeError("Value must be an integer")

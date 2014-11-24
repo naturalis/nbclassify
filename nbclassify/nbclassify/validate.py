@@ -17,7 +17,7 @@ class Validator(Common):
 
     """Validate artificial neural networks.
 
-    Must be instantiated within a database session scope.
+    Must be used within a database session scope.
     """
 
     def __init__(self, config, cache_path):

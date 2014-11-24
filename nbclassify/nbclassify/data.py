@@ -24,7 +24,7 @@ class PhenotypeCache(object):
 
     """Cache and retrieve phenotypes.
 
-    Must be instantiated within a database session scope.
+    Must be used within a database session scope.
     """
 
     def __init__(self):
@@ -192,10 +192,11 @@ class Phenotyper(object):
 
     Uses the :mod:`imgpheno` package to extract features from the image. Use
     :meth:`set_image` to load an image and :meth:`set_config` to set a
-    configuration object as returned by :meth:`open_config`. Then :meth:`make`
-    can be called to extract the features as specified in the configurations
-    object and return the phenotype. A single phenotypes is returned, which is
-    a list of floating point numbers.
+    configuration object as returned by
+    :meth:`~nbclassify.functions.open_config`. Then :meth:`make` can be called
+    to extract the features as specified in the configurations object and return
+    the phenotype. A single phenotypes is returned, which is a list of floating
+    point numbers.
     """
 
     def __init__(self):
@@ -237,7 +238,8 @@ class Phenotyper(object):
     def set_config(self, config):
         """Set the configurations object.
 
-        Expects a configuration object as returned by :meth:`open_config`.
+        Expects a configuration object as returned by
+        :meth:`~nbclassify.functions.open_config`.
         """
         if not isinstance(config, Struct):
             raise TypeError("Expected a Struct instance, got {0} instead".\
@@ -798,7 +800,7 @@ class MakeTrainData(Common):
 
     """Generate training data.
 
-    Must be instantiated within a database session scope.
+    Must be used within a database session scope.
     """
 
     def __init__(self, config, cache_path):
@@ -813,6 +815,7 @@ class MakeTrainData(Common):
         self.cache = PhenotypeCache()
 
     def set_cache_path(self, path):
+        """Set the directory where the feature caches are stored."""
         if not os.path.isdir(path):
             raise IOError("Cannot open %s (no such directory)" % path)
         self.cache_path = path
@@ -996,7 +999,7 @@ class BatchMakeTrainData(MakeTrainData):
 
     """Generate training data.
 
-    Must be instantiated within a database session scope.
+    Must be used within a database session scope.
     """
 
     def __init__(self, config, cache_path):

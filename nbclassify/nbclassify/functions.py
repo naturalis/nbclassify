@@ -30,8 +30,8 @@ def classification_hierarchy_filters(levels, hr, path=[]):
         ...         'Lorifolia': ['boissierianum', 'brasiliense']
         ...     }
         ... }
-        >>> levels = ['genus', 'section', 'species']
-        >>> filters = cmn.classification_hierarchy_filters(levels, hr)
+        >>> levels = ('genus', 'section', 'species')
+        >>> filters = classification_hierarchy_filters(levels, hr)
         >>> for f in filters:
         ...     print f
         ...
@@ -42,8 +42,8 @@ def classification_hierarchy_filters(levels, hr, path=[]):
         {'where': {'section': 'Micropetalum', 'genus': 'Phragmipedium'}, 'class': 'species'}
 
     These filters are used directly by methods like
-    :meth:`db.get_filtered_photos_with_taxon` and
-    :meth:`db.get_classes_from_filter`.
+    :meth:`~nbclassify.db.get_filtered_photos_with_taxon` and
+    :meth:`~nbclassify.db.get_classes_from_filter`.
     """
     filter_ = {}
 
@@ -121,12 +121,12 @@ def delete_temp_dir(path, recursive=False):
 def get_childs_from_hierarchy(hr, path=[]):
     """Return the child node names for a node in a hierarchy.
 
-    Returns a list of child node names of the hierarchy `hr` at node with
-    the path `path`. The hierarchy `hr` is a nested dictionary, as
-    returned by :meth:`db.get_taxon_hierarchy`. Which node to get the childs
-    from is specified by `path`, which is a list of the node names up to
-    that node. An empty list for `path` means the names of the nodes of
-    the top level are returned.
+    Returns a list of child node names of the hierarchy `hr` at node with the
+    path `path`. The hierarchy `hr` is a nested dictionary, as returned by
+    :meth:`~nbclassify.db.get_taxon_hierarchy`. Which node to get the childs
+    from is specified by `path`, which is a list of the node names up to that
+    node. An empty list for `path` means the names of the nodes of the top level
+    are returned.
 
     Example:
 
@@ -320,7 +320,7 @@ def singleton(cls):
 
 class Struct(Namespace):
 
-    """Return a dictionary as an object."""
+    """Return a dictionary as a namespace object."""
 
     def __init__(self, d):
         if not isinstance(d, dict):
@@ -346,6 +346,7 @@ class Struct(Namespace):
         return getattr(self, str(key))
 
     def as_dict(self):
+        """Return as a dictionary."""
         d = vars(self)
         for key, val in d.iteritems():
             if isinstance(val, (list, tuple)):

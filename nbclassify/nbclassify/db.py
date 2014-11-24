@@ -18,7 +18,7 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, configure_mappers
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.sql import exists, functions
+from sqlalchemy.sql import functions
 
 from . import conf
 from .exceptions import *

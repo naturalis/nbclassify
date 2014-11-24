@@ -37,7 +37,8 @@ class TrainANN(object):
     def set_train_data(self, data):
         """Set the training data on which to train the network on.
 
-        The training data `data` must be an instance of :class:`TrainData`.
+        The training data `data` must be an instance of
+        :class:`~nbclassify.data.TrainData`.
         """
         if not isinstance(data, TrainData):
             raise ValueError("Training data must be an instance of TrainData")
@@ -122,8 +123,8 @@ class TrainANN(object):
     def test(self, data):
         """Test the trained neural network.
 
-        Expects an instance of :class:`TrainData`. Returns the mean square
-        error on the test data `data`.
+        Expects an instance of :class:`~nbclassify.data.TrainData`. Returns the
+        mean square error on the test data `data`.
         """
         if not isinstance(data, TrainData):
             raise ValueError("Training data must be an instance of TrainData")
@@ -224,8 +225,8 @@ class MakeAnn(Common):
 
         Loads training data from a TSV file `train_file`, trains a neural
         network `ann_file` with training paramerters ``ann`` from the
-        configurations set with :meth:`set_config`. If training paramerters are
-        provided with `config`, those are used instead.
+        configurations. If training parameters are provided with `config`,
+        those are used instead.
         """
         if not os.path.isfile(train_file):
             raise IOError("Cannot open %s (no such file)" % train_file)
@@ -277,7 +278,7 @@ class BatchMakeAnn(MakeAnn):
 
     """Generate training data.
 
-    Must be instantiated within a database session scope.
+    Must be used within a database session scope.
     """
 
     def __init__(self, config):
@@ -366,7 +367,7 @@ class TestAnn(Common):
 
     """Test an artificial neural network.
 
-    Must be instantiated within a database session scope.
+    Must be used within a database session scope.
     """
 
     def __init__(self, config):
