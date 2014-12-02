@@ -20,15 +20,16 @@ class Validator(Common):
     Must be used within a database session scope.
     """
 
-    def __init__(self, config, cache_path):
+    def __init__(self, config, cache_dir, temp_dir):
         """Constructor for the validator.
 
-        Expects a configurations object `config`, the path to to the directory
-        with Flickr harvested images `base_path`, and the path to the meta data
-        file `meta_path`.
+        Expects a configurations object `config`, the path to the directory
+        where extracted features are cached `cache_dir`, and the path to the
+        directory where temporary files are stored `temp_dir`.
         """
         super(Validator, self).__init__(config)
-        self.set_cache_path(cache_path)
+        self.set_cache_dir(cache_dir)
+        self.set_temp_dir(temp_dir)
         self.aivolver_config_path = None
 
     def set_aivolver_config_path(self, path):
@@ -40,10 +41,20 @@ class Validator(Common):
             raise IOError("Cannot open %s (no such file)" % path)
         self.aivolver_config_path = path
 
-    def set_cache_path(self, path):
+    def set_cache_dir(self, path):
+        """Set the path to the directory where features are cached."""
         if not os.path.isdir(path):
             raise IOError("Cannot open %s (no such directory)" % path)
-        self.cache_path = path
+        self.cache_dir = path
+
+    def set_temp_dir(self, path):
+        """Set the path to the directory where temporary files are stored.
+
+        These files include training data, neural networks, and test results.
+        """
+        if not os.path.isdir(path):
+            raise IOError("Cannot open %s (no such directory)" % path)
+        self.temp_dir = path
 
     def k_fold_xval_stratified(self, k=3, autoskip=False):
         """Perform stratified K-folds cross validation.
@@ -100,7 +111,7 @@ class Validator(Common):
             photo_count_min = 0
 
         # Train data exporter.
-        train_data = BatchMakeTrainData(self.config, self.cache_path)
+        train_data = BatchMakeTrainData(self.config, self.cache_dir)
         train_data.set_photo_count_min(photo_count_min)
 
         # Set the trainer.
@@ -115,12 +126,12 @@ class Validator(Common):
 
         # Obtain cross validation folds.
         folds = cross_validation.StratifiedKFold(classes, k)
-        result_dir = os.path.join(self.cache_path, 'results')
+        result_dir = os.path.join(self.temp_dir, 'results')
         for i, (train_idx, test_idx) in enumerate(folds):
             # Make data directories.
-            train_dir = os.path.join(self.cache_path, 'train', str(i))
-            test_dir = os.path.join(self.cache_path, 'test', str(i))
-            ann_dir = os.path.join(self.cache_path, 'ann', str(i))
+            train_dir = os.path.join(self.temp_dir, 'train', str(i))
+            test_dir = os.path.join(self.temp_dir, 'test', str(i))
+            ann_dir = os.path.join(self.temp_dir, 'ann', str(i))
             test_result = os.path.join(result_dir, '{0}.tsv'.format(i))
 
             for path in (train_dir,test_dir,ann_dir,result_dir):

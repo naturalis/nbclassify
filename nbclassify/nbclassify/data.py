@@ -139,6 +139,9 @@ class PhenotypeCache(object):
         # feature type is created, and each cache contains the features
         # for all images.
         for hash_, c in self.get_single_feature_configurations(config):
+            if not os.path.isdir(cache_dir):
+                os.makedirs(cache_dir)
+
             cache_path = os.path.join(cache_dir, str(hash_))
             sys.stderr.write("Caching features in `%s`...\n" % cache_path)
 
@@ -806,8 +809,8 @@ class MakeTrainData(Common):
     def __init__(self, config, cache_path):
         """Constructor for training data generator.
 
-        Expects a configurations object `config`, and a path to the database
-        file `meta_path` containing photo meta data.
+        Expects a configurations object `config` and the path to the directory
+        where extracted image features are cached `cache_path`.
         """
         super(MakeTrainData, self).__init__(config)
         self.set_cache_path(cache_path)
@@ -1005,9 +1008,8 @@ class BatchMakeTrainData(MakeTrainData):
     def __init__(self, config, cache_path):
         """Constructor for training data generator.
 
-        Expects a configurations object `config`, a path to the root directory
-        of the photos, and a path to the database file `meta_path` containing
-        photo meta data.
+        Expects a configurations object `config` and the path to the directory
+        where extracted image features are cached `cache_path`.
         """
         super(BatchMakeTrainData, self).__init__(config, cache_path)
 

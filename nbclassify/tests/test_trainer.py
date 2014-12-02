@@ -27,6 +27,7 @@ from nbclassify.validate import Validator
 import nbclassify.db as db
 
 META_FILE = os.path.join(IMAGE_DIR, conf.meta_file)
+TEMP_DIR = conf.temp_dir
 
 # Disable FileExistsError exceptions.
 conf.force_overwrite = True
@@ -40,7 +41,7 @@ def validate(config, k, autoskip=False):
         cache = PhenotypeCache()
         cache.make(IMAGE_DIR, TEMP_DIR, config, update=False)
 
-        validator = Validator(config, TEMP_DIR)
+        validator = Validator(config, TEMP_DIR, TEMP_DIR)
         scores = validator.k_fold_xval_stratified(k, autoskip)
 
     print

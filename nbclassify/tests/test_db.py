@@ -15,6 +15,7 @@ from nbclassify import conf, open_config
 import nbclassify.db as db
 
 META_FILE = os.path.join(IMAGE_DIR, conf.meta_file)
+TEMP_DIR = conf.temp_dir
 
 #@unittest.skip("Debugging")
 class TestDatabaseMethods(unittest.TestCase):

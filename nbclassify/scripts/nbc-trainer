@@ -42,6 +42,8 @@ from nbclassify.db import session_scope
 from nbclassify.exceptions import *
 
 def main():
+    cache_dir = os.path.join(conf.temp_dir, 'cache')
+
     parser = argparse.ArgumentParser(
         description="Generate training data and train artificial neural "\
         "networks."
@@ -87,10 +89,12 @@ def main():
         description=help_data
     )
     parser_data.add_argument(
-        "--cache-dir",
+        "--cache",
+        "-c",
         metavar="PATH",
-        required=True,
-        help="Path to a directory where temporary data and cache is stored.")
+        default=cache_dir,
+        help="Path to a directory where extracted features are cached. " \
+        "Defaults to {0}".format(cache_dir))
     parser_data.add_argument(
         "--output",
         "-o",
@@ -116,10 +120,12 @@ def main():
         description=help_data_batch
     )
     parser_data_batch.add_argument(
-        "--cache-dir",
+        "--cache",
+        "-c",
         metavar="PATH",
-        required=True,
-        help="Path to a directory where temporary data and cache is stored.")
+        default=cache_dir,
+        help="Path to a directory where extracted features are cached. " \
+        "Defaults to {0}".format(cache_dir))
     parser_data_batch.add_argument(
         "--output",
         "-o",
@@ -309,11 +315,20 @@ def main():
         help=help_validate,
         description=help_validate
     )
+
     parser_validate.add_argument(
-        "--cache-dir",
+        "--cache",
+        "-c",
         metavar="PATH",
-        required=True,
-        help="Path to a directory where temporary data and cache is stored.")
+        default=cache_dir,
+        help="Path to a directory where extracted features are cached. " \
+        "Defaults to {0}".format(cache_dir))
+    parser_validate.add_argument(
+        "--temp",
+        metavar="PATH",
+        default=conf.temp_dir,
+        help="Path to a directory where temporary data is stored. Defaults " \
+        "to {0}".format(conf.temp_dir))
     parser_validate.add_argument(
         "--aivolver-config",
         metavar="PATH",
@@ -427,9 +442,9 @@ def data(config, meta_path, args):
 
     with session_scope(meta_path) as (session, metadata):
         cache = PhenotypeCache()
-        cache.make(args.imdir, args.cache_dir, config, update=False)
+        cache.make(args.imdir, args.cache, config, update=False)
 
-        train_data = MakeTrainData(config, args.cache_dir)
+        train_data = MakeTrainData(config, args.cache)
         train_data.export(args.output, filter_)
 
 def data_batch(config, meta_path, args):
@@ -438,9 +453,9 @@ def data_batch(config, meta_path, args):
 
     with session_scope(meta_path) as (session, metadata):
         cache = PhenotypeCache()
-        cache.make(args.imdir, args.cache_dir, config, update=False)
+        cache.make(args.imdir, args.cache, config, update=False)
 
-        train_data = BatchMakeTrainData(config, args.cache_dir)
+        train_data = BatchMakeTrainData(config, args.cache)
         train_data.batch_export(args.output)
 
 def ann(config, args):
@@ -522,9 +537,9 @@ def validate(config, meta_path, args):
 
     with session_scope(meta_path) as (session, metadata):
         cache = PhenotypeCache()
-        cache.make(args.imdir, args.cache_dir, config, update=False)
+        cache.make(args.imdir, args.cache, config, update=False)
 
-        validator = Validator(config, args.cache_dir)
+        validator = Validator(config, args.cache, args.temp)
         if args.aivolver_config:
             validator.set_aivolver_config_path(args.aivolver_config)
         scores = validator.k_fold_xval_stratified(args.k, args.autoskip)

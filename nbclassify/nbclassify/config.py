@@ -2,7 +2,9 @@
 
 """Global configurations."""
 
+import os
 import sys
+import tempfile
 
 from .functions import singleton
 
@@ -71,6 +73,10 @@ class ConfigManager(object):
         # The ranks that must be set for each photo in the meta data. An error
         # is raised if a photo is found without any of the ranks.
         self.required_ranks = ('genus','species')
+
+        # Default temporary directory for storing temporary files.
+        self.temp_dir = os.path.join(tempfile.gettempdir(),
+            'nbclassify-{0}'.format(os.getuid()))
 
     def __getattribute__(self, name):
         try:
