@@ -51,7 +51,7 @@ features: &features
     color_bgr_means:
         # Each axis is divided into equal size bins. The color frequencies for
         # each bin are computed.
-        bins: 50
+        bins: 20
 
 # Parameters for training artificial neural networks.
 ann: &ann

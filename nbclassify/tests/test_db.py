@@ -10,7 +10,7 @@ import unittest
 sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('.'))
 
-from context import *
+from . import *
 from nbclassify import conf, open_config
 import nbclassify.db as db
 
