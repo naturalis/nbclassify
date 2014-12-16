@@ -45,18 +45,18 @@ This setup assumes you have Apache 2.4.
       a2enmod wsgi
 
 2. Configure Apache and mod_wsgi for hosting a WSGI application (i.e. Django).
-   The mod_wsgi documentation is a good place to start:
-   https://code.google.com/p/modwsgi/wiki/QuickConfigurationGuide
+   The `mod_wsgi documentation`_ is a good place to start.
 
-   A complete virtual host configuration for hosting Django in daemon mode
-   could be something like::
+   A complete virtual host configuration for hosting this Django site in daemon
+   mode could be something like::
 
       <VirtualHost *:80>
           ServerName example.com
           ServerAdmin webmaster@example.com
 
-          WSGIDaemonProcess orchid python-path=/var/www/orchid:/var/www/orchid/env/lib/python2.7/site-packages
+          WSGIDaemonProcess orchid deadlock-timeout=10 python-path=/var/www/orchid:/var/www/orchid/env/lib/python2.7/site-packages
           WSGIProcessGroup orchid
+          WSGIApplicationGroup %{GLOBAL}
           WSGIScriptAlias / /var/www/orchid/webapp/wsgi.py
 
           Alias /media/ /var/www/orchid/media/
@@ -100,6 +100,10 @@ This setup assumes you have Apache 2.4.
       import django
       print(django.__path__)"
 
+   The ``WSGIApplicationGroup`` directive is necessary because OrchiD depends on
+   some Python modules that are affected by the `Simplified GIL State API`_
+   issue.
+
    The corresponding ``settings.py`` for your Django site must have the
    following options set for this to work::
 
@@ -118,3 +122,6 @@ This setup assumes you have Apache 2.4.
 
    If you use an SQLite database, make sure that Apache can write to the
    database file and to the parent directory of the database.
+
+.. _`mod_wsgi documentation`: https://code.google.com/p/modwsgi/wiki/QuickConfigurationGuide
+.. _`Simplified GIL State API`: https://code.google.com/p/modwsgi/wiki/ApplicationIssues#Python_Simplified_GIL_State_API

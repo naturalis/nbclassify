@@ -12,6 +12,7 @@ import sys
 import cv2
 import imgpheno as ft
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
 
 from . import conf
 from .base import Common, Struct
@@ -269,10 +270,6 @@ class Phenotyper(object):
         correct feature range. For example, for color intensities of the BGR
         color space, the scaler is fit to range 0..255.
         """
-        # WORKAROUND: Importing this module in the main scope breaks the Django
-        # web application when served with Apache. Importing it here works fine.
-        from sklearn.preprocessing import MinMaxScaler
-
         a = float(a)
         b = float(b)
         self.scaler = MinMaxScaler(copy=True, feature_range=(a, b))
