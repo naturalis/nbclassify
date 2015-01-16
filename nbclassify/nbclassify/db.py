@@ -106,7 +106,7 @@ def get_photos(session, metadata):
 def get_photos_with_taxa(session, metadata):
     """Return photos with genus, section, and species class.
 
-    This generator returns 4-tuples ``(photo_id, genus, section, species)``.
+    This generator returns 4-tuples ``(photo, genus, section, species)``.
     """
     Base = automap_base(metadata=metadata)
     Base.prepare()

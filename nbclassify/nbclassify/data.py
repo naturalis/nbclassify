@@ -499,8 +499,8 @@ class Phenotyper(object):
         img = cv2.bitwise_and(src, src, mask=bin_mask)
 
         bins = getattr(args, 'bins', 20)
-        output = ft.color_bgr_means(img, contour, bins)
-        output = output.astype(float)
+        hor_means, ver_means = ft.color_bgr_means(img, contour, bins)
+        output = np.append(hor_means, ver_means).astype(float)
 
         # Normalize the features if a scaler is set.
         if self.scaler:
