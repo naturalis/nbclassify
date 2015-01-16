@@ -1,12 +1,28 @@
+import hashlib
 import os.path
+import time
 
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch.dispatcher import receiver
 
+def get_image_path(instance, filename):
+    """Return the path for an uploaded image.
+
+    Uploaded images are placed in ``orchid/uploads/`` and the file is renamed to
+    the file's MD5 sum.
+    """
+    hasher = hashlib.md5()
+    buf = instance.image.read()
+    hasher.update(buf)
+    parts = os.path.splitext(filename)
+    filename_ = "%s%s" % (hasher.hexdigest(), parts[1])
+    path = "orchid/uploads/%%Y/%%m/%%d/%s" % (filename_,)
+    return time.strftime(path)
+
 class Photo(models.Model):
     """Model for uploaded photos."""
-    image = models.ImageField(upload_to='orchid/uploads')
+    image = models.ImageField(upload_to=get_image_path)
     roi = models.CharField(max_length=30, null=True, blank=True)
 
     def __unicode__(self):
