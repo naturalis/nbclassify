@@ -15,7 +15,6 @@ See config.yml_ for an example configurations file.
 
 The following settings exists in this configurations file:
 
-
 .. _config-directory_hierarchy:
 
 directory_hierarchy
@@ -239,36 +238,32 @@ Parameters for training artificial neural networks.
 Example::
 
     ann:
-        hidden_layers: 1
-        hidden_neurons: 20
-        epochs: 100000
-        error: 0.00001
-        learning_rate: 0.7
-        connection_rate: 1
+        train_type: ordinary
+        desired_error: 0.00001
         training_algorithm: TRAIN_RPROP
         activation_function_hidden: SIGMOID_SYMMETRIC
         activation_function_output: SIGMOID_SYMMETRIC
 
+        # Ordinary training:
+        epochs: 100000
+        hidden_layers: 1
+        hidden_neurons: 20
+        learning_rate: 0.7
+        connection_rate: 1
+
+        # Cascade training:
+        max_neurons: 100
+        neurons_between_reports: 1
+        cascade_activation_steepnesses: [ 0.25, 0.50, 0.75, 1.00 ]
+        cascade_num_candidate_groups: 2
+
 The following options are available:
 
-hidden_layers
-  Number of hidden neuron layers. Defaults to 1.
+train_type
+  Training type: ``ordinary`` or ``cascade`` training. Defaults to ``ordinary``.
 
-hidden_neurons
-  Number of hidden neurons per hidden layer. Defaults to 8.
-
-epochs
-  Maximum number of epochs. Defaults to 100000.
-
-error
+desired_error
   Desired error. Defaults to 0.00001.
-
-learning_rate
-  Learning rate. Defaults to 0.7. See fann_get_learning_rate_.
-
-connection_rate
-  Connection rate. Defaults to 1, a fully connected network. See
-  fann_create_sparse_.
 
 training_algorithm
   The training algorithm used for training. Defaults to ``TRAIN_RPROP``. See
@@ -282,6 +277,39 @@ activation_function_output
   The activation function for the output layer. Defaults to
   ``SIGMOID_STEPWISE``. See fann_activationfunc_enum_.
 
+Options for ordinary training:
+
+epochs
+  Maximum number of epochs. Defaults to 100000.
+
+hidden_layers
+  Number of hidden neuron layers. Defaults to 1.
+
+hidden_neurons
+  Number of hidden neurons per hidden layer. Defaults to 8.
+
+learning_rate
+  Learning rate. Defaults to 0.7. See fann_get_learning_rate_.
+
+connection_rate
+  Connection rate. Defaults to 1, a fully connected network. See
+  fann_create_sparse_.
+
+Options for cascade training:
+
+max_neurons
+  The maximum number of neurons to be added to neural network. Defaults to 20.
+
+neurons_between_reports
+  The number of neurons between printing a status report. Defaults to 1.
+
+cascade_activation_steepnesses
+  List of the different activation functions used by the candidates. Defaults to
+  ``[ 0.25, 0.50, 0.75, 1.00 ]``. See fann_get_cascade_activation_steepnesses_.
+
+cascade_num_candidate_groups
+  The number of groups of identical candidates which will be used during
+  training. Defaults to 2. See fann_set_cascade_num_candidate_groups_.
 
 .. _config-classification:
 
@@ -334,6 +362,7 @@ like::
     classification:
         hierarchy:
             - name: genus
+              data: *data
               preprocess: *preprocess_std
               features: *features_std
               ann: *ann_genus
@@ -343,6 +372,7 @@ like::
               max_error: 0.00001
 
             - name: section
+              data: *data
               preprocess: *preprocess_std
               features: *features_std
               ann: *ann_std
@@ -352,6 +382,7 @@ like::
               max_error: 0.0001
 
             - name: species
+              data: *data
               preprocess: *preprocess_std
               features: *features_std
               ann: *ann_std
@@ -373,6 +404,9 @@ The following options are available:
 
 name*
   The name of the level.
+
+data
+  Training data format.
 
 preprocess
   Image preprocessing options.
@@ -429,3 +463,5 @@ the :ref:`nbc-trainer-taxa` subcommand of the train script.
 .. _fann_create_sparse: http://leenissen.dk/fann/html/files/fann-h.html#fann_create_sparse
 .. _fann_train_enum: http://leenissen.dk/fann/html/files/fann_data-h.html#fann_train_enum
 .. _fann_activationfunc_enum: http://leenissen.dk/fann/html/files/fann_data-h.html#fann_activationfunc_enum
+.. _fann_get_cascade_activation_steepnesses: http://leenissen.dk/fann/html/files/fann_cascade-h.html#fann_get_cascade_activation_steepnesses
+.. _fann_set_cascade_num_candidate_groups: http://leenissen.dk/fann/html/files/fann_cascade-h.html#fann_set_cascade_num_candidate_groups

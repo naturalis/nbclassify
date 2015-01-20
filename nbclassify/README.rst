@@ -2,19 +2,20 @@
 NBClassify
 ==========
 
-NBClassify is a collection of Python scripts for image fingerprinting (using
+NBClassify is a collection of Python scripts for image phenotyping (using
 the ImgPheno_ package) and recognition via artificial neural networks.
 
 This package comes with the following scripts:
 
 * ``nbc-harvest-images.py``: Download images with meta data from a Flickr
-  account. This also builds an SQLite database with image meta data for use
-  in downsteam scripts ``nbc-trainer.py`` and ``nbc-classify.py``.
+  account and save them in a directory hierarchy matching the the
+  classifications.
 
-* ``nbc-trainer.py``: Extract fingerprints from images, export these to
+* ``nbc-trainer.py``: Extract phenotypes from images, export these to
   training data, and train artificial neural networks.
 
-* ``nbc-classify.py``: Recognize images using artificial neural networks.
+* ``nbc-classify.py``: Identify user-submitted images using trained artificial
+  neural networks.
 
 
 Requirements
@@ -67,8 +68,7 @@ Installation
 From the GitHub repository::
 
     git clone https://github.com/naturalis/nbclassify.git
-    cd nbclassify/nbclassify/
-    python setup.py install
+    pip install nbclassify/nbclassify/
 
 Or if you have a source archive file::
 

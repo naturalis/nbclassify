@@ -1,11 +1,8 @@
 # Documentation
 
-This directory contains [Sphinx][1] documentation.
+This directory contains [Sphinx][1] documentation. Install it with:
 
-To build the documentation, you first need to install the requirements. The
-easiest way is to use the Python Package Index:
-
-    pip install -r requirements.txt
+    pip install sphinx
 
 Then build the documentation with this command:
 

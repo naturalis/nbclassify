@@ -12,8 +12,9 @@ included:
   metadata file in the image directory, which is needed for downstream scripts.
 
 :ref:`nbc-trainer`
-  Extract fingerprints from images, export these to training data, and train
-  artificial neural networks.
+  Extract phenotypes from images, export these to training data, train
+  artificial neural networks, and perform cross-validation. Can also be used to
+  create a metadata file for an existing image directory.
 
 :ref:`nbc-classify`
   Classify images using artificial neural networks.
@@ -95,14 +96,12 @@ rank is not set in the tag, then the directory name for that rank will be
 As the script downloads the images from Flickr, it will also save image metadata
 to a file, by default a file named ``.meta.db`` in the target directory. This
 database file is used by the downstream scripts (:ref:`nbc-trainer` and
-:ref:`nbc-classify`) to locate the Flickr harvested images and their
-corresponding classifications.
+:ref:`nbc-classify`) to locate images and their corresponding classifications.
 
 Example usage::
 
     $ nbc-harvest-images -v 123456789@A12 harvest \
     > --page 1 --per-page 500 images/orchids/
-
 
 .. _nbc-trainer:
 
@@ -119,7 +118,8 @@ Before this script can work with an image collection, a metadata file must first
 be compiled for an image collection. This metadata file contains taxon
 information for images in a directory. This file is automatically created by
 :ref:`nbc-harvest-images` during harvesting of image, or can be manually
-compiled for an existing image directory with the `meta` subcommand.
+compiled for an existing image directory with the :ref:`nbc-trainer-meta`
+subcommand.
 
 The following subcommands are available:
 
@@ -188,7 +188,7 @@ configurations file.
 
 Example usage::
 
-    $ nbc-trainer config.yml data --cache-dir cache/ \
+    $ nbc-trainer config.yml data -c cache/ \
     > -o train_data.tsv images/orchids/
 
 
@@ -205,7 +205,7 @@ determine which training data files need to be created.
 
 Example usage::
 
-    $ nbc-trainer config.yml data-batch --cache-dir cache/ \
+    $ nbc-trainer config.yml data-batch -c cache/ \
     > -o train_data/ images/orchids/
 
 
@@ -245,9 +245,9 @@ Example usage::
 test-ann
 --------
 
-Test an artificial neural network. If ``--output`` is used, then ``--db`` must
-be set and the :ref:`classification filter <config-classification.filter>`
-must be set in the configurations file.
+Test an artificial neural network. If ``--output`` is used, then the
+:ref:`classification filter <config-classification.filter>` must be set in the
+configurations file.
 
 .. note::
 
@@ -288,7 +288,8 @@ classify
 --------
 
 Classify an image using a single neural network. The :ref:`classification
-filter <config-classification.filter>` must be set in the configurations file.
+filter <config-classification.filter>` must be set in the configurations file
+to specify which classes were used to train the neural network.
 
 Example usage::
 
@@ -307,8 +308,13 @@ cross validation on the neural networks created from a classification hierarchy.
 
 Example usage::
 
-    $ nbc-trainer config.yml validate --cache-dir cache/ -k4 images/orchids/
+    $ nbc-trainer config.yml validate -c cache/ -k4 images/orchids/
 
+The validator can also train using a genetic algorithm using Aivolver_ by
+specifying an Aivolver configurations file ::
+
+    $ nbc-trainer config.yml validate -c cache/ -k4 \
+    > --aivolver-config config_aivolver.yml images/orchids/
 
 .. _nbc-trainer-taxa:
 
@@ -338,10 +344,10 @@ The neural networks on which this script depends are created with a separate
 script, :ref:`nbc-trainer`. See its :ref:`nbc-trainer-data-batch` and
 :ref:`nbc-trainer-ann-batch` subcommands for more information.
 
-This script depends on the SQLite database file with metadata for a Flickr
-harvested image collection. This database is created by
-:ref:`nbc-harvest-images`, which is also responsible for archiving the
-images in a local directory.
+This script depends on a metadata file for an image directory. This file is
+automatically created by :ref:`nbc-harvest-images` during image harvesting, or
+it can be created with the :ref:`nbc-trainer-meta` command for an existing image
+directory.
 
 See the ``--help`` option for usage information.
 
@@ -374,3 +380,4 @@ Example usage::
 
 
 .. _config.yml: https://github.com/naturalis/nbclassify/blob/master/nbclassify/nbclassify/config.yml
+.. _Aivolver: https://github.com/naturalis/ai-fann-evolving
