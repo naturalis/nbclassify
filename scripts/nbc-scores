@@ -2,7 +2,7 @@
 #
 # nbc-scores --- calculate and print classification scores
 #
-# usage: nbc-scores [mode=N] [genus=S] [section=S] [species=S] FILE [FILE ...]
+# usage: nbc-scores [mode=N] [quiet=N] [genus=S] [section=S] [species=S] FILE [FILE ...]
 #
 # arguments:
 #   FILE      TSV file containing test results as exported by `nbc-trainer.py`.
@@ -12,6 +12,7 @@
 #             the bits with values 1, 2, and 4. The mode sets on which ranks
 #             to check for matches: genus (1), section (2), and species (4). It
 #             defaults to 7.
+#   quiet     Set to 1 to only print the overall score. Defaults to 0.
 #   genus     Filter by genus name.
 #   section   Filter by section name.
 #   species   Filter by species name.
@@ -28,6 +29,7 @@ BEGIN {
 	FS = "\t"
 	i = 0
 	mode = 7
+	quiet=0
 }
 
 BEGINFILE {
@@ -52,11 +54,11 @@ FNR > 1 && is_match {
 ENDFILE {
 	if (total) {
 		means[i] = matches / total
-		printf "%s: %s/%s (%.2f%%)\n", FILENAME, matches, total, means[i] * 100
+		if (!quiet)
+			printf "%s: %s/%s (%.2f%%)\n", FILENAME, matches, total, means[i] * 100
 		i++
 	}
 }
-
 
 END {
 	if (total) {

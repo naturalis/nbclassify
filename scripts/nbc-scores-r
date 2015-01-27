@@ -1,0 +1,39 @@
+#!/bin/bash
+#
+# nbc-scores-r --- recursively calculate and print all classification scores
+#
+# Depends on `nbc-scores'.
+#
+# usage: nbc-scores-r FILE [FILE ...]
+#
+# arguments:
+#   FILE      TSV file containing test results as exported by `nbc-trainer.py`.
+
+# Genus
+for genus in $(awk -F"\t" 'FNR > 1 && !_[$2]++ { print $2; }' $@) ; do
+    echo "genus=$genus";
+    nbc-scores mode=1 quiet=1 genus=$genus $@;
+    printf "\n"
+
+    # Section
+    c="awk -F\"\t\" 'FNR > 1 && !_[\$3]++ { if (\$2 == \""$genus"\") print \$3; }' $@";
+    for section in `eval $c` ; do
+        echo "section=$section";
+        nbc-scores mode=2 quiet=1 genus=$genus section=$section $@;
+        echo "genus=$genus section=$section";
+        nbc-scores mode=3 quiet=1 genus=$genus section=$section $@;
+        printf "\n"
+
+        # Species
+        c="awk -F\"\t\" 'FNR > 1 && !_[\$4]++ { if (\$2 == \""$genus"\" && \$3 == \""$section"\") print \$4; }' $@";
+        for sp in `eval $c` ; do
+            echo "species=$sp";
+            nbc-scores mode=4 quiet=1 genus=$genus section=$section species=$sp $@;
+            echo "genus=$genus section=$section species=$sp";
+            nbc-scores mode=7 quiet=1 genus=$genus section=$section species=$sp $@;
+            printf "\n"
+        done
+
+    done
+
+done
