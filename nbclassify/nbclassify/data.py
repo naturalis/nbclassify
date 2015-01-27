@@ -397,12 +397,14 @@ class Phenotyper(object):
 
             # Save the masked image to the output folder.
             if output_folder:
-                if not os.path.isdir(output_folder):
-                    os.makedirs(output_folder)
                 img_masked = cv2.bitwise_and(self.img, self.img,
                     mask=self.bin_mask)
-                fname = os.path.basename(self.path)
-                out_path = os.path.join(output_folder, fname)
+
+                out_path = os.path.join(output_folder, self.path)
+                out_dir = os.path.dirname(out_path)
+                if not os.path.isdir(out_dir):
+                    os.makedirs(out_dir)
+
                 cv2.imwrite(out_path, img_masked)
 
     def make(self):
