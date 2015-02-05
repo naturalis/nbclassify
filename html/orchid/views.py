@@ -12,9 +12,12 @@ from django.conf import settings
 from nbclassify.classify import ImageClassifier
 from nbclassify.db import session_scope
 from nbclassify.functions import open_config
+from rest_framework import generics, permissions, viewsets, renderers
+from rest_framework.response import Response
 
 from orchid.forms import UploadPictureForm
 from orchid.models import Photo, Identity
+from orchid.serializers import PhotoSerializer, IdentitySerializer
 
 CONFIG_FILE = os.path.join(settings.BASE_DIR, 'orchid', 'config.yml')
 TAXA_DB = os.path.join(settings.BASE_DIR, 'orchid', 'taxa.db')
@@ -22,6 +25,90 @@ ANN_DIR = os.path.join(settings.BASE_DIR, 'orchid', 'orchid.ann')
 
 # Threshold for significant MSE values.
 MSE_LOW = 0.0001
+
+
+class PhotoViewSet(viewsets.ModelViewSet):
+    """View and edit photos."""
+    queryset = Photo.objects.all()
+    serializer_class = PhotoSerializer
+    permission_classes = (permissions.AllowAny,)
+
+class IdentityViewSet(viewsets.ModelViewSet):
+    """Identify photos and view photo identities."""
+    queryset = Identity.objects.all()
+    serializer_class = IdentitySerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+
+class IdentityInfoView(generics.GenericAPIView):
+    queryset = Identity.objects.all()
+    renderer_classes = (renderers.TemplateHTMLRenderer,)
+
+    def get(self, request, *args, **kwargs):
+        identity = self.get_object()
+        info = self.get_info(str(identity))
+        return Response(info, template_name="orchid/eol_species_info.html")
+
+    def get_info(self, query):
+        """Return species info from EOL.org.
+
+        Searches on species name `species` and returns the first result in HTML
+        format. If no results were found, a HTTP 404 not found error is raised.
+        """
+        iucn_status = re.compile(r'\(([A-Z]{2})\)')
+
+        options = {
+            'images': 8,
+            'videos': 0,
+            'sounds': 0,
+            'maps': 0,
+            'text': 3,
+            'iucn': 'true',
+            'subjects': 'TaxonBiology|Description|Distribution',
+            'details': 'true',
+            'vetted': 2,
+            'cache_ttl': 300
+        }
+
+        # We're only interested in orchids.
+        taxon_concept = 8156
+
+        # Get only the first result.
+        eol_results = query_eol(query, options, taxon_concept)
+        try:
+            data = eol_results.next()
+        except StopIteration:
+            raise Http404
+
+        # Set some extra values.
+        scientificName = data['scientificName'].split()
+        data['canonicalName'] = ' '.join(scientificName[:2])
+        data['describedBy'] = ' '.join(scientificName[2:])
+        data['imageObjects'] = []
+        data['textObjects'] = []
+        data['iucn'] = None
+        for obj in data['dataObjects']:
+            try:
+                if obj['title'] == "IUCNConservationStatus":
+                    data['iucn'] = obj
+                    data['iucn']['danger_status'] = iucn_status.\
+                        search(obj['description']).\
+                        group(1) in ('VU','EN','CR','EW','EX')
+                    continue
+            except:
+                pass
+
+            if "StillImage" in obj['dataType']:
+                data['imageObjects'].append(obj)
+
+            elif "Text" in obj['dataType']:
+                # Skip non-English texts for now.
+                if 'language' in obj and obj['language'] != 'en':
+                    continue
+
+                data['textObjects'].append(obj)
+
+        return data
+
 
 def home(request):
     """Display the home page."""

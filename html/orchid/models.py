@@ -40,7 +40,7 @@ class Photo(models.Model):
     image_tag.allow_tags = True
 
 class Identity(models.Model):
-    photo = models.ForeignKey(Photo)
+    photo = models.ForeignKey(Photo, related_name="identities")
     genus = models.CharField(max_length=50)
     section = models.CharField(max_length=50, null=True, blank=True)
     species = models.CharField(max_length=50, null=True, blank=True)
