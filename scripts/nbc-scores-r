@@ -17,7 +17,7 @@ for genus in $(awk -F"\t" 'FNR > 1 && !_[$2]++ { print $2; }' $@) ; do
 
     # Section
     c="awk -F\"\t\" 'FNR > 1 && !_[\$3]++ { if (\$2 == \""$genus"\") print \$3; }' $@";
-    for section in `eval $c` ; do
+    for section in $(eval $c) ; do
         echo "section=$section";
         nbc-scores mode=2 quiet=1 genus=$genus section=$section $@;
         echo "genus=$genus section=$section";
@@ -26,7 +26,7 @@ for genus in $(awk -F"\t" 'FNR > 1 && !_[$2]++ { print $2; }' $@) ; do
 
         # Species
         c="awk -F\"\t\" 'FNR > 1 && !_[\$4]++ { if (\$2 == \""$genus"\" && \$3 == \""$section"\") print \$4; }' $@";
-        for sp in `eval $c` ; do
+        for sp in $(eval $c) ; do
             echo "species=$sp";
             nbc-scores mode=4 quiet=1 genus=$genus section=$section species=$sp $@;
             echo "genus=$genus section=$section species=$sp";
