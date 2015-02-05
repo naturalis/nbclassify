@@ -41,73 +41,12 @@ class IdentityViewSet(viewsets.ModelViewSet):
 
 class IdentityInfoView(generics.GenericAPIView):
     queryset = Identity.objects.all()
-    renderer_classes = (renderers.TemplateHTMLRenderer,)
+    renderer_classes = (renderers.JSONRenderer, renderers.TemplateHTMLRenderer)
 
     def get(self, request, *args, **kwargs):
         identity = self.get_object()
-        info = self.get_info(str(identity))
+        info = eol_orchid_species_info(str(identity))
         return Response(info, template_name="orchid/eol_species_info.html")
-
-    def get_info(self, query):
-        """Return species info from EOL.org.
-
-        Searches on species name `species` and returns the first result in HTML
-        format. If no results were found, a HTTP 404 not found error is raised.
-        """
-        iucn_status = re.compile(r'\(([A-Z]{2})\)')
-
-        options = {
-            'images': 8,
-            'videos': 0,
-            'sounds': 0,
-            'maps': 0,
-            'text': 3,
-            'iucn': 'true',
-            'subjects': 'TaxonBiology|Description|Distribution',
-            'details': 'true',
-            'vetted': 2,
-            'cache_ttl': 300
-        }
-
-        # We're only interested in orchids.
-        taxon_concept = 8156
-
-        # Get only the first result.
-        eol_results = query_eol(query, options, taxon_concept)
-        try:
-            data = eol_results.next()
-        except StopIteration:
-            raise Http404
-
-        # Set some extra values.
-        scientificName = data['scientificName'].split()
-        data['canonicalName'] = ' '.join(scientificName[:2])
-        data['describedBy'] = ' '.join(scientificName[2:])
-        data['imageObjects'] = []
-        data['textObjects'] = []
-        data['iucn'] = None
-        for obj in data['dataObjects']:
-            try:
-                if obj['title'] == "IUCNConservationStatus":
-                    data['iucn'] = obj
-                    data['iucn']['danger_status'] = iucn_status.\
-                        search(obj['description']).\
-                        group(1) in ('VU','EN','CR','EW','EX')
-                    continue
-            except:
-                pass
-
-            if "StillImage" in obj['dataType']:
-                data['imageObjects'].append(obj)
-
-            elif "Text" in obj['dataType']:
-                # Skip non-English texts for now.
-                if 'language' in obj and obj['language'] != 'en':
-                    continue
-
-                data['textObjects'].append(obj)
-
-        return data
 
 
 def home(request):
@@ -227,9 +166,9 @@ def photo_identity(request, photo_id):
         raise Http404
 
     photo = get_object_or_404(Photo, pk=photo_id)
-    ids = photo.identity_set.all()
+    ids = photo.identities.all()
     data = {'identities': ids, 'mse_low': MSE_LOW}
-    return render(request, "orchid/result_ajax.html", data)
+    return render(request, "orchid/identities.html", data)
 
 def classify_image(classifier, image_path, ann_dir):
     """Classify an image using a classfication hierarchy,
@@ -279,7 +218,7 @@ def photo(request, photo_id):
     data['photo'] = photo
 
     # Get the identities from the database.
-    data['identities'] = photo.identity_set.all()
+    data['identities'] = photo.identities.all()
 
     return render(request, "orchid/photo.html", data)
 
@@ -378,11 +317,10 @@ def query_eol(query, options, taxon_concept=None, exact=False):
             format(result['id'], urllib.urlencode(options))
         yield json.load(urllib2.urlopen(url))
 
-def eol_orchid_species_info(request, query):
+def eol_orchid_species_info(query):
     """Return species info from EOL.org.
 
-    Searches on species name `species` and returns the first result in HTML
-    format. If no results were found, a HTTP 404 not found error is raised.
+    Searches for `query` and returns the first result as a dictionary.
     """
     iucn_status = re.compile(r'\(([A-Z]{2})\)')
 
@@ -407,7 +345,7 @@ def eol_orchid_species_info(request, query):
     try:
         data = eol_results.next()
     except StopIteration:
-        raise Http404
+        return None
 
     # Set some extra values.
     scientificName = data['scientificName'].split()
@@ -437,4 +375,4 @@ def eol_orchid_species_info(request, query):
 
             data['textObjects'].append(obj)
 
-    return render(request, "orchid/eol_species_info.html", data)
+    return data

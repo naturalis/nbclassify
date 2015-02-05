@@ -16,7 +16,6 @@ urlpatterns = patterns('',
     url(r'^photo/(?P<photo_id>\d+)/delete/$', views.delete_photo, name='delete_photo'),
     url(r'^library/$', views.my_photos, name='library'),
     url(r'^session_data\.json$', views.json_get_session_data, name='session_data'),
-    url(r'^eol_species_info/(?P<query>[\w\s\+-]+)/$', views.eol_orchid_species_info, name='eol_species_info'),
     url(r'^orchid\.js$', views.javascript, name='js'),
 
     # Automatic URL routing for the API.

@@ -61,12 +61,12 @@ jQuery(function( $ ) {
         $("#identity").html(data);
 
         // Set the species button actions.
-        $("button[data-species]").click(function() {
+        $("button[data-identity]").click(function() {
             $("#species-info").html('<div class="alert alert-info" role="alert">Fetching species info from the Encyclopedia of Life...</div>');
 
-            species = $(this).data("species");
+            identity_pk = $(this).data("identity");
             $.ajax({
-                url: "{% url 'orchid:eol_species_info' 'query' %}".replace('query', species),
+                url: "{% url 'orchid:id_info' '000' %}".replace('000', identity_pk),
                 dataType: "html",
                 success: function(data) {
                     $("#species-info").html(data);
