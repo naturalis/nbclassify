@@ -66,7 +66,7 @@ jQuery(function( $ ) {
 
             identity_pk = $(this).data("identity");
             $.ajax({
-                url: "{% url 'orchid:id_info' '000' %}".replace('000', identity_pk),
+                url: "{% url 'orchid:api:identity-info' '000' %}".replace('000', identity_pk),
                 dataType: "html",
                 success: function(data) {
                     $("#species-info").html(data);

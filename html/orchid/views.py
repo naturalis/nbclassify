@@ -14,6 +14,7 @@ from nbclassify.db import session_scope
 from nbclassify.functions import open_config
 from rest_framework import generics, permissions, viewsets, renderers
 from rest_framework.response import Response
+from rest_framework.decorators import detail_route
 
 from orchid.forms import UploadPictureForm
 from orchid.models import Photo, Identity
@@ -39,15 +40,12 @@ class IdentityViewSet(viewsets.ModelViewSet):
     serializer_class = IdentitySerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
-class IdentityInfoView(generics.GenericAPIView):
-    queryset = Identity.objects.all()
-    renderer_classes = (renderers.JSONRenderer, renderers.TemplateHTMLRenderer)
-
-    def get(self, request, *args, **kwargs):
+    @detail_route(methods=['get'], renderer_classes=(renderers.JSONRenderer,
+        renderers.TemplateHTMLRenderer))
+    def info(self, request, *args, **kwargs):
         identity = self.get_object()
         info = eol_orchid_species_info(str(identity))
         return Response(info, template_name="orchid/eol_species_info.html")
-
 
 def home(request):
     """Display the home page."""

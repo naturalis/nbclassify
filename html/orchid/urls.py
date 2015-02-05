@@ -18,10 +18,6 @@ urlpatterns = patterns('',
     url(r'^session_data\.json$', views.json_get_session_data, name='session_data'),
     url(r'^orchid\.js$', views.javascript, name='js'),
 
-    # Automatic URL routing for the API.
-    url(r'^api/', include(router.urls)),
-    # Custom URLs for the API.
-    url(r'^api/identities/(?P<pk>[0-9]+)/info/$', views.IdentityInfoView.as_view(), name='id_info'),
-    # Include login URLs for the browsable API.
-    url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework'))
+    # API endpoints
+    url(r'^api/', include(router.urls, namespace='api')),
 )
