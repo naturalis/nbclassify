@@ -11,7 +11,7 @@ well. Make sure that there is only a single flower in the selection with at
 least a small margin around it. Then click the "Identify Photo" button to
 start the identification.</p>
 
-<form action="{% url 'orchid:identify' photo.id %}" method="post" id="identify_form">
+<form action="{% url 'orchid:api:photo-identify' photo.id %}" method="post" id="identify_form">
     {% csrf_token %}
     <input type="hidden" id="roi" name="roi" value="">
     <button type="submit" class="pure-button pure-button-primary nbc"><i class="fa fa-search fa-fw"></i> Identify Photo</button>
@@ -50,6 +50,7 @@ jQuery(function( $ ) {
 
     // Use an AJAX form.
     form = $("#identify_form").ajaxForm({
+        dataType: 'json',
         success: function() {
             $("#message").html('<div class="alert alert-success" role="alert"><strong>Done!</strong> Redirecting you to the result now. <a href="{% url 'orchid:photo' photo.id %}">Click here</a> if you are not being redirected.</div>');
             setTimeout(function() {

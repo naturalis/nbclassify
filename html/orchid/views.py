@@ -34,7 +34,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
     serializer_class = PhotoSerializer
     permission_classes = (permissions.AllowAny,)
 
-    @detail_route(methods=['get'])
+    @detail_route(methods=['get','post'])
     def identify(self, request, *args, **kwargs):
         """Identify a photo."""
         photo = self.get_object()
@@ -125,13 +125,7 @@ def identify(request, photo_id):
     Display the photo with ID `photo_id`, let the user select the region of
     interest, if any, and display a button with which to start the
     identification process.
-
-    If the Identify Photo button is pressed, this view is also loaded in the
-    background via an AJAX call. The photo is then classified, each
-    classification is saved as an Identity object in the database, and the
-    results are returned in HTML format.
     """
-    # Only allow identifying of own photos.
     if not session_owns_photo(request, photo_id):
         raise Http404
 
@@ -139,71 +133,16 @@ def identify(request, photo_id):
     data = {}
     data.update(csrf(request))
 
-    if request.method == 'POST':
-        # The Identify Photo button was pressed, so identify the photo.
+    data['photo'] = photo
+    data['roi'] = None
 
-        # Delete any existing identities, if any.
-        Identity.objects.filter(photo=photo).delete()
+    # Set the ROI if one was already set.
+    if photo.roi:
+        roi = photo.roi.split(",")
+        x,y,w,h = [int(x) for x in roi]
+        data['roi'] = {'x':x, 'y':y, 'w':w, 'h':h, 'x2':x+w, 'y2':y+h}
 
-        # Get the region of interest if it was set.
-        try:
-            roi = request.POST['roi']
-        except:
-            roi = None
-
-        # Set the ROI for the photo.
-        photo.roi = roi
-        photo.save()
-
-        if roi:
-            roi = roi.split(',')
-            roi = [int(x) for x in roi]
-        else:
-            roi = None
-
-        # Classify the photo.
-        config = open_config(CONFIG_FILE)
-        classifier = ImageClassifier(config)
-        classifier.set_roi(roi)
-
-        try:
-            classes = classify_image(classifier, photo.image.path, ANN_DIR)
-        except Exception as e:
-            return HttpResponseServerError(e)
-
-        # Identify this photo.
-        for c in classes:
-            if not c.get('genus'):
-                continue
-
-            id_ = Identity(
-                photo=photo,
-                genus=c.get('genus'),
-                section=c.get('section'),
-                species=c.get('species'),
-                error=c.get('error')
-            )
-
-            # Save the identity into the database.
-            id_.save()
-
-        return HttpResponse(json.dumps({'stat': 'success'}),
-            content_type="application/json")
-    else:
-        # The Identify Photo button was not pressed. So let the user set the
-        # region of interest, if any, and then press that button to start
-        # identification.
-
-        data['photo'] = photo
-        data['roi'] = None
-
-        # Get the ROI.
-        if photo.roi:
-            roi = photo.roi.split(",")
-            x,y,w,h = [int(x) for x in roi]
-            data['roi'] = {'x':x, 'y':y, 'w':w, 'h':h, 'x2':x+w, 'y2':y+h}
-
-        return render(request, "orchid/identify.html", data)
+    return render(request, "orchid/identify.html", data)
 
 def photo_identity(request, photo_id):
     """Return the identification result for a photo."""
