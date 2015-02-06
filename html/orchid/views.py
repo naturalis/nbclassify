@@ -24,10 +24,6 @@ CONFIG_FILE = os.path.join(settings.BASE_DIR, 'orchid', 'config.yml')
 TAXA_DB = os.path.join(settings.BASE_DIR, 'orchid', 'taxa.db')
 ANN_DIR = os.path.join(settings.BASE_DIR, 'orchid', 'orchid.ann')
 
-# Threshold for significant MSE values.
-MSE_LOW = 0.0001
-
-
 class PhotoViewSet(viewsets.ModelViewSet):
     """View and edit photos."""
     queryset = Photo.objects.all()
@@ -81,6 +77,16 @@ class PhotoViewSet(viewsets.ModelViewSet):
             id_.save()
 
         return self.retrieve(request, *args, **kwargs)
+
+    @detail_route(methods=['get'], renderer_classes=(renderers.JSONRenderer,
+        renderers.TemplateHTMLRenderer))
+    def identities(self, request, *args, **kwargs):
+        photo = self.get_object()
+        ids = photo.identities.all()
+        serializer = IdentitySerializer(ids, many=True)
+
+        data = {'identities': serializer.data}
+        return Response(data, template_name="orchid/identities.html")
 
 class IdentityViewSet(viewsets.ModelViewSet):
     """Identify photos and view photo identities."""
@@ -143,17 +149,6 @@ def identify(request, photo_id):
         data['roi'] = {'x':x, 'y':y, 'w':w, 'h':h, 'x2':x+w, 'y2':y+h}
 
     return render(request, "orchid/identify.html", data)
-
-def photo_identity(request, photo_id):
-    """Return the identification result for a photo."""
-    # Only allow viewing of own photos.
-    if not session_owns_photo(request, photo_id):
-        raise Http404
-
-    photo = get_object_or_404(Photo, pk=photo_id)
-    ids = photo.identities.all()
-    data = {'identities': ids, 'mse_low': MSE_LOW}
-    return render(request, "orchid/identities.html", data)
 
 def classify_image(classifier, image_path, ann_dir):
     """Classify an image using a classfication hierarchy,

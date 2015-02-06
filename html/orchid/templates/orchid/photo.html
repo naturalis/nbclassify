@@ -5,6 +5,17 @@
 {% block content %}
 <h1>Photo Identity</h1>
 
+{% if identities %}
+<p>The following identification{{identities|pluralize}}
+w{{identities|pluralize:"as,ere"}} made for this photo. The <abbr
+title="Mean Square Error">MSE</abbr> value is an indicator for the
+reliability (lower is better).</p>
+{% else %}
+<p>
+    <div class="alert alert-info" role="alert">Sorry, the photo could not be identified.</div>
+</p>
+{% endif %}
+
 <p>
     <div id="identity"></div>
 </p>
@@ -52,11 +63,9 @@ jQuery(function( $ ) {
     $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
 
     $.ajax({
-        url: "{% url 'orchid:identity' photo.id %}",
+        url: "{% url 'orchid:api:photo-identities' photo.id %}",
         dataType: "html"
     }).done(function(data) {
-        var species;
-
         // Display the result.
         $("#identity").html(data);
 
