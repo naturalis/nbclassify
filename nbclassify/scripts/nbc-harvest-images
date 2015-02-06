@@ -359,11 +359,6 @@ class ImageHarvester(object):
         the list of taxonomic ranks `ranks`, then this key-value pair will be
         present in the returned taxa dictionary.
         """
-        if not tags:
-            raise ValueError("Argument `tags` must be a list of photo tags")
-        if not ranks:
-            raise ValueError("Argument `ranks` must be a list of taxonomic ranks")
-
         taxa = {}
         seen = []
         for tag in tags:
