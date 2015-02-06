@@ -1,8 +1,8 @@
 ======
-OrchiD
+OrchID
 ======
 
-OrchiD is a proof-of-concept Django app for classifying digital images of
+OrchID is a proof-of-concept Django app for classifying digital images of
 slipper orchids.
 
 It implements the NBClassify Python package for image fingerprinting and
@@ -24,7 +24,7 @@ Quick start
 
       url(r'^orchid/', include('orchid.urls')),
 
-3. Run ``python manage.py syncdb`` to create OrchiD's database tables.
+3. Run ``python manage.py syncdb`` to create OrchID's database tables.
 
 4. You may start the development server with ``python manage.py runserver``
    and visit http://127.0.0.1:8000/ to test the app.
@@ -100,7 +100,7 @@ This setup assumes you have Apache 2.4.
       import django
       print(django.__path__)"
 
-   The ``WSGIApplicationGroup`` directive is necessary because OrchiD depends on
+   The ``WSGIApplicationGroup`` directive is necessary because OrchID depends on
    some Python modules that are affected by the `Simplified GIL State API`_
    issue.
 

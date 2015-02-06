@@ -1,10 +1,11 @@
-# OrchiD
+# OrchID
 
 ## Dependencies
 
-The OrchiD Django app has the following dependencies:
+The OrchID Django app has the following dependencies:
 
-* Django (>=1.6)
+* Django (>=1.7)
+* Django REST framework
 * FANN (>=2.1.0)
   * Python bindings
 * [ImgPheno][1]
