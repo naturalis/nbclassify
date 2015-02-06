@@ -12,7 +12,7 @@ from django.conf import settings
 from nbclassify.classify import ImageClassifier
 from nbclassify.db import session_scope
 from nbclassify.functions import open_config
-from rest_framework import generics, permissions, viewsets, renderers
+from rest_framework import generics, permissions, viewsets, renderers, status
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 
@@ -33,6 +33,54 @@ class PhotoViewSet(viewsets.ModelViewSet):
     queryset = Photo.objects.all()
     serializer_class = PhotoSerializer
     permission_classes = (permissions.AllowAny,)
+
+    @detail_route(methods=['get'])
+    def identify(self, request, *args, **kwargs):
+        """Identify a photo."""
+        photo = self.get_object()
+
+        # If the ROI is set, use that. If no ROI is set, then use the existing
+        # ROI if any. If the ROI is set, but evaluates to False, then set the
+        # ROI to None.
+        roi = request.data.get('roi', photo.roi)
+        if not roi:
+            roi = None
+
+        if photo.roi != roi:
+            photo.roi = roi
+            photo.save()
+
+        # Set the ROI for the classifier.
+        if roi:
+            roi = roi.split(',')
+            roi = [int(x) for x in roi]
+
+        # Delete all photo identities, if any.
+        Identity.objects.filter(photo=photo).delete()
+
+        # Classify the photo.
+        config = open_config(CONFIG_FILE)
+        classifier = ImageClassifier(config)
+        classifier.set_roi(roi)
+        classes = classify_image(classifier, photo.image.path, ANN_DIR)
+
+        # Identify this photo.
+        for c in classes:
+            if not c.get('genus'):
+                continue
+
+            id_ = Identity(
+                photo=photo,
+                genus=c.get('genus'),
+                section=c.get('section'),
+                species=c.get('species'),
+                error=c.get('error')
+            )
+
+            # Save the identity into the database.
+            id_.save()
+
+        return self.retrieve(request, *args, **kwargs)
 
 class IdentityViewSet(viewsets.ModelViewSet):
     """Identify photos and view photo identities."""
