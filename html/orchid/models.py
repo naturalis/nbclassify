@@ -16,7 +16,7 @@ def get_image_path(instance, filename):
     buf = instance.image.read()
     hasher.update(buf)
     parts = os.path.splitext(filename)
-    filename_ = "%s%s" % (hasher.hexdigest(), parts[1])
+    filename_ = "%s%s" % (hasher.hexdigest()[:10], parts[1])
     path = "orchid/uploads/%%Y/%%m/%%d/%s" % (filename_,)
     return time.strftime(path)
 
