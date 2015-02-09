@@ -112,5 +112,6 @@ CACHES = {
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny'
-    ]
+    ],
+    'PAGINATE_BY': 10
 }
