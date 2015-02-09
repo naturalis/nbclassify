@@ -89,8 +89,9 @@ jQuery(function( $ ) {
 
     $("button[data-action='delete-photo']").click(function(event) {
         $.ajax({
-            url: "{% url 'orchid:delete_photo' photo.id %}",
+            url: "{% url 'orchid:api:photo-detail' photo.id %}",
             dataType: "json",
+            type: "DELETE",
             success: function(data) {
                 window.location.href = "{% url 'orchid:library' %}";
             },

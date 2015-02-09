@@ -202,22 +202,6 @@ def photo(request, photo_id):
 
     return render(request, "orchid/photo.html", data)
 
-def delete_photo(request, photo_id):
-    """Delete a photo and its related objects."""
-    # Only allow deletion of own photos.
-    if not session_owns_photo(request, photo_id):
-        raise Http404
-
-    photo = get_object_or_404(Photo, pk=photo_id)
-
-    # Delete the photo. Because of the models.photo_delete_hook(), the
-    # actual image file will also be deleted.
-    photo.delete()
-
-    # Return the result.
-    return HttpResponse(json.dumps({'stat': 'success'}),
-        content_type="application/json")
-
 def my_photos(request):
     """Display the photos that were identified in a session."""
     data = {}
