@@ -24,6 +24,10 @@ CONFIG_FILE = os.path.join(settings.BASE_DIR, 'orchid', 'config.yml')
 TAXA_DB = os.path.join(settings.BASE_DIR, 'orchid', 'taxa.db')
 ANN_DIR = os.path.join(settings.BASE_DIR, 'orchid', 'orchid.ann')
 
+# -----------------------------
+# View sets for the OrchID API
+# -----------------------------
+
 class PhotoViewSet(viewsets.ModelViewSet):
     """View and edit photos."""
     queryset = Photo.objects.all()
@@ -101,6 +105,10 @@ class IdentityViewSet(viewsets.ModelViewSet):
         info = eol_orchid_species_info(str(identity))
         return Response(info, template_name="orchid/eol_species_info.html")
 
+# --------------------------
+# Standard OrchID views
+# --------------------------
+
 def home(request):
     """Display the home page."""
     data = {}
@@ -150,41 +158,6 @@ def identify(request, photo_id):
 
     return render(request, "orchid/identify.html", data)
 
-def classify_image(classifier, image_path, ann_dir):
-    """Classify an image using a classfication hierarchy,
-
-    Arguments are an instance of ImageClassifier `classifier`, file path to
-    the image file `image_path`, and the path to the directory containing the
-    artificial neural networks `ann_dir` for the specified classfication
-    hierarchy set in `classifier`.
-
-    Returns the classfications as a list of dictionaries, where each dictionary
-    maps each rank to the corresponding taxon. An additional key ``error``
-    specifies the mean square error for the entire classfication. The
-    classifications returned are ordered by mean square error.
-    """
-    classes, errors = classifier.classify_with_hierarchy(image_path, ann_dir)
-
-    # Check for failed classification.
-    if not classes[0]:
-        return []
-
-    # Calculate the mean square error for each classification path.
-    errors_classes = [(sum(e)/len(e),c) for e,c in zip(errors, classes)]
-
-    # Get the level names.
-    ranks = classifier.get_classification_hierarchy_levels()
-
-    # Create a list of all classifications.
-    classes = []
-    for error, classes_ in sorted(errors_classes):
-        class_dict = {'error': error}
-        for rank, taxon in zip(ranks, classes_):
-            class_dict[rank] = taxon
-        classes.append(class_dict)
-
-    return classes
-
 def photo(request, photo_id):
     """Display the photo with classification result."""
     # Only allow viewing of own photos.
@@ -222,6 +195,26 @@ def my_photos(request):
     data['photos'] = photos
     return render(request, "orchid/my_photos.html", data)
 
+def javascript(request):
+    """Return Django parsed JavaScript."""
+    data = {}
+    return render(request, "orchid/orchid.js", data,
+        content_type="application/javascript")
+
+def json_get_session_data(request):
+    """Return data for the current user session.
+
+    Data contains the photo IDs for the current user. Data is returned in JSON
+    format.
+    """
+    data = {}
+    data['photos'] = get_session_photo_ids(request)
+    return HttpResponse(json.dumps(data), content_type="application/json")
+
+# --------------------------
+# Functions
+# --------------------------
+
 def session_owns_photo(request, photo_id):
     """Test if the current session own photo with ID `photo_id`.
 
@@ -239,21 +232,40 @@ def get_session_photo_ids(request):
     except:
         return []
 
-def json_get_session_data(request):
-    """Return data for the current user session.
+def classify_image(classifier, image_path, ann_dir):
+    """Classify an image using a classfication hierarchy,
 
-    Data contains the photo IDs for the current user. Data is returned in JSON
-    format.
+    Arguments are an instance of ImageClassifier `classifier`, file path to
+    the image file `image_path`, and the path to the directory containing the
+    artificial neural networks `ann_dir` for the specified classfication
+    hierarchy set in `classifier`.
+
+    Returns the classfications as a list of dictionaries, where each dictionary
+    maps each rank to the corresponding taxon. An additional key ``error``
+    specifies the mean square error for the entire classfication. The
+    classifications returned are ordered by mean square error.
     """
-    data = {}
-    data['photos'] = get_session_photo_ids(request)
-    return HttpResponse(json.dumps(data), content_type="application/json")
+    classes, errors = classifier.classify_with_hierarchy(image_path, ann_dir)
 
-def javascript(request):
-    """Return Django parsed JavaScript."""
-    data = {}
-    return render(request, "orchid/orchid.js", data,
-        content_type="application/javascript")
+    # Check for failed classification.
+    if not classes[0]:
+        return []
+
+    # Calculate the mean square error for each classification path.
+    errors_classes = [(sum(e)/len(e),c) for e,c in zip(errors, classes)]
+
+    # Get the level names.
+    ranks = classifier.get_classification_hierarchy_levels()
+
+    # Create a list of all classifications.
+    classes = []
+    for error, classes_ in sorted(errors_classes):
+        class_dict = {'error': error}
+        for rank, taxon in zip(ranks, classes_):
+            class_dict[rank] = taxon
+        classes.append(class_dict)
+
+    return classes
 
 def query_eol(query, options, taxon_concept=None, exact=False):
     """Return species info from EOL.org.
