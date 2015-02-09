@@ -20,8 +20,6 @@ reliability (lower is better).</p>
     <div id="identity"></div>
 </p>
 
-<div id="species-info"></div>
-
 <h2>Photo</h2>
 
 <p>
@@ -34,7 +32,7 @@ reliability (lower is better).</p>
 </div>
 
 <!-- Modals -->
-<div class="modal" id="delete-modal">
+<div class="modal" id="delete-modal" role="dialog">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
@@ -51,6 +49,18 @@ reliability (lower is better).</p>
         <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-danger" data-action="delete-photo">Delete</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="info-modal" role="dialog" aria-labelledby="info-modal-title">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="info-modal-title"></h4>
+      </div>
+      <div class="modal-body clearfix"></div>
     </div>
   </div>
 </div>
@@ -71,17 +81,19 @@ jQuery(function( $ ) {
 
         // Set the species button actions.
         $("button[data-identity]").click(function() {
-            $("#species-info").html('<div class="alert alert-info" role="alert">Fetching species info from the Encyclopedia of Life...</div>');
+            $("#info-modal-title").html("&nbsp;");
+            $("#info-modal .modal-body").html('<p>Fetching species info from the Encyclopedia of Life&hellip;</p>');
 
             identity_pk = $(this).data("identity");
             $.ajax({
                 url: "{% url 'orchid:api:identity-info' '000' %}".replace('000', identity_pk),
                 dataType: "html",
                 success: function(data) {
-                    $("#species-info").html(data);
+                    $("#info-modal .modal-body").html(data);
+                    $("#info-modal-title").html( $("#species-name").html() );
                 },
                 error: function(data) {
-                    $("#species-info").html('<div class="alert alert-danger" role="alert">Failed to obtain species info.</div>');
+                    $("#info-modal .modal-body").html('<div class="alert alert-danger" role="alert">Failed to obtain species info.</div>');
                 }
             });
         });
