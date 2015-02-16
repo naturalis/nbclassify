@@ -7,10 +7,11 @@ the ImgPheno_ package) and recognition via artificial neural networks.
 Contents:
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 1
 
    installation
    user_guide
+   json_api
    api
 
 
