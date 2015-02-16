@@ -46,7 +46,7 @@ Some API endpoints take optional parameters. For POST, PATCH, PUT, and DELETE
 requests, the parameters must be encoded as JSON with a Content-Type of
 "application/json"::
 
-    $ curl -i -X PATCH -H "Content-Type: application/json" -d '{"roi": "186,55,117,218"}' http://example.com/api/photos/1/
+    $ curl -X PATCH -H "Content-Type: application/json" -d '{"roi": "186,55,117,218"}' http://example.com/api/photos/1/
 
     {
         "id": 1,
@@ -110,14 +110,14 @@ may be implemented in the future, which will also require access over HTTPS.
 Pagination
 ==========
 
-Requests that return multiple items will be paginated to 30 items by default.
-You can specify further pages with the ``?page`` parameter::
+Requests that return multiple items will be paginated to 30 items. You can
+specify further pages with the ``?page`` parameter::
 
     curl http://example.com/api/identities/?page=2
 
-Note that page numbering is 1-based and that omitting the ?page parameter will
-return the first page. The resource will also contain multiple properties to
-make navigation easier for the client::
+Note that page numbering is 1-based and that omitting the ``?page`` parameter
+will return the first page. The resource will also contain multiple properties
+to make navigation easier for the client::
 
     $ curl http://example.com/api/photos/
 
