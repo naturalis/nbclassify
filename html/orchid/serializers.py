@@ -35,3 +35,4 @@ class IdentitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Identity
         fields = ('id','photo','genus','section','species','error')
+        read_only_fields = fields

@@ -29,7 +29,7 @@ ANN_DIR = os.path.join(settings.BASE_DIR, 'orchid', 'orchid.ann')
 # -----------------------------
 
 class PhotoViewSet(viewsets.ModelViewSet):
-    """View and edit photos."""
+    """View, edit, and identify photos."""
     queryset = Photo.objects.all()
     serializer_class = PhotoSerializer
     permission_classes = (permissions.AllowAny,)
@@ -93,7 +93,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
         return Response(data, template_name="orchid/identities.html")
 
 class IdentityViewSet(viewsets.ModelViewSet):
-    """Identify photos and view photo identities."""
+    """List and view photo identities."""
     queryset = Identity.objects.all()
     serializer_class = IdentitySerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
