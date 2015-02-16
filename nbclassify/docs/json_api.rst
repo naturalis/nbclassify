@@ -1,8 +1,8 @@
 .. _json-api:
 
-==========
-JSON API
-==========
+======================
+JSON API Documentation
+======================
 
 :Author: Serrano Pereira
 :Release: |release|
@@ -24,7 +24,7 @@ Root Endpoint
 Send a GET request to the API root to obtain a hyperlinked list of all endpoints
 that the API supports::
 
-    $ curl -i http://orchid.bitosis.nl/api/
+    $ curl -i http://example.com/api/
     HTTP/1.1 200 OK
     Date: Mon, 16 Feb 2015 09:32:14 GMT
     Server: Apache/2.4.7 (Ubuntu)
@@ -35,8 +35,8 @@ that the API supports::
     Content-Type: application/json
 
     {
-        "photos": "http://orchid.bitosis.nl/api/photos/",
-        "identities": "http://orchid.bitosis.nl/api/identities/"
+        "photos": "http://example.com/api/photos/",
+        "identities": "http://example.com/api/identities/"
     }
 
 Parameters
@@ -46,11 +46,11 @@ Some API endpoints take optional parameters. For POST, PATCH, PUT, and DELETE
 requests, the parameters must be encoded as JSON with a Content-Type of
 "application/json"::
 
-    $ curl -i -X PATCH -H "Content-Type: application/json" -d '{"roi": "186,55,117,218"}' http://orchid.localhost/api/photos/1/
+    $ curl -i -X PATCH -H "Content-Type: application/json" -d '{"roi": "186,55,117,218"}' http://example.com/api/photos/1/
 
     {
         "id": 1,
-        "image": "http://orchid.localhost/media/orchid/uploads/2015/01/16/798232f20a.jpg",
+        "image": "http://example.com/media/orchid/uploads/2015/01/16/798232f20a.jpg",
         "roi": "186,55,117,218",
         "identities": [
             1,
@@ -113,22 +113,22 @@ Pagination
 Requests that return multiple items will be paginated to 30 items by default.
 You can specify further pages with the ``?page`` parameter::
 
-    curl http://orchid.localhost/api/identities/?page=2
+    curl http://example.com/api/identities/?page=2
 
 Note that page numbering is 1-based and that omitting the ?page parameter will
 return the first page. The resource will also contain multiple properties to
 make navigation easier for the client::
 
-    $ curl http://orchid.localhost/api/photos/
+    $ curl http://example.com/api/photos/
 
     {
         "count": 68,
-        "next": "http://orchid.localhost/api/photos/?page=2",
+        "next": "http://example.com/api/photos/?page=2",
         "previous": null,
         "results": [
             {
                 "id": 1,
-                "image": "http://orchid.localhost/media/orchid/uploads/2015/01/16/798232f20a.jpg",
+                "image": "http://example.com/media/orchid/uploads/2015/01/16/798232f20a.jpg",
                 "roi": "186,55,117,218",
                 "identities": [
                     1,
@@ -172,12 +172,12 @@ Response
 
     {
         "count": 68,
-        "next": "http://orchid.localhost/api/photos/?page=2",
+        "next": "http://example.com/api/photos/?page=2",
         "previous": null,
         "results": [
             {
                 "id": 1,
-                "image": "http://orchid.localhost/media/orchid/uploads/2015/01/16/798232f20a.jpg",
+                "image": "http://example.com/media/orchid/uploads/2015/01/16/798232f20a.jpg",
                 "roi": "186,55,117,218",
                 "identities": [
                     1,
@@ -208,7 +208,7 @@ Response
 
     {
         "id": 1,
-        "image": "http://orchid.localhost/media/orchid/uploads/2015/01/16/798232f20a.jpg",
+        "image": "http://example.com/media/orchid/uploads/2015/01/16/798232f20a.jpg",
         "roi": "186,55,117,218",
         "identities": [
             1,
@@ -242,7 +242,7 @@ Upload a photo
 
 Example::
 
-    curl -F image=@Mexipedium_xerophyticum.jpg http://orchid.localhost/api/photos/
+    curl -F image=@Mexipedium_xerophyticum.jpg http://example.com/api/photos/
 
 Response
 --------
@@ -256,7 +256,7 @@ Response
 
     {
         "id": 26,
-        "image": "http://orchid.localhost/media/orchid/uploads/2015/02/16/915995be75.jpg",
+        "image": "http://example.com/media/orchid/uploads/2015/02/16/915995be75.jpg",
         "roi": null,
         "identities": []
     }
@@ -271,7 +271,7 @@ Update a photo
 
 Example::
 
-    curl -X PATCH -H 'Content-Type: application/json' -d '{"roi": "0,0,300,300"}' http://orchid.localhost/api/photos/26/
+    curl -X PATCH -H 'Content-Type: application/json' -d '{"roi": "0,0,300,300"}' http://example.com/api/photos/26/
 
 Response
 --------
@@ -285,7 +285,7 @@ Response
 
     {
         "id": 26,
-        "image": "http://orchid.localhost/media/orchid/uploads/2015/02/16/915995be75.jpg",
+        "image": "http://example.com/media/orchid/uploads/2015/02/16/915995be75.jpg",
         "roi": "0,0,300,300",
         "identities": []
     }
@@ -301,11 +301,11 @@ Identify a photo
 
 Example::
 
-    curl http://orchid.localhost/api/photos/26/identify/
+    curl http://example.com/api/photos/26/identify/
 
 Example with modified region of interest (ROI)::
 
-    curl -X POST -H 'Content-Type: application/json' -d '{"roi": "30,92,764,812"}' http://orchid.localhost/api/photos/26/identify/
+    curl -X POST -H 'Content-Type: application/json' -d '{"roi": "30,92,764,812"}' http://example.com/api/photos/26/identify/
 
 Response
 --------
@@ -319,7 +319,7 @@ Response
 
     {
         "id": 26,
-        "image": "http://orchid.localhost/media/orchid/uploads/2015/02/16/915995be75.jpg",
+        "image": "http://example.com/media/orchid/uploads/2015/02/16/915995be75.jpg",
         "roi": "30,92,764,812",
         "identities": [
             108,
@@ -337,7 +337,7 @@ List all the identities for a given photo::
 
 Example::
 
-    curl http://orchid.localhost/api/photos/26/identities/
+    curl http://example.com/api/photos/26/identities/
 
 Response
 --------
@@ -372,7 +372,7 @@ Response
 
 HTML response is also supported for use in the OrchID web application::
 
-    $ curl -H 'Accept: text/html' http://orchid.localhost/api/photos/26/identities/
+    $ curl -H 'Accept: text/html' http://example.com/api/photos/26/identities/
 
     <div class="table-responsive">
       <table class="table" id="id-result">
@@ -420,7 +420,7 @@ Deleting a photo also causes the related identities to be deleted::
 
 Example::
 
-    curl -X DELETE http://orchid.localhost/api/photos/26/
+    curl -X DELETE http://example.com/api/photos/26/
 
 Response
 --------
@@ -455,7 +455,7 @@ Response
 
     {
         "count": 72,
-        "next": "http://orchid.localhost/api/identities/?page=2",
+        "next": "http://example.com/api/identities/?page=2",
         "previous": null,
         "results": [
             {
