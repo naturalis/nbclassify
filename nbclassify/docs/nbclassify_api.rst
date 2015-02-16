@@ -1,7 +1,7 @@
 .. _api-doc:
 
-API Documentation
-=================
+NBClassify API Documentation
+============================
 
 Contents:
 

@@ -11,8 +11,8 @@ Contents:
 
    installation
    user_guide
-   json_api
-   api
+   orchid_api
+   nbclassify_api
 
 
 Indices and tables

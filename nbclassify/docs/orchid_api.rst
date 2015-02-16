@@ -1,14 +1,14 @@
 .. _json-api:
 
-======================
-JSON API Documentation
-======================
+========================
+OrchID API Documentation
+========================
 
 :Author: Serrano Pereira
 :Release: |release|
 :Date: |today|
 
-This describes the JSON API for OrchID.
+This describes the API for OrchID.
 
 Schema
 ======
