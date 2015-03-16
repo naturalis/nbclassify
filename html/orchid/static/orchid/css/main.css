@@ -212,6 +212,10 @@ a:hover, a:focus {
     margin: 0.2rem 0.5rem 0.2rem 0;
 }
 
+.container-fluid img {
+    margin: 2px 0;
+}
+
 /* Override some Font Awesome styles */
 
 .fa-li {
