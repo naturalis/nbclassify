@@ -102,6 +102,7 @@ jQuery(function( $ ) {
     $("button[data-action='delete-photo']").click(function(event) {
         $.ajax({
             url: "{% url 'orchid:api:photo-detail' photo.id %}",
+            headers: {'X-CSRFToken': getCookie("csrftoken")},
             dataType: "json",
             type: "DELETE",
             success: function(data) {
