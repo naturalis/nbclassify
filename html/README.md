@@ -30,11 +30,10 @@ software repository:
     python-opencv python-pil python-pyfann python-scipy python-sklearn \
     python-sorl-thumbnail python-sqlalchemy python-yaml
 
-More recent versions of some Python packages can be obtained via the Python
-Package Index:
+More recent versions of some Python packages can be obtained and built via the
+Python Package Index:
 
-    apt-get install python-pip
-
+    apt-get install python-pip python-dev gfortran libopenblas-dev liblapack-dev
     pip install -r requirements.txt
 
 Follow the setup instructions for [sorl-thumbnail][2].
