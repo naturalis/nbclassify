@@ -18,16 +18,17 @@ The OrchID Django app has the following dependencies:
 * Python Imaging Library (PIL) or Pillow
 * Python-memcached
 * PyYAML
-* sorl-thumbnail
+* SciPy
+* scikit-learn (>=0.15)
+* sorl-thumbnail (>=12.2)
 * SQLAlchemy (>=0.9.1)
 
 On Debian (based) systems, most dependencies can be installed from the
 software repository:
 
     apt-get install memcached python-django python-memcache python-numpy \
-    python-opencv python-pil python-pyfann python-sorl-thumbnail \
-    python-sqlalchemy python-yaml
-
+    python-opencv python-pil python-pyfann python-scipy python-sklearn \
+    python-sorl-thumbnail python-sqlalchemy python-yaml
 
 More recent versions of some Python packages can be obtained via the Python
 Package Index:

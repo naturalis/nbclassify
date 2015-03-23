@@ -3,6 +3,7 @@ djangorestframework
 numpy
 pillow
 pyyaml
+scipy
 scikit-learn>=0.15
-sorl-thumbnail
+sorl-thumbnail>=12.2
 sqlalchemy>=0.9.1
