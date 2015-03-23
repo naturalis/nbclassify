@@ -84,23 +84,27 @@ This setup assumes you have Apache 2.4.
 
    In this example, we added the path
    ``/var/www/orchid/env/lib/python2.7/site-packages``
-   which points to a virtualenv directory. This is needed if Python packaged
+   which points to a virtualenv directory. This is needed if Python packages
    were installed using virtualenv. For security reasons, a Django site (i.e.
    ``/var/www/orchid/``) must not be in the Apache document root. Notice that we
-   made aliases for the paths ``/var/www/orchid/{orchid/static|media}/``. This
-   way, Apache can still serve static and user uploaded files. Also make sure
-   that ``/var/www/orchid/media/`` is writable to Apache. Another alias was
-   created for ``/static/admin/``, which is needed for the admin panel. The path
-   could be a system link to ``/<django-source-path>/contrib/admin/static/``.
-   Find out where the Django source path is by running::
+   made aliases for these paths:
 
-      python -c "
-      import sys
-      sys.path = sys.path[1:]
-      import django
-      print(django.__path__)"
+   * ``/var/www/orchid/media/``
+   * ``/var/www/orchid/webapp/static/...``
+   * ``/var/www/orchid/orchid/static/``
 
-   The ``WSGIApplicationGroup`` directive is necessary because OrchID depends on
+   This way, Apache can still serve static and user uploaded files. Also make
+   sure that ``/var/www/orchid/media/`` exists and is writable to Apache.
+   Aliases were also created for ``static/admin/`` and
+   ``static/rest_framework/``, which are needed for the admin panel and the JSON
+   API. Both could be system links::
+
+      mkdir /var/www/orchid/webapp/static/
+      cd /var/www/orchid/webapp/static/
+      ln -s ../../env/lib/python2.7/site-packages/django/contrib/admin/static/admin/
+      ln -s ../../env/lib/python2.7/site-packages/rest_framework/static/rest_framework/
+
+   The ``WSGIApplicationGroup`` directive is necessary because WingID depends on
    some Python modules that are affected by the `Simplified GIL State API`_
    issue.
 
