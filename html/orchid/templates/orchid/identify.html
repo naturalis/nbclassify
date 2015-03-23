@@ -14,7 +14,9 @@ start the identification.</p>
 <form action="{% url 'orchid:api:photo-identify' photo.id %}" method="post" id="identify_form">
     {% csrf_token %}
     <input type="hidden" id="roi" name="roi" value="">
-    <button type="submit" class="pure-button pure-button-primary nbc"><i class="fa fa-search fa-fw"></i> Identify Photo</button>
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary btn-lg"><i class="fa fa-search fa-fw"></i> Identify Photo</button>
+    </div>
 </form>
 
 <p>

@@ -97,19 +97,16 @@ textarea {
    Author's custom styles
    ========================================================================== */
 
-html, footer {
+html {
     background-color: rgb(250, 250, 250);
 }
 
 body {
+    background-color: rgb(250, 250, 250);
     color: #3C4043;
     font-family: "Open Sans",sans-serif;
     font-size: 100%;
     line-height: 1.6;
-}
-
-main {
-    background-color: #FFFFFF;
 }
 
 main .content {
@@ -119,23 +116,24 @@ main .content {
 footer {
     color: #999;
     text-align: center;
-    border-top: 1px solid #EEEEEE;
+    border-top: 1px solid #D2D2D2;
     font-size: 90%;
     line-height: 1.1;
     padding: 1em;
+    margin-top: 2em;
 }
 
 footer a,
 footer a:hover,
 footer a:visited {
-    color: #6E5E40;
+    color: #999;
     text-decoration: none;
 }
 footer a {
-    border-bottom: 1px dotted #7F7A80;
+    border-bottom: 1px dotted #999;
 }
 footer a:hover {
-    border-bottom: 1px solid #6E5E40;
+    border-bottom: 1px solid #999;
 }
 
 footer .links {
@@ -177,15 +175,9 @@ h4 {
     font-weight: 400;
 }
 
-.pure-button.nbc {
-    background-color: #E3004D !important;
-    border-radius: 4px;
-    -moz-border-radius: 4px;
-    -webkit-border-radius: 4px;
-}
-
-#species-info .panel-body img {
-    margin: 0.3rem 0.3rem 0.3rem 0;
+canvas#photo {
+    background-color: rgb(61, 61, 61);
+    border: 1px solid black;
 }
 
 /* Override some Bootstrap styles */
@@ -205,27 +197,50 @@ a:hover, a:focus {
 }
 
 #my-photos > div.row > div {
-    margin-bottom: 2rem;
+    margin: 0;
+    padding: 0;
 }
 
-.badge.pull-right {
-    margin: 0.2rem 0.5rem 0.2rem 0;
+.badge {
+    margin-left: 0.2rem;
 }
 
-.container-fluid img {
-    margin: 2px 0;
+.add-margin {
+    margin: 4px;
+}
+
+.no-padding {
+    padding: 0;
+}
+
+/* Buttons */
+
+.btn {
+    border: 0 none rgba(0, 0, 0, 0);
+    border-radius: 4px;
+}
+.btn:focus {
+    outline: 0 none !important;
+}
+.btn:active {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset, 0 0 6px rgba(0, 0, 0, 0.2) inset;
+}
+.btn:hover,
+.btn:focus {
+    background-image: linear-gradient(transparent, rgba(0, 0, 0, 0.05) 40%, rgba(0, 0, 0, 0.1));
+}
+
+.btn-default {
+    background-color: #e6e6e6 !important;
+}
+.btn-primary {
+    background-color: #e3004d !important;
 }
 
 /* Override some Font Awesome styles */
 
 .fa-li {
     top: 0.3em;
-}
-
-/* Override some Pure styles */
-
-.pure-menu .pure-menu-heading {
-    text-transform: none;
 }
 
 /* ==========================================================================

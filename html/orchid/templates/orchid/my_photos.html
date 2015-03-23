@@ -10,14 +10,14 @@
 <div class="container-fluid" id="my-photos">
     <div class="row">
     {% for photo in photos %}
-        <div class="col-sm-3">
+        <div class="col-sm-2">
             <a href="{% url 'orchid:photo' photo.id %}">
                 {% thumbnail photo.image "200x200" crop="center" as im %}
-                <img src="{{ im.url }}" class="img-responsive img-rounded" alt="{{ photo.file_name }}">
+                <img src="{{ im.url }}" class="img-responsive" alt="{{ photo.file_name }}">
                 {% endthumbnail %}
             </a>
         </div>
-        {% if forloop.counter|divisibleby:"4" %}
+        {% if forloop.counter|divisibleby:"6" %}
     </div>
     <div class="row">
         {% endif %}
