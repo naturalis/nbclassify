@@ -213,6 +213,11 @@ a:hover, a:focus {
     padding: 0;
 }
 
+div.photo-container {
+    display: inline-block;
+    max-width: 100%;
+}
+
 /* Buttons */
 
 .btn {
