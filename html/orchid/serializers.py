@@ -27,7 +27,7 @@ class PhotoSerializer(serializers.ModelSerializer):
             assert roi[3] >= 1, \
                 "ROI height value out of bounds"
         except:
-            raise serializers.ValidationError("The ROI must have the format `x,y,width,height`")
+            raise serializers.ValidationError("Must be of the format `x,y,width,height`")
 
         return value
 

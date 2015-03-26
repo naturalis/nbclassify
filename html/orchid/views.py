@@ -12,7 +12,7 @@ from django.conf import settings
 from nbclassify.classify import ImageClassifier
 from nbclassify.db import session_scope
 from nbclassify.functions import open_config
-from rest_framework import generics, permissions, viewsets, renderers, status
+from rest_framework import generics, permissions, mixins, viewsets, renderers, status
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 
@@ -52,8 +52,13 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
         # Set the ROI for the classifier.
         if roi:
-            roi = roi.split(',')
-            roi = [int(x) for x in roi]
+            try:
+                roi = roi.split(',')
+                roi = [int(x) for x in roi]
+                assert len(roi) == 4
+            except:
+                return Response({'roi': "Must be of the format `x,y,width,height`"},
+                    status=status.HTTP_400_BAD_REQUEST)
 
         # Delete all photo identities, if any.
         Identity.objects.filter(photo=photo).delete()
@@ -92,11 +97,14 @@ class PhotoViewSet(viewsets.ModelViewSet):
         data = {'identities': serializer.data}
         return Response(data, template_name="orchid/identities.html")
 
-class IdentityViewSet(viewsets.ModelViewSet):
+class IdentityViewSet(mixins.RetrieveModelMixin,
+                      mixins.DestroyModelMixin,
+                      mixins.ListModelMixin,
+                      viewsets.GenericViewSet):
     """List and view photo identities."""
     queryset = Identity.objects.all()
     serializer_class = IdentitySerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (permissions.AllowAny,)
 
     @detail_route(methods=['get'], renderer_classes=(renderers.JSONRenderer,
         renderers.TemplateHTMLRenderer))
