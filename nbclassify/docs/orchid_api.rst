@@ -1,14 +1,16 @@
 .. _json-api:
 
-========================
-OrchID API Documentation
-========================
+===============
+OrchID JSON API
+===============
 
 :Author: Serrano Pereira
 :Release: |release|
 :Date: |today|
 
-This describes the API for OrchID.
+This describes the JSON API for OrchID. The JSON API is used by the OrchID
+web application to upload and identify orchid photos. This JSON API can also
+be used for other server-client setups, like a mobile application.
 
 Schema
 ======
@@ -26,10 +28,7 @@ that the API supports::
 
     $ curl -i http://example.com/api/
     HTTP/1.1 200 OK
-    Date: Mon, 16 Feb 2015 09:32:14 GMT
-    Server: Apache/2.4.7 (Ubuntu)
     Vary: Accept,Cookie
-    X-Frame-Options: SAMEORIGIN
     Allow: GET, HEAD, OPTIONS
     Transfer-Encoding: chunked
     Content-Type: application/json
@@ -104,8 +103,12 @@ DELETE  Used for deleting resources.
 Authentication
 ==============
 
-The OrchID API currently uses no authentication mechanism. Token authentication
-may be implemented in the future, which will also require access over HTTPS.
+The JSON API is currently at an early development stage and no form of user
+authentication has been implemented so far. This means that users are currently
+able to view and edit photos uploaded by other users.
+
+Once user authentication is implemented, permissions can be set so that users
+can only edit their own photos.
 
 Pagination
 ==========
@@ -450,7 +453,7 @@ Response
 
     HTTP/1.1 200 OK
     Vary: Accept,Cookie
-    Allow: GET, POST, HEAD, OPTIONS
+    Allow: GET, HEAD, OPTIONS
     Content-Type: application/json
 
     {
@@ -485,7 +488,7 @@ Response
 
     HTTP/1.1 200 OK
     Vary: Accept,Cookie
-    Allow: GET, PUT, PATCH, DELETE, HEAD, OPTIONS
+    Allow: GET, DELETE, HEAD, OPTIONS
     Content-Type: application/json
 
     {
@@ -538,3 +541,27 @@ HTML response is also supported for use in the OrchID web application::
         <h3>Range Description</h2>
         <p><em>Phragmipedium lindenii</em> is a large terrestrial, lithophytic, or epiphytic orchid. It has been reported from mountainous areas of Venezuela, Colombia and Ecuador (Dressler and Williams 1975, Coz and Bravo 2007, Villafuerte and Christenson 2007). New records have recently been found in Peru, which represents a large range extension (Coz and Bravo 2007, Villafuerte and Christenson 2007).</p>
     <span class="pull-right"><a href="http://eol.org/1135011"><img src="/static/orchid/images/eol_logo_100.png" height="25px" title="More info on the Encyclopedia of Life" alt="EOL.org"></a></span>
+
+Delete a photo identity
+=======================
+
+Users should only be able to delete their own photo identities once
+authentication is implemented.
+
+::
+
+    DELETE /api/identities/:id/
+
+Example::
+
+    curl -X DELETE http://example.com/api/identities/1/
+
+Response
+--------
+
+::
+
+    HTTP/1.1 204 NO CONTENT
+    Vary: Accept,Cookie
+    Allow: GET, DELETE, HEAD, OPTIONS
+    Content-Length: 0
