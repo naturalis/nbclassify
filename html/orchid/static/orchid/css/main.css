@@ -97,12 +97,15 @@ textarea {
    Author's custom styles
    ========================================================================== */
 
-html {
+html, body {
+    /* Background pattern from subtlepatterns.com */
+    background-attachment: scroll;
     background-color: rgb(250, 250, 250);
+    background-image: url("/static/orchid/images/debut_light.png");
+    background-repeat: repeat;
 }
 
 body {
-    background-color: rgb(250, 250, 250);
     color: #3C4043;
     font-family: "Open Sans",sans-serif;
     font-size: 100%;
@@ -175,9 +178,17 @@ h4 {
     font-weight: 400;
 }
 
-canvas#photo {
-    background-color: rgb(61, 61, 61);
-    border: 1px solid black;
+.navbar-inverse {
+    /* Background pattern from subtlepatterns.com */
+    background-image: url("/static/orchid/images/debut_dark.png");
+    background-repeat: repeat;
+    background-attachment: scroll;
+}
+.navbar-inverse .navbar-brand {
+    color: #9E9E9E;
+}
+.navbar-inverse .navbar-nav > li > a {
+    color: #CCC;
 }
 
 /* Override some Bootstrap styles */
