@@ -24,10 +24,10 @@ reliability (lower is better).</p>
 
 <div class="photo-container">
   <div class="dropdown pull-right">
-    <button class="btn btn-default dropdown-toggle add-margin" type="button" id="photo-menu" data-toggle="dropdown" aria-expanded="true">Action <span class="caret"></span></button>
+    <button class="btn btn-primary dropdown-toggle" type="button" id="photo-menu" data-toggle="dropdown" aria-expanded="true"><i class="fa fa-bars"></i></button>
     <ul class="dropdown-menu" role="menu" aria-labelledby="photo-menu">
-      <li role="presentation"><a role="menuitem" tabindex="-1" href="{% url 'orchid:identify' photo.id %}"><i class="fa fa-search fa-fw"></i> Re-identify</a></li>
-      <li role="presentation"><a role="menuitem" tabindex="-1" data-toggle="modal" data-target="#delete-modal" href="#"><i class="fa fa-trash fa-fw"></i> Delete</a></li>
+      <li role="presentation"><a role="menuitem" tabindex="-1" href="{% url 'orchid:identify' photo.id %}"><i class="fa fa-search fa-fw"></i> Identify photo</a></li>
+      <li role="presentation"><a role="menuitem" tabindex="-1" data-toggle="modal" data-target="#delete-modal" href="#"><i class="fa fa-trash fa-fw"></i> Delete photo</a></li>
     </ul>
   </div>
   <div>
