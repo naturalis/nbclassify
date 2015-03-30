@@ -289,12 +289,9 @@ def query_eol(query, options, taxon_concept=None, exact=False):
         params['filter_by_taxon_concept_id'] = taxon_concept
 
     # Get the first species ID.
-    try:
-        url = "http://eol.org/api/search/1.0.json?{0}".\
-            format(urllib.urlencode(params))
-        rsp = json.load(urllib2.urlopen(url))
-    except:
-        return
+    url = "http://eol.org/api/search/1.0.json?{0}".\
+        format(urllib.urlencode(params))
+    rsp = json.load(urllib2.urlopen(url))
 
     for result in rsp['results']:
         url = "http://eol.org/api/pages/1.0/{0}.json?{1}".\
