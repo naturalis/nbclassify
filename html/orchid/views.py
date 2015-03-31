@@ -87,15 +87,14 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
         return self.retrieve(request, *args, **kwargs)
 
-    @detail_route(methods=['get'], renderer_classes=(renderers.JSONRenderer,
-        renderers.TemplateHTMLRenderer))
+    @detail_route(methods=['get'], renderer_classes=(renderers.JSONRenderer,))
     def identities(self, request, *args, **kwargs):
         photo = self.get_object()
         ids = photo.identities.all()
         serializer = IdentitySerializer(ids, many=True)
 
         data = {'identities': serializer.data}
-        return Response(data, template_name="orchid/identities.html")
+        return Response(data)
 
 class IdentityViewSet(mixins.RetrieveModelMixin,
                       mixins.DestroyModelMixin,
