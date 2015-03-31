@@ -479,27 +479,13 @@ Get taxon information for an identity
 
 This fetches taxon information from the Encyclopedia of Life::
 
-    GET /api/identities/:id/info/
+    GET /api/identities/:id/eol/
 
 Response
 --------
 
 See http://eol.org/api/docs/pages for response format.
 
-HTML response is also supported for use in the OrchID web application::
-
-    <div class="hidden" id="species-name"><em>Phragmipedium lindenii</em> (Lindl.) Dressler &amp; N.H.Williams</div>
-        <div class="alert alert-success" role="alert">IUCN threat status: <a href="http://www.iucnredlist.org/apps/redlist/details/43324857" class="alert-link">Least Concern (LC)</a></div>
-    <div class="container-fluid">
-        <a href="http://eol.org/data_objects/29868742"><img class="img-rounded" src="http://media.eol.org/content/2014/07/09/02/28667_98_68.jpg" alt="El Valle - Phragmipedium Lindenii Orchid"></a>
-        <a href="http://eol.org/data_objects/30893623"><img class="img-rounded" src="http://media.eol.org/content/2014/09/27/01/18678_98_68.jpg" alt="El Valle - Phragmipedium Lindenii Orchid"></a>
-        <a href="http://eol.org/data_objects/31488128"><img class="img-rounded" src="http://media.eol.org/content/2014/10/20/10/41492_98_68.jpg" alt="File:Phragmipedium lindenii Orchi 030.jpg"></a>
-        <a href="http://eol.org/data_objects/31926505"><img class="img-rounded" src="http://media.eol.org/content/2012/06/15/16/20655_98_68.jpg" alt="File:Phragmipedium lindenii Orchi 066.jpg"></a>
-        <a href="http://eol.org/data_objects/31926506"><img class="img-rounded" src="http://media.eol.org/content/2012/06/14/21/18370_98_68.jpg" alt="File:Phragmipedium lindenii Orchi 068.jpg"></a>
-    </div>
-        <h3>Range Description</h2>
-        <p><em>Phragmipedium lindenii</em> is a large terrestrial, lithophytic, or epiphytic orchid. It has been reported from mountainous areas of Venezuela, Colombia and Ecuador (Dressler and Williams 1975, Coz and Bravo 2007, Villafuerte and Christenson 2007). New records have recently been found in Peru, which represents a large range extension (Coz and Bravo 2007, Villafuerte and Christenson 2007).</p>
-    <span class="pull-right"><a href="http://eol.org/1135011"><img src="/static/orchid/images/eol_logo_100.png" height="25px" title="More info on the Encyclopedia of Life" alt="EOL.org"></a></span>
 
 Delete a photo identity
 =======================
