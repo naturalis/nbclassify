@@ -373,46 +373,6 @@ Response
         ]
     }
 
-HTML response is also supported for use in the OrchID web application::
-
-    $ curl -H 'Accept: text/html' http://example.com/api/photos/26/identities/
-
-    <div class="table-responsive">
-      <table class="table" id="id-result">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Genus</th>
-                <th>Section</th>
-                <th>Species</th>
-                <th><abbr title="Mean Square Error">MSE</abbr></th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>1</td>
-                <td><em>Mexipedium</em></td>
-                <td><em>Mexipedium</em></td>
-                <td>
-                    <button class="btn btn-success" data-toggle="modal" data-target="#info-modal" data-identity="108"><em>M. xerophyticum</em></button>
-                </td>
-                <td>
-                    <span class="text-success" title="2.325401e-14">0.000000</span>
-                </td>
-            </tr>
-            <tr>
-                <td>2</td>
-                <td><em>Paphiopedilum</em></td>
-                <td><em>&mdash;</em></td>
-                <td>&mdash;</td>
-                <td>
-                    <span class="text-success" title="2.519105e-06">0.000003</span>
-                </td>
-            </tr>
-        </tbody>
-      </table>
-    </div>
-
 
 Delete a photo
 ==============
@@ -434,7 +394,6 @@ Response
     Vary: Accept,Cookie
     Allow: GET, PUT, PATCH, DELETE, HEAD, OPTIONS
     Content-Length: 0
-    Content-Type: text/x-python
 
 
 Identities list

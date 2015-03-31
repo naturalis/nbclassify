@@ -77,7 +77,7 @@ jQuery(function( $ ) {
     $("#identity").html('<div class="alert alert-info" role="alert"><i class="fa fa-gear fa-fw"></i> Please wait while we identify your photo...</div>');
 
     $.ajax({
-        url: "{% url 'orchid:api:photo-identities' photo.id %}",
+        url: "{% url 'orchid:photo-identities' photo.id %}",
         dataType: "html"
     }).done(function(data) {
         // Display the result.

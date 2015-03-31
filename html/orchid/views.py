@@ -183,6 +183,14 @@ def photo(request, photo_id):
 
     return render(request, "orchid/photo.html", data)
 
+def photo_identities(request, photo_id):
+    """Display the identities for a photo."""
+    if not session_owns_photo(request, photo_id):
+        raise Http404
+    photo = get_object_or_404(Photo, pk=photo_id)
+    data = {'identities': photo.identities.all()}
+    return render(request, "orchid/identities.html", data)
+
 def my_photos(request):
     """Display the photos that were identified in a session."""
     data = {}
