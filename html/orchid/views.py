@@ -105,12 +105,12 @@ class IdentityViewSet(mixins.RetrieveModelMixin,
     serializer_class = IdentitySerializer
     permission_classes = (permissions.AllowAny,)
 
-    @detail_route(methods=['get'], renderer_classes=(renderers.JSONRenderer,
-        renderers.TemplateHTMLRenderer))
-    def info(self, request, *args, **kwargs):
+    @detail_route(methods=['get'], renderer_classes=(renderers.JSONRenderer,))
+    def eol(self, request, *args, **kwargs):
+        """Get taxon information from EOL.org."""
         identity = self.get_object()
         info = eol_orchid_species_info(str(identity))
-        return Response(info, template_name="orchid/eol_species_info.html")
+        return Response(info)
 
 # --------------------------
 # Standard OrchID views
@@ -189,6 +189,12 @@ def photo_identities(request, photo_id):
     photo = get_object_or_404(Photo, pk=photo_id)
     data = {'identities': photo.identities.all()}
     return render(request, "orchid/identities.html", data)
+
+def identity_eol_info(request, pk):
+    """Get taxon information from EOL.org."""
+    identity = get_object_or_404(Identity, pk=pk)
+    data = eol_orchid_species_info(str(identity))
+    return render(request, "orchid/eol_species_info.html", data)
 
 def my_photos(request):
     """Display the photos that were identified in a session."""

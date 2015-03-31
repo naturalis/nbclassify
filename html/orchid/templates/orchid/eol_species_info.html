@@ -26,12 +26,12 @@
     {% endfor %}
     {% endautoescape %}
 {% else %}
-    <p>No summaries found for this species. Refer to <a href="http://eol.org/{{ identifier }}"><em>{{ canonicalName }}</em> on the Encyclopedia of Life</a> for additional information.</p>
+    <br><div class="alert alert-info" role="alert">No summaries found for this name. Refer to <a href="http://eol.org/{{ identifier }}" class="alert-link"><em>{{ canonicalName }}</em> on the Encyclopedia of Life</a> for additional information.</div>
 {% endif %}
 
 <span class="pull-right"><a href="http://eol.org/{{ identifier }}"><img src="{% static 'orchid/images/eol_logo_100.png' %}" height="25px" title="More info on the Encyclopedia of Life" alt="EOL.org"></a></span>
 {% else %}
 <p>
-    <div class="alert alert-info" role="alert">This species was not found on the Encyclopedia of Life.</div>
+    <div class="alert alert-info" role="alert">This name was not found on the Encyclopedia of Life.</div>
 </p>
 {% endif %}

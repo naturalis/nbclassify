@@ -90,7 +90,7 @@ jQuery(function( $ ) {
 
             identity_pk = $(this).data("identity");
             $.ajax({
-                url: "{% url 'orchid:api:identity-info' '000' %}".replace('000', identity_pk),
+                url: "{% url 'orchid:identity-eol' '000' %}".replace('000', identity_pk),
                 dataType: "html",
                 success: function(data) {
                     $("#info-modal .modal-body").html(data);
