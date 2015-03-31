@@ -1,14 +1,77 @@
-======
-OrchID
-======
+============
+Installation
+============
 
 OrchID is a proof-of-concept Django app for classifying digital images of
 slipper orchids.
 
-It implements the NBClassify Python package for image fingerprinting and
+OrchID implements the NBClassify Python package for image fingerprinting and
 recognition. NBClassify depends on the `ImgPheno
 <https://github.com/naturalis/imgpheno>`_ package and they both need to be
 installed for this app to work.
+
+Dependencies
+------------
+
+The OrchID Django app has the following dependencies:
+
+* Django (>=1.7)
+* Django REST framework
+* FANN (>=2.1.0)
+
+  * Python bindings
+
+* ImgPheno_
+* NBClassify_
+* NumPy
+* OpenCV (2.4.x)
+
+  * Python bindings
+
+* Python (>=2.7 && <2.8)
+
+  * SQLite (>=3.6.19)
+
+* PyYAML
+* SciPy
+* scikit-learn (>=0.15)
+* sorl-thumbnail (>=12.2)
+
+  * Pillow
+  * Python-memcached
+  * memcached
+
+* SQLAlchemy (>=0.9.1)
+
+On Debian (based) systems, most dependencies can be installed from the
+software repository::
+
+    apt-get install memcached python-django python-memcache python-numpy \
+    python-opencv python-pil python-pyfann python-scipy python-sklearn \
+    python-sorl-thumbnail python-sqlalchemy python-yaml
+
+More recent versions of some Python packages can be obtained and built via the
+Python Package Index::
+
+    apt-get install python-pip python-dev gfortran libopenblas-dev liblapack-dev
+    pip install -r requirements.txt
+
+Follow the setup instructions for `sorl-thumbnail`_.
+
+ImgPheno_ and NBClassify_ can be installed from the GitHub repositories.
+
+
+Installation
+------------
+
+In a production environment it is recommended to install Python packages in a
+virtual environment. But since system Python packages are also required (e.g.
+python-opencv), the following could be done::
+
+  cd /var/www/django-site/
+  virtualenv --system-site-packages env
+  env/bin/pip install -r requirements.txt
+
 
 Quick start
 -----------
@@ -24,15 +87,11 @@ Quick start
 
       url(r'^orchid/', include('orchid.urls')),
 
-3. Run ``python manage.py syncdb`` to create OrchID's database tables.
+3. Run ``python manage.py migrate`` to create OrchID's database tables.
 
 4. You may start the development server with ``python manage.py runserver``
    and visit http://127.0.0.1:8000/ to test the app.
 
-   This app was however designed to be served on a production server (e.g. on
-   Apache with mod_wsgi). Some functionality will not work using Django's
-   development server. The following section explains how to deploy this app
-   on Apache.
 
 Deploying on Apache with mod_wsgi
 ---------------------------------
@@ -126,6 +185,11 @@ This setup assumes you have Apache 2.4.
 
    If you use an SQLite database, make sure that Apache can write to the
    database file and to the parent directory of the database.
+
+
+.. _ImgPheno: https://github.com/naturalis/imgpheno
+.. _NBClassify: https://github.com/naturalis/nbclassify
+.. _`sorl-thumbnail`: http://sorl-thumbnail.readthedocs.org/en/latest/installation.html
 
 .. _`mod_wsgi documentation`: https://code.google.com/p/modwsgi/wiki/QuickConfigurationGuide
 .. _`Simplified GIL State API`: https://code.google.com/p/modwsgi/wiki/ApplicationIssues#Python_Simplified_GIL_State_API
