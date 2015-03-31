@@ -11,5 +11,6 @@ is as follows:
 * `scripts/`: Miscellaneous helper scripts.
 
 [![Build Status](https://travis-ci.org/naturalis/nbclassify.svg?branch=master)](https://travis-ci.org/naturalis/nbclassify)
+[![Documentation Status](https://readthedocs.org/projects/nbclassify/badge/?version=latest)](https://readthedocs.org/projects/nbclassify/?badge=latest)
 
 [1]: https://github.com/naturalis/imgpheno
