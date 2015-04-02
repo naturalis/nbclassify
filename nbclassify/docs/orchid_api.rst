@@ -427,8 +427,6 @@ List all the identities::
 
     GET /api/identities/
 
-Should return only the user's identities once authentication is implemented.
-
 Response
 --------
 
