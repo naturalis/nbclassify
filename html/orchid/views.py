@@ -94,7 +94,8 @@ class PhotoViewSet(viewsets.ModelViewSet):
         """List all identifications made for a photo."""
         photo = self.get_object()
         ids = photo.identities.all()
-        serializer = IdentitySerializer(ids, many=True)
+        serializer = IdentitySerializer(ids, many=True,
+            context={'request': request})
 
         data = {'identities': serializer.data}
         return Response(data)
