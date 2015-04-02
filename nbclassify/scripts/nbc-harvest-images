@@ -177,10 +177,11 @@ def harvest(meta_path, args):
 def cleanup(meta_path, args):
     """Clean up image directory."""
     flickr = FlickrDownloader(FLICKR_API_KEY, FLICKR_API_SECRET, args.flickr_uid)
-    harvester = ImageHarvester(flickr, meta_path)
-    sys.stderr.write("Now checking for unknown Flickr photos in `%s` " % args.imdir)
-    n = harvester.remove_unknown_photos(args.imdir)
-    sys.stderr.write("A total of %d photos were deleted\n" % n)
+    with db.session_scope(meta_path) as (session, metadata):
+        harvester = ImageHarvester(flickr, session, metadata)
+        sys.stderr.write("Now checking for unknown Flickr photos in `%s` " % args.imdir)
+        n = harvester.remove_unknown_photos(args.imdir)
+        sys.stderr.write("A total of %d photos were deleted\n" % n)
 
 
 class ImageHarvester(object):
