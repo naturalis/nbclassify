@@ -88,8 +88,8 @@ class PhotoViewSet(viewsets.ModelViewSet):
         return self.retrieve(request, *args, **kwargs)
 
     @detail_route(methods=['get'],
-        renderer_classes=(renderers.BrowsableAPIRenderer,
-            renderers.JSONRenderer))
+        renderer_classes=(renderers.JSONRenderer,
+            renderers.BrowsableAPIRenderer))
     def identities(self, request, *args, **kwargs):
         """List all identifications made for a photo."""
         photo = self.get_object()
@@ -110,8 +110,8 @@ class IdentityViewSet(mixins.RetrieveModelMixin,
     permission_classes = (permissions.AllowAny,)
 
     @detail_route(methods=['get'],
-        renderer_classes=(renderers.BrowsableAPIRenderer,
-        renderers.JSONRenderer))
+        renderer_classes=(renderers.JSONRenderer,
+        renderers.BrowsableAPIRenderer))
     def eol(self, request, *args, **kwargs):
         """Get taxon information from EOL.org."""
         identity = self.get_object()
