@@ -107,8 +107,8 @@ The JSON API is currently at an early development stage and no form of user
 authentication has been implemented so far. This means that users are currently
 able to view and edit photos uploaded by other users.
 
-Once user authentication is implemented, permissions can be set so that users
-can only edit their own photos.
+Once client authentication is implemented, permissions can be set so that
+clients can only edit their own photos.
 
 Pagination
 ==========
@@ -161,7 +161,9 @@ Photos list
 
     GET /api/photos/
 
-Should return only the user's photos once authentication is implemented.
+.. note::
+
+    Should only return the client's photos once authentication is implemented.
 
 Response
 --------
@@ -228,9 +230,8 @@ Field name   Description
 id           The photo ID.
 image        URL for the photo.
 roi          The region of interest (ROI) in the format ``x,y,width,height``
-             pixels.
-             The ROI is set by the client when the flower is selected in the
-             image.
+             pixels. The ROI is set by the client when the flower is selected
+             in the image.
 identities   List of identifications made for the photo. This only lists the
              IDs for the identities.
 ===========  =============
@@ -246,6 +247,11 @@ Upload a photo
 Example::
 
     curl -F image=@Mexipedium_xerophyticum.jpg http://example.com/api/photos/
+
+.. note::
+
+    Clients must be authenticated to upload photos once authentication is
+    implemented.
 
 Response
 --------
@@ -275,6 +281,11 @@ Update a photo
 Example::
 
     curl -X PATCH -H 'Content-Type: application/json' -d '{"roi": "0,0,300,300"}' http://example.com/api/photos/26/
+
+.. note::
+
+    Clients should only be able to update their own photos once authentication
+    is implemented.
 
 Response
 --------
@@ -309,6 +320,11 @@ Example::
 Example with modified region of interest (ROI)::
 
     curl -X POST -H 'Content-Type: application/json' -d '{"roi": "30,92,764,812"}' http://example.com/api/photos/26/identify/
+
+.. note::
+
+    Clients should only be able to identify their own photos once authentication
+    is implemented.
 
 Response
 --------
@@ -377,13 +393,21 @@ Response
 Delete a photo
 ==============
 
-Deleting a photo also causes the related identities to be deleted::
+::
 
     DELETE /api/photos/:id/
 
 Example::
 
     curl -X DELETE http://example.com/api/photos/26/
+
+Deleting a photo also causes the related identities to be deleted, as well as
+the actual photo on the server.
+
+.. note::
+
+    Clients should only be able to delete their own photos once authentication
+    is implemented.
 
 Response
 --------
@@ -490,9 +514,6 @@ See http://eol.org/api/docs/pages for response format.
 Delete a photo identity
 =======================
 
-Users should only be able to delete their own photo identities once
-authentication is implemented.
-
 ::
 
     DELETE /api/identities/:id/
@@ -500,6 +521,11 @@ authentication is implemented.
 Example::
 
     curl -X DELETE http://example.com/api/identities/1/
+
+.. note::
+
+    Clients should only be able to delete their own photo identities once
+    authentication is implemented.
 
 Response
 --------
