@@ -325,7 +325,7 @@ def eol_orchid_species_info(query):
     iucn_status = re.compile(r'\(([A-Z]{2})\)')
 
     options = {
-        'images': 8,
+        'images': 12,
         'videos': 0,
         'sounds': 0,
         'maps': 0,
