@@ -1,4 +1,4 @@
-.. _json-api:
+.. _orchid-api:
 
 ===============
 OrchID JSON API

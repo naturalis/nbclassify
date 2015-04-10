@@ -5,10 +5,10 @@ Installation
 OrchID is a proof-of-concept Django app for classifying digital images of
 slipper orchids.
 
-OrchID implements the NBClassify Python package for image fingerprinting and
-recognition. NBClassify depends on the `ImgPheno
-<https://github.com/naturalis/imgpheno>`_ package and they both need to be
-installed for this app to work.
+The easiest and fastest method of deploying OrchID on a server is with Puppet
+and the `Puppet OrchID module <https://github.com/naturalis/puppet-orchid>`_. If
+instead you want to opt for the labour intensive method, continue with the rest
+of this page.
 
 Dependencies
 ------------
