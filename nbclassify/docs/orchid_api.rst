@@ -15,10 +15,10 @@ be used for other server-client setups, like a mobile application.
 Schema
 ======
 
-API access is over HTTP, though HTTPS is probably required once some form of
-authentication (e.g. token authentication) is implemented. The API can be
-accessed via the ``/api/`` subdirectory of the OrchiD web application (e.g.
-``example.com/api/``). Data is sent and received as JSON.
+API access is over HTTP, though HTTPS is required once authentication (e.g.
+token authentication) is implemented. The API can be accessed via the ``/api/``
+subdirectory of the OrchiD web application (i.e.
+http://orch-id.naturalis.nl/api/). Data is sent and received as JSON.
 
 Root Endpoint
 =============
@@ -26,7 +26,7 @@ Root Endpoint
 Send a GET request to the API root to obtain a hyperlinked list of all endpoints
 that the API supports::
 
-    $ curl -i http://example.com/api/
+    $ curl -i http://orch-id.naturalis.nl/api/
     HTTP/1.1 200 OK
     Vary: Accept,Cookie
     Allow: GET, HEAD, OPTIONS
@@ -34,8 +34,8 @@ that the API supports::
     Content-Type: application/json
 
     {
-        "photos": "http://example.com/api/photos/",
-        "identities": "http://example.com/api/identities/"
+        "photos": "http://orch-id.naturalis.nl/api/photos/",
+        "identities": "http://orch-id.naturalis.nl/api/identities/"
     }
 
 Parameters
@@ -45,11 +45,11 @@ Some API endpoints take optional parameters. For POST, PATCH, PUT, and DELETE
 requests, the parameters must be encoded as JSON with a Content-Type of
 "application/json"::
 
-    $ curl -X PATCH -H "Content-Type: application/json" -d '{"roi": "186,55,117,218"}' http://example.com/api/photos/1/
+    $ curl -X PATCH -H "Content-Type: application/json" -d '{"roi": "186,55,117,218"}' http://orch-id.naturalis.nl/api/photos/1/
 
     {
         "id": 1,
-        "image": "http://example.com/media/orchid/uploads/2015/01/16/798232f20a.jpg",
+        "image": "http://orch-id.naturalis.nl/media/orchid/uploads/2015/01/16/798232f20a.jpg",
         "roi": "186,55,117,218",
         "identities": [
             1,
@@ -116,22 +116,22 @@ Pagination
 Requests that return multiple items will be paginated to 30 items. You can
 specify further pages with the ``?page`` parameter::
 
-    curl http://example.com/api/identities/?page=2
+    curl http://orch-id.naturalis.nl/api/identities/?page=2
 
 Note that page numbering is 1-based and that omitting the ``?page`` parameter
 will return the first page. The resource will also contain multiple properties
 to make navigation easier for the client::
 
-    $ curl http://example.com/api/photos/
+    $ curl http://orch-id.naturalis.nl/api/photos/
 
     {
         "count": 68,
-        "next": "http://example.com/api/photos/?page=2",
+        "next": "http://orch-id.naturalis.nl/api/photos/?page=2",
         "previous": null,
         "results": [
             {
                 "id": 1,
-                "image": "http://example.com/media/orchid/uploads/2015/01/16/798232f20a.jpg",
+                "image": "http://orch-id.naturalis.nl/media/orchid/uploads/2015/01/16/798232f20a.jpg",
                 "roi": "186,55,117,218",
                 "identities": [
                     1,
@@ -177,12 +177,12 @@ Response
 
     {
         "count": 68,
-        "next": "http://example.com/api/photos/?page=2",
+        "next": "http://orch-id.naturalis.nl/api/photos/?page=2",
         "previous": null,
         "results": [
             {
                 "id": 1,
-                "image": "http://example.com/media/orchid/uploads/2015/01/16/798232f20a.jpg",
+                "image": "http://orch-id.naturalis.nl/media/orchid/uploads/2015/01/16/798232f20a.jpg",
                 "roi": "186,55,117,218",
                 "identities": [
                     1,
@@ -213,7 +213,7 @@ Response
 
     {
         "id": 1,
-        "image": "http://example.com/media/orchid/uploads/2015/01/16/798232f20a.jpg",
+        "image": "http://orch-id.naturalis.nl/media/orchid/uploads/2015/01/16/798232f20a.jpg",
         "roi": "186,55,117,218",
         "identities": [
             1,
@@ -246,7 +246,7 @@ Upload a photo
 
 Example::
 
-    curl -F image=@Mexipedium_xerophyticum.jpg http://example.com/api/photos/
+    curl -F image=@Mexipedium_xerophyticum.jpg http://orch-id.naturalis.nl/api/photos/
 
 .. note::
 
@@ -265,7 +265,7 @@ Response
 
     {
         "id": 26,
-        "image": "http://example.com/media/orchid/uploads/2015/02/16/915995be75.jpg",
+        "image": "http://orch-id.naturalis.nl/media/orchid/uploads/2015/02/16/915995be75.jpg",
         "roi": null,
         "identities": []
     }
@@ -280,7 +280,7 @@ Update a photo
 
 Example::
 
-    curl -X PATCH -H 'Content-Type: application/json' -d '{"roi": "0,0,300,300"}' http://example.com/api/photos/26/
+    curl -X PATCH -H 'Content-Type: application/json' -d '{"roi": "0,0,300,300"}' http://orch-id.naturalis.nl/api/photos/26/
 
 .. note::
 
@@ -299,7 +299,7 @@ Response
 
     {
         "id": 26,
-        "image": "http://example.com/media/orchid/uploads/2015/02/16/915995be75.jpg",
+        "image": "http://orch-id.naturalis.nl/media/orchid/uploads/2015/02/16/915995be75.jpg",
         "roi": "0,0,300,300",
         "identities": []
     }
@@ -315,11 +315,11 @@ Identify a photo
 
 Example::
 
-    curl http://example.com/api/photos/26/identify/
+    curl http://orch-id.naturalis.nl/api/photos/26/identify/
 
 Example with modified region of interest (ROI)::
 
-    curl -X POST -H 'Content-Type: application/json' -d '{"roi": "30,92,764,812"}' http://example.com/api/photos/26/identify/
+    curl -X POST -H 'Content-Type: application/json' -d '{"roi": "30,92,764,812"}' http://orch-id.naturalis.nl/api/photos/26/identify/
 
 .. note::
 
@@ -338,7 +338,7 @@ Response
 
     {
         "id": 26,
-        "image": "http://example.com/media/orchid/uploads/2015/02/16/915995be75.jpg",
+        "image": "http://orch-id.naturalis.nl/media/orchid/uploads/2015/02/16/915995be75.jpg",
         "roi": "30,92,764,812",
         "identities": [
             108,
@@ -356,7 +356,7 @@ List all the identities for a given photo::
 
 Example::
 
-    curl http://example.com/api/photos/26/identities/
+    curl http://orch-id.naturalis.nl/api/photos/26/identities/
 
 Response
 --------
@@ -399,7 +399,7 @@ Delete a photo
 
 Example::
 
-    curl -X DELETE http://example.com/api/photos/26/
+    curl -X DELETE http://orch-id.naturalis.nl/api/photos/26/
 
 Deleting a photo also causes the related identities to be deleted, as well as
 the actual photo on the server.
@@ -439,7 +439,7 @@ Response
 
     {
         "count": 72,
-        "next": "http://example.com/api/identities/?page=2",
+        "next": "http://orch-id.naturalis.nl/api/identities/?page=2",
         "previous": null,
         "results": [
             {
@@ -518,7 +518,7 @@ Delete a photo identity
 
 Example::
 
-    curl -X DELETE http://example.com/api/identities/1/
+    curl -X DELETE http://orch-id.naturalis.nl/api/identities/1/
 
 .. note::
 
