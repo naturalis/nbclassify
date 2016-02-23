@@ -1,4 +1,5 @@
-# NBClassify
+NBClassify
+----------
 
 This repository contains code and examples that demonstrate the ability for
 artificial neural networks to classify images of orchid species. The layout
