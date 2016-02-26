@@ -2,13 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """
-Saskia de Vetter
-Naturalis Biodiversity Center
-2016-02-16  Start building the script; make flickr connection
-2016-02-17  Retrieve info from meta data file; get flickr photos
-2016-02-18  Loop through flickr pages; add try-except
-2016-02-22  Add documentation
-
 This program is made to automatically add tags to pictures
 on a flickr account. The information to add to the tags
 are harvested from a comma separated file.
@@ -20,8 +13,8 @@ After this is accepted once, it won't be asked again.
 This program can be run in Windows by double clicking on the
 filename.
 This program can be run in Linux by the command:
-    python nbc-add-tags.py
-This program requires python 2.7.9 or a higer 2.7 version.
+    python nbc-add-tags
+This program requires python 2.7.9 or a higher 2.7 version.
 """
 
 import flickrapi
