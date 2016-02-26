@@ -39,7 +39,7 @@ This Python package has the following dependencies:
 
   * SQLite (>=3.6.19)
 
-* `Python Flickr API`_
+* `Python Flickr API`_ (1.4.5)
 
 * PyYAML_
 
