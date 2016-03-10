@@ -153,6 +153,19 @@ def main():
 
     # Make the image directory path absolute.
     args.imdir = os.path.realpath(args.imdir)
+    
+    # Set correct meta data file for database.
+    db.conf.meta_file = args.meta_file
+        
+    # Set correct required ranks for database
+    ranks = ('domain', 'kingdom', 'phylum', 'class', 'order', 'family', 
+        'subfamily', 'tribus', 'genus', 'subgenus', 'section', 'species', 'subspecies')
+    required_ranks = []
+    if args.tag_keys:
+        for key in args.tag_keys.strip().split(","):
+            if key in ranks:
+                required_ranks.append(key)
+    db.conf.required_ranks = tuple(required_ranks)
 
     if args.task == 'harvest':
         harvest(meta_path, args)
@@ -226,8 +239,8 @@ class ImageHarvester(object):
 
         # Only collect photo taxon information from tags for the following
         # taxonomic ranks.
-        self.ranks = ('family', 'subfamily', 'tribus', 'genus', 'section', 'species', 'subspecies')
-        #self.ranks = ('genus','section','species')
+        self.ranks = ('domain', 'kingdom', 'phylum', 'class', 'order', 'family', 
+        'subfamily', 'tribus', 'genus', 'subgenus', 'section', 'species', 'subspecies')
 
     def set_flickr_downloader(self, flickr):
         """Set the Flickr downloader."""
@@ -268,7 +281,7 @@ class ImageHarvester(object):
         description = photo_info.find('description')
         description = None if description is None else description.text
         tags = self.flickr_info_get_tags(photo_info)
-        taxa = self.get_taxa_from_tags(tags, self.ranks)
+        taxa, seen = self.get_taxa_from_tags(tags)
 
         # Insert the photo into the database.
         db.insert_new_photo(self.session, self.metadata,
@@ -303,6 +316,7 @@ class ImageHarvester(object):
         last_page = args.page + 1
         downloaded = 0
         
+        # Loop through flickr pages.
         while pagenr < last_page:
             filters['page'] = pagenr
             photos = self.flickr.execute('photos.search', **filters)
@@ -325,10 +339,10 @@ class ImageHarvester(object):
                 title = info.find('title')
                 title = None if title is None else title.text
                 tags = self.flickr_info_get_tags(info)
-                taxa, seen, other_tags = self.get_taxa_from_tags(tags, self.ranks)
+                taxa, seen = self.get_taxa_from_tags(tags)
                 ext = info.get('originalformat')
                 
-                save = self.check_requested_keys(seen, args.tag_keys, args.key_mode)
+                save = self.check_required_keys(seen, args.tag_keys, args.key_mode)
                 if save == False:
                     logging.warning("Skipping photo {0} `{1}` because the requested "\
                     "tagkey is not set".format(photo_id, title))
@@ -339,10 +353,8 @@ class ImageHarvester(object):
                 for rank in self.ranks:
                   if rank in taxa:
                     photo_dir = os.path.join(photo_dir, taxa[rank])
-                
-                name = photo_id if title is None else title
     
-                filename = "%s.%s" % (name, ext)
+                filename = "%s.%s" % (photo_id, ext)
                 filename = self.re_filename_replace.sub('-', filename)
                 photo_path = os.path.join(photo_dir, filename)
     
@@ -368,14 +380,15 @@ class ImageHarvester(object):
                 self.db_insert_photo(info, photo_path, target)
 
             
-            # Determine what the last page will be
-            if last_page == args.page + 1 and args.pages == 0:
-                for information in photos.iter("photos"):
-                    last_page = int(information.get("pages")) + 1
-            else:
-                last_page = args.page + args.pages
+            # Determine only in the first iteration what the last page will be.
+            if last_page == args.page + 1:
+              if args.pages == 0:
+                  for information in photos.iter("photos"):
+                      last_page = int(information.get("pages")) + 1
+              else:
+                  last_page = args.page + args.pages
             
-            # Go to next page
+            # Go to the next page
             pagenr += 1
 
         return downloaded
@@ -388,18 +401,18 @@ class ImageHarvester(object):
         out = []
         tags = info.find('tags')
         for tag in tags:
-            raw = tag.get('raw').strip().split(",")
+            raw = tag.get('raw').strip()
             out.append(raw)
         return out
 
-    def get_taxa_from_tags(self, tags, ranks):
-        """Return a taxa dictionary from a list of tags.
+    def get_taxa_from_tags(self, tags):
+        """Return a taxa dictionary from a list of tags and a list of all tag-keys.
 
         Searches for tags of the format ``key:value``. If the `key` exists in
-        the list of taxonomic ranks `ranks`, then this key-value pair will be
-        present in the returned taxa dictionary.
+        the list of taxonomic ranks `self.ranks`, then this key-value pair will be
+        present in the returned taxa dictionary. Every 'key' will be present in the
+        returned list.
         """
-        tags = {}
         taxa = {}
         seen = []
         for tag in tags:
@@ -410,14 +423,20 @@ class ImageHarvester(object):
                 else:
                     logging.warning("Found multiple taxon tags with rank `%s`",
                         ranks)
-                if rank not in ranks:
-                    tags[rank] = taxon
+                if rank not in self.ranks:
                     continue
                 taxa[rank] = taxon
-        return taxa, seen, tags
+        return taxa, seen
         
-    def check_requested_keys(self, seen, keys, mode):
-        # Skip if requested tag-keys are not set.
+    def check_required_keys(self, seen, keys, mode):
+        """Check if the required keys are set for the photo.
+        
+        If required tag-keys are given ('keys'), there will be checked
+        if all or any (depending on 'mode') of the keys is present
+        in the list of seen tag-keys ('seen'). 
+        
+        Returns False if the requirements are not met, True otherwise.
+        """
         if keys:
             for key in keys.strip().split(","):
                 if mode == "all" and key not in seen:
