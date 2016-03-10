@@ -91,7 +91,7 @@ def main():
         "Photos with the given keys in the tags, but variable values will be harvested.")
     parser_harvest.add_argument(
         "--key_mode",
-        metaver="MODE",
+        metavar="MODE",
         default="all",
         choices=['all', 'any'],
         help="Either 'any' for an OR combination of tag-keys, or 'all' for an "\
