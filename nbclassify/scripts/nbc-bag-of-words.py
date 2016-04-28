@@ -16,9 +16,8 @@ def main():
     # Create argument parser.
     parser = argparse.ArgumentParser(
         description="Bag-of-words (BOW) creator.\nThe program takes a file "
-                    "with a dictionary of image feature descriptors, a list "
-                    "of files in the dictionary and a database with "
-                    "metadata of these images.\n"
+                    "with a dictionary of image feature descriptors and a "
+                    "database with metadata of these images.\n"
                     "The Bag-of-words model is applied for image "
                     "classification. The extracted features are used to "
                     "create a codebook. The vector of occurrence counts "
@@ -33,11 +32,6 @@ def main():
         "descr_dict",
         metavar="FILE.file",
         help="File with a dictionary of image feature descriptors per image."
-    )
-    parser.add_argument(
-        "file_list",
-        metavar="FILE.txt",
-        help="File with a list of images in the dictionary."
     )
     parser.add_argument(
         "meta_file",
@@ -55,6 +49,12 @@ def main():
              "An existing file with the same name will be overwritten."
     )
     parser.add_argument(
+        "--clusters",
+        metavar="N",
+        help="Number of clusters to create the codebook with. If omitted, "
+             "the sqrt of the total number of features will be used."
+    )
+    parser.add_argument(
         "--codebookfile",
         metavar="CODEBOOK-FILE",
         default="Codebook",
@@ -62,6 +62,12 @@ def main():
              "Defaults to 'Codebook' if omitted. "
              "File is stored in current working directory by default. "
              "An existing file with the same name will be overwritten. "
+    )
+    parser.add_argument(
+        "--file_list",
+        metavar="FILE.txt",
+        help="File with a list of images in the dictionary. File will be "
+             "used to order the images in the BOW-file."
     )
     parser.add_argument(
         "--time",
@@ -79,10 +85,6 @@ def main():
     if not os.path.isfile(args.descr_dict):
         raise IOError("The given dictionary file does not exist.")
 
-    # Check if the image list file exists.
-    if not os.path.isfile(args.file_list):
-        raise IOError("The given image list file does not exist.")
-
     # Check if the metadata file exists.
     if not os.path.isfile(args.meta_file):
         raise IOError("The given metadata file does not exist.")
@@ -99,7 +101,7 @@ def main():
     if args.time:
         newtime = print_duration(starttime, newtime)
 
-    codebook = create_codebook(descr_array)
+    codebook = create_codebook(descr_array, args)
     if args.time:
         newtime = print_duration(starttime, newtime)
 
@@ -111,7 +113,7 @@ def main():
     if args.time:
         newtime = print_duration(starttime, newtime)
 
-    imglist = open_listfile(args)
+    imglist = open_listfile(args, descr_dict)
     if args.time:
         newtime = print_duration(starttime, newtime)
 
@@ -156,12 +158,15 @@ def dict2nparray(descr_dict):
     return descr_array
 
 
-def create_codebook(descr_array):
+def create_codebook(descr_array, args):
     total_features = descr_array.shape[0]
     print("Total number of features: %d" % total_features)
-    nclusters = int(np.sqrt(total_features))
+    if args.clusters and args.clusters.isdigit():
+        nclusters = int(args.clusters)
+    else:
+        nclusters = int(np.sqrt(total_features))
     print("Number of clusters: %d" % nclusters)
-    print("\nCreating codebook (this may take a while)...")
+    print("\nCreating codebook (this will take a while)...")
     codebook, distortion = vq.kmeans(descr_array, nclusters)
     return codebook
 
@@ -186,11 +191,19 @@ def save_codebook(args, codebook):
         dump(codebook, f, protocol=HIGHEST_PROTOCOL)
 
 
-def open_listfile(args):
-    print("Reading list file...")
-    listfile = open(args.file_list, 'r')
-    imglist = load(listfile)
-    listfile.close()
+def open_listfile(args, descr_dict):
+    # Check if the image list file exists.
+    if args.file_list and os.path.isfile(args.file_list):
+        print("Reading list file...")
+        listfile = open(args.file_list, 'r')
+        imglist = listfile.readlines()
+        listfile.close()
+        return imglist
+    elif args.file_list:
+        sys.stderr.write("The given image list file does not exist. "
+                         "Proceeding without order in files.")
+    print("Creating image list...")
+    imglist = descr_dict.keys()
     return imglist
 
 
@@ -213,7 +226,7 @@ def save_bow(args, bow, nclusters, imglist):
             for pic in session.query(Photo).filter(Photo.id == photo_id):
                 title = photo_id if pic.title is None else pic.title
             valuelist = [photo_id, title]
-            words = bow[filename]
+            words = bow[filename.rstrip()]
             for item in words:
                 valuelist.append(str(item))
             row = "\t".join(valuelist)
