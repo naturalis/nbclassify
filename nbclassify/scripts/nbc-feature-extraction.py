@@ -144,8 +144,11 @@ def write_dictionary(args, dictio):
 def write_list(args, file_list):
     if not args.listfile.endswith(".txt"):
         args.listfile += ".txt"
-    with open(args.listfile, 'w') as f:
-        dump(file_list, f, protocol=HIGHEST_PROTOCOL)
+    outputfile = open(args.listfile, 'w')
+    for name in file_list:
+        outputfile.write(name)
+        outputfile.write("\n")
+    outputfile.close()
 
 
 main()
