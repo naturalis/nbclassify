@@ -89,35 +89,57 @@ def main():
     if not os.path.isfile(args.meta_file):
         raise IOError("The given metadata file does not exist.")
 
+    # Display time and duration if wanted.
     if args.time:
         starttime = datetime.datetime.now()
         newtime = print_duration(starttime, starttime)
 
+    # Open dictionaryfile with descriptors per image.
     descr_dict = open_dict_file(args)
+    
+    # Display time and duration if wanted.
     if args.time:
         newtime = print_duration(starttime, newtime)
 
+    # Convert dictionary to nparray.
     descr_array = dict2nparray(descr_dict)
+    
+    # Display time and duration if wanted.
     if args.time:
         newtime = print_duration(starttime, newtime)
 
+    # Create codebook according to Bag-Of-Words priciple.
     codebook = create_codebook(descr_array, args)
+    
+    # Display time and duration if wanted.
     if args.time:
         newtime = print_duration(starttime, newtime)
 
+    # Create Bag-Of-Words.
     bow = create_bow(descr_dict, codebook)
+    
+    # Display time and duration if wanted.
     if args.time:
         newtime = print_duration(starttime, newtime)
 
+    # Save the codebook.
     save_codebook(args, codebook)
+    
+    # Display time and duration if wanted.
     if args.time:
         newtime = print_duration(starttime, newtime)
-
+    
+    # Make a file with (ordered) imagenames.
     imglist = open_listfile(args, descr_dict)
+    
+    # Display time and duration if wanted.
     if args.time:
         newtime = print_duration(starttime, newtime)
 
+    # Save the Bag-Of-Words.
     save_bow(args, bow, len(codebook), imglist)
+    
+    # Display time and duration if wanted.
     if args.time:
         print_duration(starttime, newtime)
 
@@ -125,6 +147,11 @@ def main():
 
 
 def print_duration(starttime, previous):
+    """
+    The function takes two times in datetime format and
+    displays the current time and running time of the program.
+    The current time is returned.
+    """
     current = datetime.datetime.now()
     print("Present time: %s" % current)
     print("Duration of step: %s" % (current - previous))
@@ -134,6 +161,11 @@ def print_duration(starttime, previous):
 
 
 def open_dict_file(args):
+    """
+    The function takes the result of an argument parser.
+    The given dictionary file is opened and loaded. The loaded
+    dictionary is returned.
+    """
     print("Reading dictionary file...")
     dict_file = open(args.descr_dict, 'rb')
     descr_dict = load(dict_file)
@@ -142,6 +174,10 @@ def open_dict_file(args):
 
 
 def dict2nparray(descr_dict):
+    """
+    The function takes a dictionary and stores its
+    values into a nparray. The nparray is returned.
+    """
     print("Converting dictionary to nparray...")
     nimages = len(descr_dict)
     descr_array = np.zeros((nimages * 1000, 128))
@@ -159,6 +195,23 @@ def dict2nparray(descr_dict):
 
 
 def create_codebook(descr_array, args):
+    """
+    The function takes a nparray with descriptors and
+    the result of an argument parser.
+    If no number of clusters is given, the number of
+    clusters will be the squareroot of the total number
+    of feature descriptors. Otherwise the given number
+    of clusters will be used. A codebook is created
+    by the kmeans-algorithm. The processing time depends
+    on the total number of feature descriptors and the 
+    number of clusters, but will take some hours. 
+    The codebook is a nparray of length 'number of clusters'
+    and each cluster is of length 128 (for there are
+    128 dimensions in a descriptor). The positions of the 
+    centroids of each dimension in each cluster are stored 
+    in the codebook.
+    The codebook is returned.
+    """
     total_features = descr_array.shape[0]
     print("Total number of features: %d" % total_features)
     if args.clusters and args.clusters.isdigit():
@@ -172,6 +225,22 @@ def create_codebook(descr_array, args):
 
 
 def create_bow(descr_dict, codebook):
+    """
+    The function takes a dictionary with descriptors
+    per image and a codebook.
+    For every image in the dictionary a code and a 
+    histogram (word) is created.
+    Each feature of that image is assigned to a cluster 
+    in the codebook and the clusterindex of that cluster 
+    in the codebook is stored in the code.
+    The code is used to make a histogram with the 
+    presence of each cluster in that image. The length
+    of this word_hist is of lenght 'number of clusters'
+    and the values are normalized. A dictionary 
+    'bag_of_words' is filled with a list of the word_hist 
+    per image.
+    The dictionary 'bag_of_words' is returned.
+    """
     print("Creating Bag-of-words...")
     bag_of_words = {}
     for imagename in descr_dict:
@@ -184,6 +253,12 @@ def create_bow(descr_dict, codebook):
 
 
 def save_codebook(args, codebook):
+    """
+    This function takes the result of an argument parser
+    and a codebook.
+    The codebook is saved to a given filename as a
+    .file file.
+    """
     print("Saving codebook...")
     if not args.codebookfile.endswith(".file"):
         args.codebookfile += ".file"
@@ -192,6 +267,17 @@ def save_codebook(args, codebook):
 
 
 def open_listfile(args, descr_dict):
+    """
+    The function takes the result of an argument parser
+    and a dictionary with descriptors.
+    If a file with processed image filenames
+    is given, that file is read and the content
+    is returned.
+    If a file with processed image filenames is
+    given, but the file doesn't exist or if no
+    file is given, the keys of the dictionary
+    are (unordered) stored in a list and returned.
+    """
     # Check if the image list file exists.
     if args.file_list and os.path.isfile(args.file_list):
         print("Reading list file...")
@@ -208,6 +294,18 @@ def open_listfile(args, descr_dict):
 
 
 def save_bow(args, bow, nclusters, imglist):
+    """
+    The function takes the result of an argument parser,
+    a dictionary with image 'words' (Bag-Of-Words = bow), 
+    a number of clusters and a list with image filenames.
+    A header is created and saved to a .tsv file.
+    A connection to the database is made. For every
+    image in the imagelist, a photo_id is taken out
+    of the filename. A title for the image is taken
+    from the database. The photo_id, title and
+    all values in the bow of this image are written
+    to the .tsv file.
+    """
     print("Saving bag-of-words...")
     if not args.bow.endswith(".tsv"):
         args.bow += ".tsv"
@@ -236,6 +334,14 @@ def save_bow(args, bow, nclusters, imglist):
 
 
 def make_header(nclusters):
+    """
+    The function takes a number of clusters as
+    argument.
+    A header is created with items 'ID', 'Title'
+    and a clusternumber for each cluster like 
+    'cl5', starting at 'cl0'.
+    The header is returned as a string.
+    """
     headerlist = ["ID", "Title"]
     for x in range(nclusters):
         clustername = "cl" + str(x)
@@ -245,4 +351,5 @@ def make_header(nclusters):
     return header
 
 
+# Call the main function.
 main()
