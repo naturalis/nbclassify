@@ -1,3 +1,23 @@
+"""
+Bag-of-words creator.
+
+The program takes a dictionary with image
+feature descriptors and a database. 
+A codebook is created by performing a kmeans
+on all feature descriptors (this takes a while!).
+For every image is then determined to which cluster
+each feature belongs and a histogram (= word)is made of
+the presence of each cluster in that image.
+The codebook is saved to a .file file.
+The dictionary with all histogramvalues (= bag of words)
+is saved to a .tsv file. If a file is given with
+imagenames, the order of those names will be used to
+store the bag of words. Otherwise the order will be
+random.
+
+See the --help option for possible arguments.
+"""
+
 
 import argparse
 from cPickle import dump, load, HIGHEST_PROTOCOL
