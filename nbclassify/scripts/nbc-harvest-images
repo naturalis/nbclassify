@@ -232,7 +232,7 @@ class ImageHarvester(object):
         self.re_filename_replace = re.compile(r'[\s]+')
         self.re_tags_ignore = re.compile(r'vision:')
         self.re_photo_id = re.compile(r'^[0-9]+$')
-        self.re_taxon_tag = re.compile(r'^([a-z_]+):([A-Za-z0-9 ,.\-]+)$')
+        self.re_taxon_tag = re.compile(r'^([a-z_]+):([A-Za-z0-9 ,.\-\(\)=]+)$')
         self.set_flickr_downloader(flickr)
         self.session = session
         self.metadata = metadata
