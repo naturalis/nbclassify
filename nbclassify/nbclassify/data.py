@@ -3,6 +3,7 @@
 """Train data routines."""
 
 from copy import deepcopy
+from cPickle import dump, HIGHEST_PROTOCOL
 import csv
 import logging
 import os
@@ -12,13 +13,15 @@ import sys
 import cv2
 import imgpheno as ft
 import numpy as np
+import scipy.cluster.vq as vq
 from sklearn.preprocessing import MinMaxScaler
 
 from . import conf
 from .base import Common, Struct
 from .exceptions import *
 from .functions import (combined_hash, classification_hierarchy_filters,
-    get_codewords, get_config_hashables, readable_filter)
+    get_codewords, get_config_hashables, readable_filter,
+    get_bowcode_from_surf_features)
 import nbclassify.db as db
 
 class PhenotypeCache(object):
@@ -329,7 +332,7 @@ class Phenotyper(object):
 
         * Resizing
         * Color correction
-        * Segmentation
+        * Segmentation or cropping
 
         This method is executed by :meth:`make`.
         """
@@ -406,6 +409,60 @@ class Phenotyper(object):
                     os.makedirs(out_dir)
 
                 cv2.imwrite(out_path, img_masked)
+        else:
+            # Crop image in stead of segmenting.
+            try:
+                crop = self.config.preprocess.crop
+            except:
+                crop = {}
+
+            if crop:
+                logging.info("Cropping image...")
+                roi_pix = getattr(crop, 'roi_pix', None)
+                roi_frac = getattr(crop, 'roi_frac', None)
+                if roi_pix:
+                    # roi_pix is like (x, y, w, h) in pixel units.
+                    if len(roi_pix) != 4:
+                        raise ValueError(
+                            "roi_pix must be a list of four integers.")
+                    for x in roi_pix:
+                        if not (isinstance(x, int) and x >= 0):
+                            raise ValueError(
+                                "roi_pix must be a (x, y, w, h) tuple "
+                                "of integers.")
+                    self.roi = roi_pix
+                elif roi_frac:
+                    # roi_frac is like (x1, x2, y1, y2) in fractions
+                    # of total img size.
+                    if len(roi_frac) != 4:
+                        raise ValueError(
+                            "roi_frac must be a list of four floats.")
+                    for x in roi_frac:
+                        if not 0 <= x <= 1:
+                            raise ValueError(
+                                "roi_frac must be a (x1, x2, y1, y2) tuple, "
+                                "where the values are floats between 0 and 1.")
+                    if not (roi_frac[0] < roi_frac[1] and
+                            roi_frac[2] < roi_frac[3]):
+                        raise ValueError(
+                            "roi_frac must be a (x1, x2, y1, y2) tuple, "
+                            "where x1 < x2 and y1 < y2.")
+                    # Make ROI like (x, y, w, h).
+                    self.roi = (int(self.img.shape[1] * roi_frac[0]),
+                                int(self.img.shape[0] * roi_frac[2]),
+                                int(self.img.shape[1] * roi_frac[1]) -
+                                int(self.img.shape[1] * roi_frac[0]),
+                                int(self.img.shape[0] * roi_frac[3]) -
+                                int(self.img.shape[0] * roi_frac[2]))
+                else:
+                    logging.warning("No ROI for cropping found. Proceed "
+                                    "without cropping.")
+                    self.roi = (0, 0, self.img.shape[1], self.img.shape[0])
+
+                # Crop image to given ROI.
+                self.img = self.img[self.roi[1]: self.roi[1] + self.roi[3],
+                                    self.roi[0]: self.roi[0] + self.roi[2]]
+
 
     def make(self):
         """Return the phenotype for the loaded image.
@@ -447,6 +504,11 @@ class Phenotyper(object):
             elif name == 'shape_360':
                 logging.info("- Running shape:360...")
                 data = self.__get_shape_360(args, self.bin_mask)
+                phenotype.extend(data)
+
+            elif name == 'surf':
+                logging.info("- Running feature:surf...")
+                data = self.__get_surf_features(args, self.img)
                 phenotype.extend(data)
 
             else:
@@ -629,6 +691,33 @@ class Phenotyper(object):
         means_sds = np.array(zip(means, sds)).flatten()
 
         return np.append(means_sds, histograms)
+
+    def __get_surf_features(self, args, src):
+        """Executes :meth:`features.surf`."""
+        threshVal = getattr(args, 'thresholdVal', None)
+        maxVal = getattr(args, 'maxVal', None)
+        ht = getattr(args, 'HessianThreshold', 400)
+        mask = getattr(args, 'mask', None)
+
+        if type(src) == np.ndarray:
+            # Convert img to grayscale if it is in color.
+            if len(src.shape) == 3:
+                img_gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+            else:
+                img_gray = src
+
+            # Truncate img if preferred.
+            if threshVal and maxVal:
+                ret, thresh = cv2.threshold(img_gray, threshVal, maxVal,
+                                        cv2.THRESH_TRUNC)
+            else:
+                thresh = img_gray
+
+            # Get keypoints and descriptors from the SURF features.
+            _kp, des = ft.surf_features(thresh, ht, mask)
+
+            return des
+
 
 class TrainData(object):
 
@@ -889,6 +978,12 @@ class MakeTrainData(Common):
         # Load the fingerprint cache.
         self.cache.load_cache(self.cache_path, config)
 
+        # Check if the BagOfWords alogrithm needs to be applied.
+        use_bow = getattr(self.config.features['surf'], 'bow_clusters', False)
+        if use_bow:
+            codebook = self.__make_codebook(images, filename)
+
+
         # Generate the training data.
         with open(filename, 'w') as fh:
             # Write the header.
@@ -908,6 +1003,12 @@ class MakeTrainData(Common):
                 # Get phenotype for this image from the cache.
                 phenotype = self.cache.get_phenotype(photo.md5sum)
 
+                # If the BagOfWords algorithm is applied,
+                # convert phenotype to BOW-code.
+                if use_bow:
+                    phenotype = get_bowcode_from_surf_features(phenotype,
+                                                               codebook)
+
                 assert len(phenotype) == len(header_data), \
                     "Fingerprint size mismatch. According to the header " \
                     "there are {0} data columns, but the fingerprint has " \
@@ -921,8 +1022,9 @@ class MakeTrainData(Common):
             if not training_data:
                 raise ValueError("Training data cannot be empty")
 
-            # Round feature data.
-            training_data.round_input(6)
+            # Round feature data only if BOW is not applied.
+            if not use_bow:
+                training_data.round_input(6)
 
             # Write data rows.
             for photo_id, input_, output in training_data:
@@ -986,6 +1088,15 @@ class MakeTrainData(Common):
                                     for k in range(1, bins[j]+1):
                                         data.append("360:%d.%s:%d" % (i,color,k))
 
+            if feature == 'surf':
+                try:
+                    n_clusters = int(getattr(args, 'bow_clusters', None))
+                except ValueError:
+                    n_clusters = 150
+                for i in range(1, n_clusters+1):
+                    data.append("CL%d" % i)
+
+
         # Write classification columns.
         try:
             out_prefix = self.config.data.dependent_prefix
@@ -996,6 +1107,53 @@ class MakeTrainData(Common):
             out.append("%s%d" % (out_prefix, i))
 
         return (data, out)
+
+    def __make_codebook(self, images, filename):
+        # Create nparray with all descriptors of the SURF features.
+        descr_array = np.zeros((len(images) * 1000, 128))
+        position = 0
+        for photo, class_ in images:
+            # Only export the subset if an export subset is set.
+            if self.subset and photo.id not in self.subset:
+                continue
+
+            # Get descriptors for this image from the cache.
+            descriptors = self.cache.get_phenotype(photo.md5sum)
+
+            # Add descriptors to nparray.
+            n_features = descriptors.shape[0]
+            while position + n_features > descr_array.shape[0]:
+                elongation = np.zeros_like(descr_array)
+                descr_array = np.vstack((descr_array, elongation))
+            descr_array[position: position + n_features] = descriptors
+            position += n_features
+
+        # Adjust size of nparray to number of descriptors.
+        descr_array = np.resize(descr_array, (position, 128))
+
+        try:
+            n_clusters = int(getattr(self.config.features['surf'],
+                                     'bow_clusters', None))
+        except ValueError:
+            logging.warning("No (valid) value for bow_clusters is set in "
+                            "configurations. Default 150 will be used.")
+            n_clusters = 150
+
+        logging.info("%d extracted features will now be clustered into "
+                     "%d clusters to create a codebook (this will take "
+                     "a while)...", descr_array.shape[0], n_clusters)
+
+        codebook, _distortion = vq.kmeans(descr_array, n_clusters)
+
+        # Save the codebook.
+        codebookfilename = filename + "_codebook.file"
+        with open(codebookfilename, "wb") as f:
+            dump(codebook, f, protocol=HIGHEST_PROTOCOL)
+
+        logging.info("Codebook created and saved to %s", codebookfilename)
+
+        return codebook
+
 
 class BatchMakeTrainData(MakeTrainData):
 
