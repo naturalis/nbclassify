@@ -350,7 +350,7 @@ class ImageHarvester(object):
     
                 # Construct the save path for the photo.
                 photo_dir = ""
-                for rank in self.ranks:
+                for rank in ('genus', 'species'):
                   if rank in taxa:
                     photo_dir = os.path.join(photo_dir, taxa[rank])
     
