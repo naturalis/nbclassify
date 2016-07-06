@@ -8,6 +8,9 @@ import os
 import shutil
 import tempfile
 
+import numpy as np
+import scipy.cluster.vq as vq
+
 import yaml
 
 def classification_hierarchy_filters(levels, hr, path=[]):
@@ -316,6 +319,18 @@ def singleton(cls):
             instances[cls] = cls()
         return instances[cls]
     return get_instance
+
+def get_bowcode_from_surf_features(surf_features, codebook):
+    """Return the BagOfWords code of SURF features.
+
+    The codebook contains clustered SURF features.
+    A list of the corresponding clusters of the given
+    surf_features is returned.
+    """
+    code, _dist = vq.vq(surf_features, codebook)
+    word_hist, _bin_edges = np.histogram(
+        code, bins=range(codebook.shape[0] + 1), normed=True)
+    return list(word_hist)
 
 
 class Struct(Namespace):
