@@ -7,13 +7,15 @@ import logging
 import os
 import sys
 
+from cPickle import load
 from pyfann import libfann
 
 from .base import Common
 from .data import Phenotyper
 from .exceptions import *
 from .functions import (combined_hash, get_childs_from_hierarchy,
-    get_classification, get_codewords, get_config_hashables)
+    get_classification, get_codewords, get_config_hashables,
+                        get_bowcode_from_surf_features)
 
 class ImageClassifier(Common):
 
@@ -57,12 +59,13 @@ class ImageClassifier(Common):
         """Return the list of level names from the classification hierarchy."""
         return [l.name for l in self.class_hr]
 
-    def classify_image(self, im_path, ann_path, config):
+    def classify_image(self, im_path, ann_path, config, codebookfile=None):
         """Classify an image file and return the codeword.
 
         Preprocess and extract features from the image `im_path` as defined
         in the configuration object `config`, and use the features as input
         for the neural network `ann_path` to obtain a codeword.
+        If necessary the 'codebookfile' is used to create the codeword.
         """
         if not os.path.isfile(im_path):
             raise IOError("Cannot open %s (no such file)" % im_path)
@@ -72,6 +75,8 @@ class ImageClassifier(Common):
             raise ConfigurationError("preprocess settings not set")
         if 'features' not in config:
             raise ConfigurationError("features settings not set")
+        if codebookfile and not os.path.isfile(codebookfile):
+            raise IOError("Cannot open %s (no such file)" % codebookfile)
 
         ann = libfann.neural_net()
         ann.create_from_file(str(ann_path))
@@ -101,13 +106,20 @@ class ImageClassifier(Common):
             # Cache the phenotypes, in case they are needed again.
             self.cache[hash_] = phenotype
 
+            # Convert phenotype to BagOfWords-code if necessary.
+            use_bow = getattr(config.features['surf'], 'bow_clusters', False)
+            if use_bow:
+                with open(codebookfile, "rb") as cb:
+                    codebook = load(cb)
+                phenotype = get_bowcode_from_surf_features(phenotype, codebook)
+
         logging.debug("Using ANN `%s`" % ann_path)
         codeword = ann.run(phenotype)
 
         return codeword
 
     def classify_with_hierarchy(self, image_path, ann_base_path=".",
-                                path=[], path_error=[]):
+                                path=[], path_error=[], codebookfile=None):
         """Start recursive classification.
 
         Classify the image `image_path` with neural networks from the
@@ -166,7 +178,8 @@ class ImageClassifier(Common):
 
             # Classify the image and obtain the codeword.
             ann_path = os.path.join(ann_base_path, ann_file)
-            codeword = self.classify_image(image_path, ann_path, conf)
+            codeword = self.classify_image(image_path, ann_path,
+                                           conf, codebookfile)
 
             # Set the maximum classification error for this level.
             try:
@@ -208,7 +221,7 @@ class ImageClassifier(Common):
         for class_, mse in zip(classes, class_errors):
             # Recurse into lower hierarchy levels.
             paths_, paths_errors_ = self.classify_with_hierarchy(image_path,
-                ann_base_path, path+[class_], path_error+[mse])
+                ann_base_path, path+[class_], path_error+[mse], codebookfile)
 
             # Keep a list of each classification path and their
             # corresponding errors.
