@@ -155,11 +155,18 @@ class Validator(Common):
             tester.test_with_hierarchy(test_dir, ann_dir)
             tester.export_hierarchy_results(test_result)
 
-            level_filters = (
-                ['genus'],
-                ['genus','section'],
-                ['genus','section','species']
-            )
+            # List all level combinations.
+            try:
+                class_hr = self.config.classification.hierarchy
+                hr = [level.name for level in class_hr]
+            except:
+                raise ConfigurationError("classification hierarchy not set")
+            level_filters = []
+            ranks = []
+            for i in range(len(hr)):
+                ranks.append(hr[i])
+                level_filters.append(ranks)
+            level_filters = tuple(level_filters)
 
             for filter_ in level_filters:
                 correct, total = tester.get_correct_count(filter_)
