@@ -303,8 +303,14 @@ def main():
         "image",
         metavar="IMAGE_FILE",
         help="Path to image file to be classified.")
+    parser_classify.add_argument(
+        "--codebook",
+        "-cb",
+        metavar="FILE",
+        default=None,
+        help="Path to the codebookfile of the SURF features.")
 
-    # Create an argument parser for sub-command 'classify'.
+    # Create an argument parser for sub-command 'validate'.
     help_validate = """Test the performance of trained neural networks.
 
     Performs stratified K-fold cross validation.
@@ -513,6 +519,11 @@ def classify(config, meta_path, args):
     except:
         raise ConfigurationError("The classification filter is not set")
 
+    # If the BagOfWords algorithm was applied to the data used to
+    # train the ann, the corresponding codebook is necessary.
+    if args.codebook and not os.path.isfile(args.codebook):
+        raise IOError("Cannot open %s (no such directory)" % args.codebook)
+
     with session_scope(meta_path) as (session, metadata):
         classes = get_classes_from_filter(session, metadata, filter_)
         if not classes:
@@ -520,7 +531,8 @@ def classify(config, meta_path, args):
         codewords = get_codewords(classes)
 
         classifier = ImageClassifier(config)
-        codeword = classifier.classify_image(args.image, args.ann, config)
+        codeword = classifier.classify_image(args.image, args.ann,
+                                             config, args.codebook)
         classification = get_classification(codewords, codeword, args.error)
 
     class_ = [class_ for mse,class_ in classification]
