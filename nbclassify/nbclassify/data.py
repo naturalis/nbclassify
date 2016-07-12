@@ -223,6 +223,7 @@ class Phenotyper(object):
         image processing. The ROI must be a 4-tuple ``(y,y2,x,x2)``. Image
         related attributes are reset. Returns the image object.
         """
+        logging.info("Setting image...")
         self.img = cv2.imread(path)
         if self.img is None or self.img.size == 0:
             raise IOError("Failed to read image %s" % path)
@@ -239,6 +240,8 @@ class Phenotyper(object):
         self.path = path
         self.mask = None
         self.bin_mask = None
+        
+        logging.info("Image set.")
 
         return self.img
 
