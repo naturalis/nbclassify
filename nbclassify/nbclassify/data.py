@@ -163,6 +163,9 @@ class PhenotypeCache(object):
                     continue
 
                 logging.info("Processing photo %s...", photo.id)
+                
+                logging.info("image_dir: %s", image_dir)
+                logging.info("photo.path: %s", photo.path)
 
                 # Extract a feature and cache it.
                 im_path = os.path.join(image_dir, photo.path)
