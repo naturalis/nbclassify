@@ -162,7 +162,9 @@ class PhenotypeCache(object):
                 if not update and str(photo.md5sum) in cache:
                     continue
                 
+                logging.info("test1")
                 logging.info("photo.id: %s", photo.id)
+                logging.info("test2")
 
                 logging.info("Processing photo %s...", photo.id)
                 
