@@ -336,9 +336,12 @@ class Phenotyper(object):
 
         This method is executed by :meth:`make`.
         """
+        logging.info("Start preprocessing...")
+        
         if self.img is None:
             raise RuntimeError("No image is loaded")
         if 'preprocess' not in self.config:
+            logging.info("Skip preprocessing...")
             return
 
         # Scale the image down if its perimeter (width+height) exceeds the
@@ -365,6 +368,7 @@ class Phenotyper(object):
         color_enhancement = getattr(self.config.preprocess,
             'color_enhancement', None)
         if color_enhancement:
+            logging.info("Preprocess: color_enhancement...")
             for method, args in vars(color_enhancement).iteritems():
                 if method == 'naik_murthy_linear':
                     logging.info("Color enhancement...")
@@ -462,6 +466,7 @@ class Phenotyper(object):
                 # Crop image to given ROI.
                 self.img = self.img[self.roi[1]: self.roi[1] + self.roi[3],
                                     self.roi[0]: self.roi[0] + self.roi[2]]
+        logging.info("Preprocessing done.")
 
 
     def make(self):
