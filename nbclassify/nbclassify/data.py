@@ -1134,6 +1134,9 @@ class MakeTrainData(Common):
 
             # Get descriptors for this image from the cache.
             descriptors = self.cache.get_phenotype(photo.md5sum)
+            
+            # Convert list to nparray.
+            descriptors = np.asarray(descriptors)
 
             # Add descriptors to nparray.
             n_features = descriptors.shape[0]
