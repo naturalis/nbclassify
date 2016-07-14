@@ -654,11 +654,15 @@ class MakeMeta(object):
             path_rel = re.sub(self.image_dir, "", path)
             if path_rel.startswith(os.sep):
                 path_rel = path_rel[1:]
-
-            # Save the meta data.
-            insert_new_photo(session, metadata,
-                root=self.image_dir,
-                path=path_rel,
-                taxa=classes)
+            
+            if type(cv2.imread(path)) == np.ndarray:
+                # Save the meta data only if it is an image.
+                insert_new_photo(session, metadata,
+                    root=self.image_dir,
+                    path=path_rel,
+                    taxa=classes)
+            else:
+                sys.stdout.write("%s is not an image: will be skipped.\n" % path)
+                continue
 
         sys.stdout.write("Done\n")
