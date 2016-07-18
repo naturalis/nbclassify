@@ -161,16 +161,9 @@ class PhenotypeCache(object):
                 # update is set to True.
                 if not update and str(photo.md5sum) in cache:
                     continue
-                
-                logging.info("test1")
-                logging.info("photo.id: %s", photo.id)
-                logging.info("test2")
 
                 logging.info("Processing photo %s...", photo.id)
                 
-                logging.info("image_dir: %s", image_dir)
-                logging.info("photo.path: %s", photo.path)
-
                 # Extract a feature and cache it.
                 im_path = os.path.join(image_dir, photo.path)
                 phenotyper.set_image(im_path)
@@ -230,7 +223,6 @@ class Phenotyper(object):
         image processing. The ROI must be a 4-tuple ``(y,y2,x,x2)``. Image
         related attributes are reset. Returns the image object.
         """
-        logging.info("Setting image...")
         self.img = cv2.imread(path)
         if self.img is None or self.img.size == 0:
             raise IOError("Failed to read image %s" % path)
@@ -247,8 +239,6 @@ class Phenotyper(object):
         self.path = path
         self.mask = None
         self.bin_mask = None
-        
-        logging.info("Image set.")
 
         return self.img
 
@@ -346,12 +336,9 @@ class Phenotyper(object):
 
         This method is executed by :meth:`make`.
         """
-        logging.info("Start preprocessing...")
-        
         if self.img is None:
             raise RuntimeError("No image is loaded")
         if 'preprocess' not in self.config:
-            logging.info("Skip preprocessing...")
             return
 
         # Scale the image down if its perimeter (width+height) exceeds the
@@ -378,7 +365,6 @@ class Phenotyper(object):
         color_enhancement = getattr(self.config.preprocess,
             'color_enhancement', None)
         if color_enhancement:
-            logging.info("Preprocess: color_enhancement...")
             for method, args in vars(color_enhancement).iteritems():
                 if method == 'naik_murthy_linear':
                     logging.info("Color enhancement...")
@@ -476,8 +462,6 @@ class Phenotyper(object):
                 # Crop image to given ROI.
                 self.img = self.img[self.roi[1]: self.roi[1] + self.roi[3],
                                     self.roi[0]: self.roi[0] + self.roi[2]]
-        logging.info("Preprocessing done.")
-
 
     def make(self):
         """Return the phenotype for the loaded image.
@@ -1160,8 +1144,23 @@ class MakeTrainData(Common):
         logging.info("%d extracted features will now be clustered into "
                      "%d clusters to create a codebook (this will take "
                      "a while)...", descr_array.shape[0], n_clusters)
-
+                     
+        start = datetime.datetime.now().replace(microsecond=0)
         codebook, _distortion = vq.kmeans(descr_array, n_clusters)
+        end = datetime.datetime.now().replace(microsecond=0)
+        
+        # Check if the length of the codebook is correct.
+        while len(codebook) != n_clusters:
+            time = end - start
+            logging.warning("%d clusters were created in stead of %d. "
+                            "The codebook must be created again. This "
+                            "will probably take the same time as last "
+                            "time: %s (H:M:S), starting at %s", 
+                            len(codebook), n_clusters, time,
+                            datetime.datetime.now().replace(microsecond=0))
+            start = datetime.datetime.now().replace(microsecond=0)
+            codebook, _distortion = vq.kmeans(descr_array, n_clusters)
+            end = datetime.datetime.now().replace(microsecond=0)
 
         # Save the codebook.
         codebookfilename = filename + "_codebook.file"
