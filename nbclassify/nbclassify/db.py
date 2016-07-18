@@ -11,6 +11,7 @@ import os
 import re
 import sys
 
+import cv2
 import sqlalchemy
 from sqlalchemy import Column, ForeignKey, Integer, Sequence, String, \
     UniqueConstraint
