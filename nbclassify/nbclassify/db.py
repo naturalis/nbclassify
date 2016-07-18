@@ -7,6 +7,7 @@ Uses SQLAlchemy for object relational mapping.
 
 from contextlib import contextmanager
 import hashlib
+import numpy as np
 import os
 import re
 import sys
