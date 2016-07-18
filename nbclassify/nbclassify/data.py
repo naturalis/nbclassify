@@ -1143,9 +1143,11 @@ class MakeTrainData(Common):
 
         logging.info("%d extracted features will now be clustered into "
                      "%d clusters to create a codebook (this will take "
-                     "a while)...", descr_array.shape[0], n_clusters)
+                     "a while)...", descr_array.shape[0], 
+                     n_clusters)
                      
         start = datetime.datetime.now().replace(microsecond=0)
+        logging.info("\nStart creating codebook at: %s\n", start)
         codebook, _distortion = vq.kmeans(descr_array, n_clusters)
         end = datetime.datetime.now().replace(microsecond=0)
         
@@ -1161,6 +1163,10 @@ class MakeTrainData(Common):
             start = datetime.datetime.now().replace(microsecond=0)
             codebook, _distortion = vq.kmeans(descr_array, n_clusters)
             end = datetime.datetime.now().replace(microsecond=0)
+        
+        time = end - start
+        logging.info("\nThe codebook was succesfully created! It took %s "
+                     "(H:M:S)\n", time)
 
         # Save the codebook.
         codebookfilename = filename + "_codebook.file"
