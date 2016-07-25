@@ -3,7 +3,7 @@
 """Train data routines."""
 
 from copy import deepcopy
-from cPickle import dump, HIGHEST_PROTOCOL
+from cPickle import dump, load, HIGHEST_PROTOCOL
 import csv
 import datetime
 import logging
