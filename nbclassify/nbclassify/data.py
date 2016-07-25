@@ -922,7 +922,7 @@ class MakeTrainData(Common):
             subset = set(subset)
         self.subset = subset
 
-    def export(self, filename, filter_, config=None):
+    def export(self, filename, filter_, config=None, codebook_file=None):
         """Write the training data to `filename`.
 
         Images to be processed are obtained from the database. Which images are
@@ -980,8 +980,11 @@ class MakeTrainData(Common):
 
         # Check if the BagOfWords alogrithm needs to be applied.
         use_bow = getattr(self.config.features['surf'], 'bow_clusters', False)
-        if use_bow:
+        if use_bow and codebook_file == None:
             codebook = self.__make_codebook(images, filename)
+        elif use_bow:
+            with open(codebook_file, "rb") as cb:
+                codebook = load(cb)
 
 
         # Generate the training data.
@@ -1213,7 +1216,7 @@ class BatchMakeTrainData(MakeTrainData):
         if not self.taxon_hr:
             self.taxon_hr = db.get_taxon_hierarchy(session, metadata)
 
-    def batch_export(self, target_dir):
+    def batch_export(self, target_dir, codebook_dir=None):
         """Batch export training data to directory `target_dir`."""
         self._load_taxon_hierarchy()
 
@@ -1225,19 +1228,31 @@ class BatchMakeTrainData(MakeTrainData):
             level = levels.index(filter_.get('class'))
             train_file = os.path.join(target_dir,
                 self.class_hr[level].train_file)
+                    
             config = self.class_hr[level]
+            
+            # Check if a codebook directory is given with existing codebook.
+            codebook_file = ""
+            if codebook_dir:
+                codebook_file = os.path.join(codebook_dir, 
+                    self.class_hr[level].train_file)
 
             # Replace any placeholders in the paths.
             where = filter_.get('where', {})
             for key, val in where.items():
                 val = val if val is not None else '_'
                 train_file = train_file.replace("__%s__" % key, val)
+                codebook_file = codebook_file.replace("__%s__" % key, val)
+            
+            codebook_file = codebook_file + "_codebook.file"
+            if not os.path.isfile(codebook_file):
+                codebook_file = None
 
             # Generate and export the training data.
             logging.info("Exporting train data for classification on %s" % \
                 readable_filter(filter_))
             try:
-                self.export(train_file, filter_, config)
+                self.export(train_file, filter_, config, codebook_file)
             except FileExistsError as e:
                 # Don't export if the file already exists.
                 logging.warning("Skipping: %s" % e)
