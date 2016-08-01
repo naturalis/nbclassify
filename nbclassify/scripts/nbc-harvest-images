@@ -117,6 +117,14 @@ def main():
         type=int,
         help="Number of photos to return per page. If this argument is " \
         "omitted, it defaults to 100. The maximum allowed value is 500.")
+    parser_harvest.add_arguemnt(
+        "--save_mode",
+        metavar="MODE",
+        default='g-s',
+        choices=['all', 'g-s'],
+        help="Mode of how to save the images: only Genus-species directories (g-s) "\
+        "or all possible levels of taxonomy (all). Defaults to Genus-species if "\
+        "omitted.")
     parser_harvest.add_argument(
         "imdir",
         metavar="PATH",
@@ -350,7 +358,12 @@ class ImageHarvester(object):
     
                 # Construct the save path for the photo.
                 photo_dir = ""
-                for rank in ('genus', 'species'):
+                if args.save_mode == 'all':
+                  save_ranks = self.ranks
+                else:
+                  save_ranks = ('genus', 'species')
+                
+                for rank in save_ranks:
                   if rank in taxa:
                     photo_dir = os.path.join(photo_dir, taxa[rank])
     
