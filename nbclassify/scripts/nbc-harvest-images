@@ -117,7 +117,7 @@ def main():
         type=int,
         help="Number of photos to return per page. If this argument is " \
         "omitted, it defaults to 100. The maximum allowed value is 500.")
-    parser_harvest.add_arguemnt(
+    parser_harvest.add_argument(
         "--save_mode",
         metavar="MODE",
         default='g-s',
