@@ -676,5 +676,5 @@ class MakeMeta(object):
             else:
                 sys.stdout.write("%s is not an image: will be skipped.\n" % path)
                 continue
-
+        sys.stdout.write("\nCHECK!\n")
         sys.stdout.write("Done\n")
