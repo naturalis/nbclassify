@@ -238,23 +238,32 @@ def insert_new_photo(session, metadata, root, path, update=False, **kwargs):
     description = None
     taxa = {}
     tags = []
+    sys.stdout.write("\nSTART CHECKING KWARGS\n")
     for key, val in kwargs.items():
         if val is None:
+            sys.stdout.write("\nVAL = NONE\n")
             continue
 
         if key == 'id':
+            sys.stdout.write("\nKEY = ID\n")
             photo_id = int(val)
         elif key == 'title':
+            sys.stdout.write("\nKEY = TITLE\n")
             title = val
         elif key == 'description':
+            sys.stdout.write("\nKEY = DESCRIPTION\n")
             description = val
         elif key == 'taxa':
+            sys.stdout.write("\nKEY=TAXA\n")
             taxa = dict(val)
         elif key == 'tags':
+            sys.stdout.write("\nKEY=TAGS\n")
             tags = list(val)
         else:
+            sys.stdout.write("\nUNKNOWN KEY\n")
             ValueError("Unknown keyword argument `%s`" % key)
-
+    sys.stdout.write("\nEND CHECKING KWARGS\n")
+    
     # Get the database models.
     Base = automap_base(metadata=metadata)
     Base.prepare()
