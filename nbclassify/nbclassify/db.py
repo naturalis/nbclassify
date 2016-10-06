@@ -662,7 +662,8 @@ class MakeMeta(object):
                 insert_new_photo(session, metadata,
                     root=self.image_dir,
                     path=path_rel,
-                    taxa=classes)
+                    taxa=classes,
+                    title=path_rel)
             else:
                 sys.stdout.write("%s is not an image: will be skipped.\n" % path)
                 continue
