@@ -549,8 +549,8 @@ class TestAnn(Common):
             codewords = get_codewords(classes)
 
             # Load the ANN.
+            ann = libfann.neural_net()
             if len(classes) > 1:
-                ann = libfann.neural_net()
                 ann.create_from_file(str(ann_file))
 
             # Load the test data.
@@ -575,6 +575,11 @@ class TestAnn(Common):
                 except:
                     raise RuntimeError("Failed to obtain the photo ID from " \
                         "the sample label")
+                
+                # Save the classification at each level.
+                if level_n == 0:
+                    self.classifications[photo_id] = {}
+                    self.classifications_expected[photo_id] = {}
 
                 # Skip classification if there is only one class for this
                 # filter.
@@ -602,10 +607,6 @@ class TestAnn(Common):
                 class_ann = [class_ for mse,class_ in class_ann]
 
                 # Save the classification at each level.
-                if level_n == 0:
-                    self.classifications[photo_id] = {}
-                    self.classifications_expected[photo_id] = {}
-
                 self.classifications[photo_id][level_name] = class_ann
                 self.classifications_expected[photo_id][level_name] = class_expected
 
