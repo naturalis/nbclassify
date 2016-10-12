@@ -14,6 +14,7 @@ See the --help option for any of these subcommands for more information.
 """
 
 import argparse
+import datetime
 import hashlib
 import logging
 import mimetypes
@@ -174,11 +175,18 @@ def main():
             if key in ranks:
                 required_ranks.append(key)
     db.conf.required_ranks = tuple(required_ranks)
+    
+    start = datetime.datetime.now().replace(microsecond=0)
+    sys.stderr.write("Start at: %s\n" % start)
 
     if args.task == 'harvest':
         harvest(meta_path, args)
     elif args.task == 'cleanup':
         cleanup(meta_path, args)
+    
+    end = datetime.datetime.now().replace(microsecond=0)
+    sys.stderr.write("Finished at: %s\n" % end)
+    sys.stderr.write("Duration: %s\n" % (end-start))
 
 def harvest(meta_path, args):
     """Run the image harvester."""
@@ -334,10 +342,12 @@ class ImageHarvester(object):
             
             n_photos = len(photos)
             if n_photos > 0:
-                sys.stderr.write("Going to process %s photos...\n" % n_photos)
+                sys.stderr.write("Going to process %s photos on page %d...\n" % (n_photos, pagenr))
 
             # Download each photo and set meta data in the database.
             for n, photo in enumerate(photos, start=1):
+                if (n+1) % 10 == 0:
+                    sys.stderr.write("Processing photo %d/%d...\n" % ((n+1), n_photos))
                 photo_id = int(photo.get('id'))
                 info = self.flickr.execute('photos.getInfo', photo_id=photo_id)
                 if info is False:
