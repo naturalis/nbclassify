@@ -550,7 +550,10 @@ class Phenotyper(object):
 
     def __get_color_bgr_means(self, src, args, bin_mask=None):
         """Executes :meth:`features.color_bgr_means`."""
-        if self.bin_mask is None:
+        segmentation = getattr(self.config.preprocess, 'segmentation', False)
+        if not segmentation:
+            bin_mask = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+        if bin_mask is None:
             raise ValueError("Binary mask cannot be None")
 
         # Get the contours from the mask.
@@ -967,10 +970,6 @@ class MakeTrainData(Common):
         # Make a codeword for each class.
         codewords = get_codewords(classes)
 
-        # Construct the header.
-        header_data, header_out = self.__make_header(len(classes))
-        header = ["ID"] + header_data + header_out
-
         # Get the configurations.
         if not config:
             config = self.config
@@ -979,13 +978,23 @@ class MakeTrainData(Common):
         self.cache.load_cache(self.cache_path, config)
 
         # Check if the BagOfWords alogrithm needs to be applied.
-        use_bow = getattr(self.config.features['surf'], 'bow_clusters', False)
+        use_bow = False
+        for name in sorted(vars(self.config.features).keys()):
+            if name == 'surf':
+                use_bow = True
         if use_bow and codebook_file == None:
             codebook = self.__make_codebook(images, filename)
         elif use_bow:
             with open(codebook_file, "rb") as cb:
                 codebook = load(cb)
 
+        # Construct the header.
+        if use_bow:
+            n_clusters = len(codebook)
+        else:
+            n_clusters = None
+        header_data, header_out = self.__make_header(len(classes), n_clusters)
+        header = ["ID"] + header_data + header_out
 
         # Generate the training data.
         with open(filename, 'w') as fh:
@@ -1007,10 +1016,29 @@ class MakeTrainData(Common):
                 phenotype = self.cache.get_phenotype(photo.md5sum)
 
                 # If the BagOfWords algorithm is applied,
-                # convert phenotype to BOW-code.
+                # convert phenotype of SURF features to BOW-code.
                 if use_bow:
-                    phenotype = get_bowcode_from_surf_features(phenotype,
+                    surf_feat = []
+                    bgr_feat = []
+                    surf_locations = []
+                    bgr_locations = []
+                    for featnr in range(len(phenotype)):
+                        # Check if phenotype is created with SURF or BGR.
+                        if phenotype[featnr].shape == (128,):
+                            surf_locations.append(featnr)
+                            surf_feat.append(phenotype[featnr])
+                        else:
+                            bgr_locations.append(featnr)
+                            bgr_feat.append(phenotype[featnr])
+
+                    bowcode = get_bowcode_from_surf_features(surf_feat,
                                                                codebook)
+                    if 0 in bgr_locations:
+                        phenotype = list(bgr_feat)
+                        phenotype.extend(bowcode)
+                    else:
+                        phenotype = list(bowcode)
+                        phenotype.extend(bgr_feat)
 
                 assert len(phenotype) == len(header_data), \
                     "Fingerprint size mismatch. According to the header " \
@@ -1038,7 +1066,7 @@ class MakeTrainData(Common):
 
         logging.info("Training data written to %s", filename)
 
-    def __make_header(self, n_out):
+    def __make_header(self, n_out, n_clusters):
         """Construct a header from features settings.
 
         Header is returned as a 2-tuple ``(data_columns, output_columns)``.
@@ -1092,10 +1120,6 @@ class MakeTrainData(Common):
                                         data.append("360:%d.%s:%d" % (i,color,k))
 
             if feature == 'surf':
-                try:
-                    n_clusters = int(getattr(args, 'bow_clusters', None))
-                except ValueError:
-                    n_clusters = 150
                 for i in range(1, n_clusters+1):
                     data.append("CL%d" % i)
 
@@ -1124,7 +1148,11 @@ class MakeTrainData(Common):
             descriptors = self.cache.get_phenotype(photo.md5sum)
             
             # Convert list to nparray.
-            descriptors = np.asarray(descriptors)
+            surf_features = []
+            for feat in descriptors:
+		if feat.shape == (128,):
+                    surf_features.append(feat)
+            descriptors = np.asarray(surf_features)
 
             # Add descriptors to nparray.
             n_features = descriptors.shape[0]
@@ -1137,13 +1165,17 @@ class MakeTrainData(Common):
         # Adjust size of nparray to number of descriptors.
         descr_array = np.resize(descr_array, (position, 128))
 
-        try:
-            n_clusters = int(getattr(self.config.features['surf'],
-                                     'bow_clusters', None))
-        except ValueError:
+        # Get number of clusters.
+        bow_clusters = getattr(self.config.features['surf'], 'bow_clusters', None)
+        if str(bow_clusters).isdigit():
+            n_clusters = int(bow_clusters)
+        elif str(bow_clusters).lower() == 'root':
+            n_clusters = int(np.sqrt(descr_array.shape[0]))
+        else:
             logging.warning("No (valid) value for bow_clusters is set in "
-                            "configurations. Default 150 will be used.")
-            n_clusters = 150
+                            "configurations. Default square root of total "
+                            "number of features will be used.")
+            n_clusters = int(np.sqrt(descr_array.shape[0]))
 
         logging.info("%d extracted features will now be clustered into "
                      "%d clusters to create a codebook (this will take "
