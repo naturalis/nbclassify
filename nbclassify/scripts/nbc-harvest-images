@@ -517,7 +517,8 @@ class FlickrDownloader(object):
         self.token = None
         self.frob = None
         self.api = flickrapi.FlickrAPI(key, secret, format='etree')
-
+        self.flickr.authenticate_via_browser(pers='write')
+        """
         # Flickr's two-phase authentication.
         self.token, self.frob = self.api.get_token_part_one(perms='read')
 
@@ -535,6 +536,7 @@ class FlickrDownloader(object):
             raw_input("Press ENTER after you authorized this program")
 
         self.api.get_token_part_two((self.token, self.frob))
+        """
         sys.stderr.write("Flickr authorization success\n")
 
     def execute(self, method, *args, **kwargs):
@@ -546,8 +548,8 @@ class FlickrDownloader(object):
         The Flickr method arguments `api_key` and `user_id` are automatically
         added and can be omitted when calling this method.
         """
-        if self.token is None:
-            raise RuntimeError("Flickr token not set")
+        #if self.token is None:
+        #    raise RuntimeError("Flickr token not set")
         if not isinstance(method, str):
             raise TypeError("Argument `method` must be a string")
         try:
