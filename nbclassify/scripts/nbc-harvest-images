@@ -517,7 +517,7 @@ class FlickrDownloader(object):
         self.token = None
         self.frob = None
         self.api = flickrapi.FlickrAPI(key, secret, format='etree')
-        self.flickr.authenticate_via_browser(pers='write')
+        self.api.authenticate_via_browser(pers='write')
         """
         # Flickr's two-phase authentication.
         self.token, self.frob = self.api.get_token_part_one(perms='read')
