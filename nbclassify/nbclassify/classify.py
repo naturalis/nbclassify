@@ -107,7 +107,10 @@ class ImageClassifier(Common):
             self.cache[hash_] = phenotype
 
             # Convert phenotype to BagOfWords-code if necessary.
-            use_bow = getattr(config.features['surf'], 'bow_clusters', False)
+            use_bow = False
+            for name in sorted(vars(config.features).keys()):
+                if name == 'surf':
+                    use_bow = True
             if use_bow:
                 with open(codebookfile, "rb") as cb:
                     codebook = load(cb)
