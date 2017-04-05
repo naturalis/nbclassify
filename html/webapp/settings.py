@@ -38,7 +38,8 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'sorl.thumbnail',
     'rest_framework',
-    'orchid'
+    'orchid',
+    'sticky_traps',
 )
 
 MIDDLEWARE_CLASSES = (

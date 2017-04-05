@@ -2,6 +2,11 @@
 *.pyc
 *.sqlite3
 .meta.db
+*.py~
+*.html~
+*.js~
+.gitignore~
+
 
 # Where user uploads are stored.
 html/media/
