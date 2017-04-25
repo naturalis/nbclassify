@@ -7,9 +7,11 @@
 <h1>My Photos</h1>
 
 {% if photos %}
-<div <a class="btn btn-primary btn-lg" href="{% url 'sticky_traps:home' %}">
+<div> <a class="btn btn-primary btn-lg sub" href="{% url 'sticky_traps:home' %}">
   Upload more images
 </a></div>
+
+
 <div class="container-fluid" id="my-photos">
     <div class="row">
     {% for photo in photos %}

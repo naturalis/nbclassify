@@ -116,3 +116,5 @@ REST_FRAMEWORK = {
     ],
     'PAGINATE_BY': 30
 }
+
+DATE_INPUT_FORMATS = ('%d-%m-%Y')

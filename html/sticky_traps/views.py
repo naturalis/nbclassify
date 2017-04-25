@@ -9,6 +9,7 @@ from django.core.urlresolvers import reverse
 from django.shortcuts import render, get_object_or_404
 from django.core.context_processors import csrf
 from django.conf import settings
+from django.forms import modelformset_factory
 from nbclassify.classify import ImageClassifier
 from nbclassify.db import session_scope
 from nbclassify.functions import open_config
@@ -16,110 +17,27 @@ from rest_framework import generics, permissions, mixins, viewsets, renderers, s
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 
-from sticky_traps.forms import UploadPictureForm
-from sticky_traps.models import Photo, Identity
-from sticky_traps.serializers import PhotoSerializer, IdentitySerializer
+from sticky_traps.forms import ImageForm, VeldData
+from sticky_traps.models import Photo, Veld
+from sticky_traps.serializers import PhotoSerializer
 
 
 # -----------------------------
 # View sets for the OrchID API
 # -----------------------------
 
-class PhotoViewSet(viewsets.ModelViewSet): #potentially useful for viewing the images uploaded, can be cleaned during second pass.
-    """View, edit, and identify photos."""
-    queryset = Photo.objects.all()
-    serializer_class = PhotoSerializer
-    permission_classes = (permissions.AllowAny,)
-
-    @detail_route(methods=['get','post'])
-    def identify(self, request, *args, **kwargs):
-        """Identify a photo."""
-        photo = self.get_object()
-
-        # If the ROI is set, use that. If no ROI is set, then use the existing
-        # ROI if any. If the ROI is set, but evaluates to False, then set the
-        # ROI to None.
-        roi = request.data.get('roi', photo.roi)
-        if not roi:
-            roi = None
-
-        if photo.roi != roi:
-            photo.roi = roi
-            photo.save()
-
-        # Set the ROI for the classifier.
-        if roi:
-            try:
-                roi = roi.split(',')
-                roi = [int(x) for x in roi]
-                assert len(roi) == 4
-            except:
-                return Response({'roi': "Must be of the format `x,y,width,height`"},
-                    status=status.HTTP_400_BAD_REQUEST)
-
-        # Delete all photo identities, if any.
-        Identity.objects.filter(photo=photo).delete()
-
-        # Classify the photo.
-        config = open_config(CONFIG_FILE)
-        classifier = ImageClassifier(config)
-        classifier.set_roi(roi)
-        classes = classify_image(classifier, photo.image.path, ANN_DIR)
-
-        # Identify this photo.
-        for c in classes:
-            if not c.get('genus'):
-                continue
-
-            id_ = Identity(
-                photo=photo,
-                genus=c.get('genus'),
-                section=c.get('section'),
-                species=c.get('species'),
-                error=c.get('error')
-            )
-
-            # Save the identity into the database.
-            id_.save()
-
-        return self.retrieve(request, *args, **kwargs)
-
-    @detail_route(methods=['get'],
-        renderer_classes=(renderers.JSONRenderer,
-            renderers.BrowsableAPIRenderer))
-    def identities(self, request, *args, **kwargs):
-        """List all identifications made for a photo."""
-        photo = self.get_object()
-        ids = photo.identities.all()
-        serializer = IdentitySerializer(ids, many=True,
-            context={'request': request})
-
-        data = {'identities': serializer.data}
-        return Response(data)
-
-class IdentityViewSet(mixins.RetrieveModelMixin,
-                      mixins.DestroyModelMixin,
-                      mixins.ListModelMixin,
-                      viewsets.GenericViewSet): #not sure what it does specificially, keep it for now.
-    """List and view photo identities."""
-    queryset = Identity.objects.all()
-    serializer_class = IdentitySerializer
-    permission_classes = (permissions.AllowAny,)
-
-    @detail_route(methods=['get'],
-        renderer_classes=(renderers.JSONRenderer,
-        renderers.BrowsableAPIRenderer))
-    def eol(self, request, *args, **kwargs):
-        """Get taxon information from EOL.org."""
-        identity = self.get_object()
-        info = eol_orchid_species_info(str(identity))
-        return Response(info)
+def generate_output(field_id):
+    print(str(field_id))
+    fotos_voor_veld = list(Photo.objects.filter(veld=field_id))
+    alle_fotos = Photo.objects.all()
+    print(alle_fotos)
+    print(fotos_voor_veld)
 
 # --------------------------
 # Standard OrchID views
 # --------------------------
 
-def home(request): #let's keep this one enirely.
+def home(request): #let's keep this one entirely.
     """Display the home page."""
     data = {}
     data.update(csrf(request))
@@ -142,6 +60,48 @@ def home(request): #let's keep this one enirely.
 
     data['form'] = UploadPictureForm()
     return render(request, "sticky_traps/home.html", data)
+
+
+def upload(request):
+
+    data = {}
+    FotoFormSet = modelformset_factory(Photo,
+                                       form=ImageForm, extra=10)
+
+    if request.method == 'POST':
+
+        veld_form = VeldData(request.POST, prefix = 'veld1')
+        foto_form = FotoFormSet(request.POST, request.FILES, queryset=Photo.objects.none(), prefix = "foto's")
+
+        if veld_form.is_valid() and foto_form.is_valid():
+            veld_ingevuld = veld_form.save()
+            for form in foto_form:
+                form.veld=veld_ingevuld.id
+                foto = form.save()
+            field_id = veld_ingevuld.id
+            return HttpResponseRedirect(reverse('sticky_traps:results', args=(field_id,)))
+        else:
+            data['error_message'] = "Het formulier is nog niet goed ingevuld."
+            print veld_form.errors
+            print foto_form.errors
+    else:
+        veld_form = VeldData(prefix = 'veld1')
+        foto_form = FotoFormSet(queryset=Photo.objects.none(), prefix= "foto's")
+
+    data['veld_form'] = veld_form
+    data['foto_form'] = foto_form
+    return render(request, "sticky_traps/upload.html", data)
+
+
+
+def results(request, field_id):
+    velden = Veld.objects.all().values()
+    # print(velden)
+    veld_nummers = Veld.objects.all().values("id")
+    # print(veld_nummers)
+    generate_output(field_id)
+    return render(request, "sticky_traps/results.html")
+
 
 
 def photo(request, photo_id): #is a lot like the previous function, could get rid of either this one or the previous one for now.

@@ -1,10 +1,18 @@
 from django import forms
 
 from sticky_traps.models import Photo
+from sticky_traps.models import Veld
 
-class UploadPictureForm(forms.ModelForm):
-    """Form model for uploading photos."""
+
+
+class VeldData(forms.ModelForm):
 
     class Meta:
+        model = Veld
+        exclude = ()
+
+class ImageForm(forms.ModelForm):
+    
+    class Meta:
         model = Photo
-        exclude = ('roi',)
+        fields = ('foto', 'code' )

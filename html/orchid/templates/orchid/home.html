@@ -21,7 +21,7 @@ form below to upload your photo.</p>
     <div class="alert alert-warning" role="alert"><i class="fa fa-exclamation-circle fa-fw"></i> {{error_message}}</div>
 {% endif %}
 
-<form action="{% url 'sticky_traps:home' %}" method="post" enctype="multipart/form-data">
+<form action="{% url 'orchid:home' %}" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <div class="form-group">
         {{form}}
