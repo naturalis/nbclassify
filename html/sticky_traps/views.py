@@ -28,8 +28,8 @@ from sticky_traps.serializers import PhotoSerializer
 
 def generate_output(field_id):
     print(str(field_id))
-    fotos_voor_veld = list(Photo.objects.filter(veld=field_id))
-    alle_fotos = Photo.objects.all()
+    fotos_voor_veld = list(Photo.objects.filter(veldnr=field_id))
+    alle_fotos = Photo.objects.all().values()
     print(alle_fotos)
     print(fotos_voor_veld)
 
@@ -65,8 +65,7 @@ def home(request): #let's keep this one entirely.
 def upload(request):
 
     data = {}
-    FotoFormSet = modelformset_factory(Photo,
-                                       form=ImageForm, extra=10)
+    FotoFormSet = modelformset_factory(Photo, form=ImageForm, extra=10)
 
     if request.method == 'POST':
 
@@ -75,10 +74,12 @@ def upload(request):
 
         if veld_form.is_valid() and foto_form.is_valid():
             veld_ingevuld = veld_form.save()
-            for form in foto_form:
-                form.veld=veld_ingevuld.id
-                foto = form.save()
             field_id = veld_ingevuld.id
+            for form in foto_form:
+                form.veld_id=field_id
+                foto = form.save()
+                foto.veldnr = field_id
+                foto.save()
             return HttpResponseRedirect(reverse('sticky_traps:results', args=(field_id,)))
         else:
             data['error_message'] = "Het formulier is nog niet goed ingevuld."

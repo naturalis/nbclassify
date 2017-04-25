@@ -72,6 +72,7 @@ class Photo(models.Model):
     """Model for uploaded photos."""
     foto = models.ImageField(upload_to=get_image_path)
     veld = models.ForeignKey(Veld, null=True)
+    veldnr = models.PositiveIntegerField(null=True)
     code = models.CharField(max_length=30)
 
 
@@ -79,7 +80,7 @@ class Photo(models.Model):
         return self.file_name()
 
     def file_name(self):
-        return os.path.basename(self.image.name)
+        return os.path.basename(self.foto.name)
 
     def image_tag(self):
         if self.image:
