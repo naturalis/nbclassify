@@ -1,0 +1,11 @@
+Fotonr	veld	insectoppervlak
+Koning-KG-01a	37	
+Koning-KG-01b	37	
+Koning-KG-02a	37	
+Koning-KG-02b	37	
+Koning-KG-03a	37	
+Koning-KG-03b	37	
+Koning-KG-04a	37	
+Koning-KG-04b	37	
+Koning-KG-05a	37	
+Koning-KG-05b	37	

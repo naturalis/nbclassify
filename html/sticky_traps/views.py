@@ -22,16 +22,33 @@ from sticky_traps.models import Photo, Veld
 from sticky_traps.serializers import PhotoSerializer
 
 
+OUTPUT_VELD = os.path.join(settings.BASE_DIR, 'sticky_traps', 'results', 'veld_data.txt')
+OUTPUT_FOTO = os.path.join(settings.BASE_DIR, 'sticky_traps', 'results', 'foto_data.txt')
+
 # -----------------------------
 # View sets for the OrchID API
 # -----------------------------
 
 def generate_output(field_id):
-    print(str(field_id))
-    fotos_voor_veld = list(Photo.objects.filter(veldnr=field_id))
-    alle_fotos = Photo.objects.all().values()
-    print(alle_fotos)
-    print(fotos_voor_veld)
+
+    fotos_voor_veld = list(Photo.objects.filter(veldnr=field_id).values())
+    Foto_output_file = open(OUTPUT_FOTO, "a+")
+    Veld_output_file = open(OUTPUT_VELD, "a+")
+    for item in fotos_voor_veld:
+        Foto_output_file.write("%s\t%s\t\n"%(item.get('code'), item.get('veldnr')))
+    veld_output = list(Veld.objects.filter(id=field_id).values())[0]
+    veld_object = Veld.objects.get(id=field_id)
+    print veld_object
+    veld_object.Opgeslagen=True
+    veld_object.save()
+    #print(veld_output)
+    Veld_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t\t\t\n" %(
+        veld_output.get('Veld_nummer'), veld_output.get('Breedtegraad'), veld_output.get('Lengtegraad'), veld_output.get('Beheer_type'),
+        veld_output.get('Plaatsings_datum'), veld_output.get('Verwijderings_datum'), veld_output.get('Locatie_binnen_veld'),
+        veld_output.get('Beweiding'), veld_output.get('Maaien'), veld_output.get('Minimale_hoogte_gras'), veld_output.get('Maximale_hoogte_gras'),
+        veld_output.get('Hoeveelheid_biodiversiteit')
+        ))
+
 
 # --------------------------
 # Standard OrchID views
@@ -73,14 +90,17 @@ def upload(request):
         foto_form = FotoFormSet(request.POST, request.FILES, queryset=Photo.objects.none(), prefix = "foto's")
 
         if veld_form.is_valid() and foto_form.is_valid():
-            veld_ingevuld = veld_form.save()
-            field_id = veld_ingevuld.id
-            for form in foto_form:
-                form.veld_id=field_id
-                foto = form.save()
-                foto.veldnr = field_id
-                foto.save()
-            return HttpResponseRedirect(reverse('sticky_traps:results', args=(field_id,)))
+            veldnr=veld_form.cleaned_data['Veld_nummer']
+            if Veld.objects.filter(Veld_nummer=veldnr).exists():
+                data['error_message'] = "De informatie voor dit veld is al eerder ingevuld."
+            else:
+                    veld_ingevuld = veld_form.save()
+                    field_id = veld_ingevuld.id
+                    for form in foto_form:
+                        foto = form.save()
+                        foto.veldnr = field_id
+                        foto.save()
+                    return HttpResponseRedirect(reverse('sticky_traps:results', args=(field_id,)))
         else:
             data['error_message'] = "Het formulier is nog niet goed ingevuld."
             print veld_form.errors
@@ -100,7 +120,12 @@ def results(request, field_id):
     # print(velden)
     veld_nummers = Veld.objects.all().values("id")
     # print(veld_nummers)
-    generate_output(field_id)
+    opgeslagen = list(Veld.objects.filter(id=field_id).values('Opgeslagen'))[0]
+    if opgeslagen.get('Opgeslagen')==False:
+        print "We gaan door met het opslaan van de gegevens"
+        generate_output(field_id)
+    else:
+        print "Dit object is al opgeslagen in de outputbestanden."
     return render(request, "sticky_traps/results.html")
 
 

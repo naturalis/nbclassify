@@ -9,10 +9,10 @@ class VeldData(forms.ModelForm):
 
     class Meta:
         model = Veld
-        exclude = ()
+        exclude = ('Opgeslagen',)
 
 class ImageForm(forms.ModelForm):
-    
+
     class Meta:
         model = Photo
-        fields = ('foto', 'code' )
+        fields = ('foto', 'code', )

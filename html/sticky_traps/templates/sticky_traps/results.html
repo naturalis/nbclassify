@@ -6,5 +6,8 @@
 <p>Dit is de pagina voor de resultaten van de foto's die u geüpload heeft.
 deze pagina is op het moment nog niet functioneel, maar wij werken eraan om dit zo snel mogelijk wel het geval te laten zijn.</p>
 
+{% if error_message %}
+    <div class="alert alert-warning" role="alert"><i class="fa fa-exclamation-circle fa-fw"></i> {{error_message}}</div>
+{% endif %}
 
 {% endblock %}
