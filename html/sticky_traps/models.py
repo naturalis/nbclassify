@@ -29,7 +29,7 @@ def get_image_path(instance, filename):
 
 class Veld(models.Model):
     Opgeslagen = models.BooleanField(default=False)
-    Veld_nummer = models.PositiveIntegerField()
+    Veld_nummer = models.CharField(max_length=50)
     Breedtegraad = models.DecimalField(decimal_places=5, max_digits=10)
     Lengtegraad = models.DecimalField(decimal_places=5, max_digits=10)
     Beheer_type = models.CharField(max_length=50)
