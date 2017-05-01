@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Bag-of-words creator.
 

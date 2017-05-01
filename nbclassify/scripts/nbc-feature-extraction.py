@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Feature extractor with the use of the SURF-algorithm.
 
