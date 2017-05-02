@@ -7,10 +7,12 @@ Uses SQLAlchemy for object relational mapping.
 
 from contextlib import contextmanager
 import hashlib
+import numpy as np
 import os
 import re
 import sys
 
+import cv2
 import sqlalchemy
 from sqlalchemy import Column, ForeignKey, Integer, Sequence, String, \
     UniqueConstraint
@@ -252,7 +254,7 @@ def insert_new_photo(session, metadata, root, path, update=False, **kwargs):
             tags = list(val)
         else:
             ValueError("Unknown keyword argument `%s`" % key)
-
+    
     # Get the database models.
     Base = automap_base(metadata=metadata)
     Base.prepare()
@@ -654,11 +656,15 @@ class MakeMeta(object):
             path_rel = re.sub(self.image_dir, "", path)
             if path_rel.startswith(os.sep):
                 path_rel = path_rel[1:]
-
-            # Save the meta data.
-            insert_new_photo(session, metadata,
-                root=self.image_dir,
-                path=path_rel,
-                taxa=classes)
-
+            
+            if type(cv2.imread(path)) == np.ndarray:
+                # Save the meta data only if it is an image.
+                insert_new_photo(session, metadata,
+                    root=self.image_dir,
+                    path=path_rel,
+                    taxa=classes,
+                    title=path_rel)
+            else:
+                sys.stdout.write("%s is not an image: will be skipped.\n" % path)
+                continue
         sys.stdout.write("Done\n")

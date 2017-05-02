@@ -7,15 +7,17 @@ the ImgPheno_ package) and recognition via artificial neural networks.
 
 This package comes with the following scripts:
 
-* ``nbc-harvest-images.py``: Download images with meta data from a Flickr
+* ``nbc-harvest-images``: Download images with meta data from a Flickr
   account and save them in a directory hierarchy matching the the
   classifications.
 
-* ``nbc-trainer.py``: Extract phenotypes from images, export these to
+* ``nbc-trainer``: Extract phenotypes from images, export these to
   training data, and train artificial neural networks.
 
-* ``nbc-classify.py``: Identify user-submitted images using trained artificial
+* ``nbc-classify``: Identify user-submitted images using trained artificial
   neural networks.
+
+* ``nbc-add-tags``: Add tags from a local spreadsheet file to images on Flickr.
 
 
 Requirements
@@ -39,7 +41,7 @@ This Python package has the following dependencies:
 
   * SQLite (>=3.6.19)
 
-* `Python Flickr API`_
+* `Python Flickr API`_ (1.4.5)
 
 * PyYAML_
 

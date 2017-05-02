@@ -75,8 +75,12 @@ class ConfigManager(object):
         self.required_ranks = ('genus','species')
 
         # Default temporary directory for storing temporary files.
-        self.temp_dir = os.path.join(tempfile.gettempdir(),
+        try:
+            self.temp_dir = os.path.join(tempfile.gettempdir(),
             'nbclassify-{0}'.format(os.getuid()))
+        except AttributeError:
+            self.temp_dir = os.path.join(tempfile.gettempdir(),
+            'nbclassify-{0}'.format(os.environ.get("USERNAME")))
 
     def __getattribute__(self, name):
         try:

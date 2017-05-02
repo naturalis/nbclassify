@@ -14,6 +14,7 @@ See the --help option for any of these subcommands for more information.
 """
 
 import argparse
+import datetime
 import hashlib
 import logging
 import mimetypes
@@ -42,9 +43,6 @@ except IndexError:
 FLICKR_API_KEY = "6ad8fc70959e3c50eff8339287dd38bd"
 FLICKR_API_SECRET = "d7e3a0b378034fa6"
 
-# File name of the meta data file.
-META_FILE = ".meta.db"
-
 def main():
     # Create argument parser.
     parser = argparse.ArgumentParser(description='Flickr image harvester')
@@ -53,6 +51,10 @@ def main():
         "flickr_uid",
         metavar="FLICKR_UID",
         help="The Flickr user ID to harvest photos from (e.g. 123456789@A12)")
+    parser.add_argument(
+        "meta_file",
+        metavar="FILE",
+        help="File name of the meta data file (e.g. meta.db).")
     parser.add_argument(
         "--verbose",
         "-v",
@@ -74,33 +76,60 @@ def main():
     parser_harvest.add_argument(
         "--tags",
         metavar="TAGS",
-        help="A comma-delimited list of tags. Photos with the tags listed " \
+        help="A comma-delimited list of complete tags. Photos with the tags listed "\
         "will be harvested. You can exclude results that match a tag by " \
-        "prepending it with a _ character (e.g. \"foo,_bar\").")
+        "prepending it with a _ character (e.g. 'foo:yes,_bar:no').")
     parser_harvest.add_argument(
-        "--tag-mode",
+        "--tag_mode",
         metavar="MODE",
         default='all',
         help="Either 'any' for an OR combination of tags, or 'all' for an " \
+        "AND combination. Defaults to 'all' if not specified.")
+    parser_harvest.add_argument(
+        "--tag_keys",
+        metavar="KEYS",
+        help="A comma-delimited list of tag-keys (tag = <key>:<value>). "\
+        "Photos with the given keys in the tags, but variable values will be harvested.")
+    parser_harvest.add_argument(
+        "--key_mode",
+        metavar="MODE",
+        default="all",
+        choices=['all', 'any'],
+        help="Either 'any' for an OR combination of tag-keys, or 'all' for an "\
         "AND combination. Defaults to 'all' if not specified.")
     parser_harvest.add_argument(
         "--page",
         metavar="N",
         default=1,
         type=int,
-        help="The page of results to return. If this argument is omitted, " \
+        help="The first pagenumber of results to return. If this argument is omitted, " \
         "it defaults to 1.")
     parser_harvest.add_argument(
-        "--per-page",
+        "--pages",
+        metavar="N",
+        default=1,
+        type=int,
+        help="The number of pages to harvest images from. If this argument is "\
+        "omitted, it defaults to 1. To harvest from all pages, use 0.")
+    parser_harvest.add_argument(
+        "--per_page",
         metavar="N",
         default=100,
         type=int,
         help="Number of photos to return per page. If this argument is " \
         "omitted, it defaults to 100. The maximum allowed value is 500.")
     parser_harvest.add_argument(
+        "--save_mode",
+        metavar="MODE",
+        default='g-s',
+        choices=['all', 'g-s'],
+        help="Mode of how to save the images: only Genus-species directories (g-s) "\
+        "or all possible levels of taxonomy (all). Defaults to Genus-species if "\
+        "omitted.")
+    parser_harvest.add_argument(
         "imdir",
         metavar="PATH",
-        help="Base directory where the Flickr harvested images are stored.")
+        help="Base directory where the Flickr harvested images will be stored.")
 
     help_cleanup = """Clean up your local archive of Flickr harvested images.
     Images that were harvested, but were later removed from Flickr, will also
@@ -129,20 +158,40 @@ def main():
     logging.basicConfig(level=log_level, format='%(levelname)s %(message)s')
 
     # Get path to meta data file.
-    meta_path = os.path.join(args.imdir, META_FILE)
+    meta_path = os.path.join(args.imdir, args.meta_file)
 
     # Make the image directory path absolute.
     args.imdir = os.path.realpath(args.imdir)
+    
+    # Set correct meta data file for database.
+    db.conf.meta_file = args.meta_file
+        
+    # Set correct required ranks for database
+    ranks = ('domain', 'kingdom', 'phylum', 'class', 'order', 'family', 
+        'subfamily', 'tribus', 'genus', 'subgenus', 'section', 'species', 'subspecies')
+    required_ranks = []
+    if args.tag_keys:
+        for key in args.tag_keys.strip().split(","):
+            if key in ranks:
+                required_ranks.append(key)
+    db.conf.required_ranks = tuple(required_ranks)
+    
+    start = datetime.datetime.now().replace(microsecond=0)
+    sys.stderr.write("Start at: %s\n" % start)
 
     if args.task == 'harvest':
         harvest(meta_path, args)
     elif args.task == 'cleanup':
         cleanup(meta_path, args)
+    
+    end = datetime.datetime.now().replace(microsecond=0)
+    sys.stderr.write("Finished at: %s\n" % end)
+    sys.stderr.write("Duration: %s\n" % (end-start))
 
 def harvest(meta_path, args):
     """Run the image harvester."""
     if not (0 < args.per_page <= 500):
-        sys.stderr.write("Incorrect value for option --per-page\n")
+        sys.stderr.write("Incorrect value for option --per_page\n")
         return
 
     # Initialize Flickr downloader.
@@ -168,7 +217,7 @@ def harvest(meta_path, args):
     with db.session_scope(meta_path) as (session, metadata):
         # Download and organize photos.
         harvester = ImageHarvester(flickr, session, metadata)
-        n = harvester.archive_taxon_photos(args.imdir, **search_options)
+        n = harvester.archive_taxon_photos(args.imdir, args, **search_options)
         if n > 0:
             sys.stderr.write("Finished processing %d photos\n" % n)
         else:
@@ -199,14 +248,15 @@ class ImageHarvester(object):
         self.re_filename_replace = re.compile(r'[\s]+')
         self.re_tags_ignore = re.compile(r'vision:')
         self.re_photo_id = re.compile(r'^[0-9]+$')
-        self.re_taxon_tag = re.compile(r'^([a-z]+):([A-Za-z\-]+)$')
+        self.re_taxon_tag = re.compile(r'^([a-z_]+):([A-Za-z0-9 ,.\-\(\)=]+)$')
         self.set_flickr_downloader(flickr)
         self.session = session
         self.metadata = metadata
 
         # Only collect photo taxon information from tags for the following
         # taxonomic ranks.
-        self.ranks = ('genus','section','species')
+        self.ranks = ('domain', 'kingdom', 'phylum', 'class', 'order', 'family', 
+        'subfamily', 'tribus', 'genus', 'subgenus', 'section', 'species', 'subspecies')
 
     def set_flickr_downloader(self, flickr):
         """Set the Flickr downloader."""
@@ -247,7 +297,7 @@ class ImageHarvester(object):
         description = photo_info.find('description')
         description = None if description is None else description.text
         tags = self.flickr_info_get_tags(photo_info)
-        taxa = self.get_taxa_from_tags(tags, self.ranks)
+        taxa, seen = self.get_taxa_from_tags(tags)
 
         # Insert the photo into the database.
         db.insert_new_photo(self.session, self.metadata,
@@ -261,16 +311,15 @@ class ImageHarvester(object):
             taxa=taxa
         )
 
-    def archive_taxon_photos(self, target, **filters):
+    def archive_taxon_photos(self, target, args, **filters):
         """Download photos with taxon tags to a taxonomic directory hierarchy.
 
         Taxon photos are photos with tags with taxonomic information of the
-        format ``rank:name``, where `rank` is either "genus", "section", or
-        "species".
+        format ``rank:name``.
 
         Downloads photos matching Flickr API search criteria set as remaining
-        keyword arguments. Downloaded photos are stored in the following
-        taxonomic directory structure: ``Genus/Section/species`` in the target
+        keyword arguments. Downloaded photos are stored in a taxonomic 
+        directory structure like: ``Genus/Section/species`` in the target
         directory `target`. Photo metadata is automatically stored in a
         database.
 
@@ -278,68 +327,94 @@ class ImageHarvester(object):
         """
         if not os.path.isdir(target):
             raise IOError("Cannot open %s (no such directory)" % target)
+        
+        pagenr = args.page
+        last_page = args.page + 1
+        downloaded = 0
+        
+        # Loop through flickr pages.
+        while pagenr < last_page:
+            filters['page'] = pagenr
+            photos = self.flickr.execute('photos.search', **filters)
+          
+            if photos is False:
+                raise RuntimeError("Failed to obtain photo list from Flickr")
+            
+            n_photos = len(photos)
+            if n_photos > 0:
+                sys.stderr.write("Going to process %s photos on page %d...\n" % (n_photos, pagenr))
 
-        photos = self.flickr.execute('photos.search', **filters)
-        if photos is False:
-            raise RuntimeError("Failed to obtain photo list from Flickr")
+            # Download each photo and set meta data in the database.
+            for n, photo in enumerate(photos, start=1):
+                if (n+1) % 10 == 0:
+                    sys.stderr.write("Processing photo %d/%d...\n" % ((n+1), n_photos))
+                photo_id = int(photo.get('id'))
+                info = self.flickr.execute('photos.getInfo', photo_id=photo_id)
+                if info is False:
+                    raise RuntimeError("Failed to obtain photo info from Flickr")
+    
+                # Get some photo metadata.
+                title = info.find('title')
+                title = None if title is None else title.text
+                tags = self.flickr_info_get_tags(info)
+                taxa, seen = self.get_taxa_from_tags(tags)
+                ext = info.get('originalformat')
+                
+                save = self.check_required_keys(seen, args.tag_keys, args.key_mode)
+                if save == False:
+                    logging.warning("Skipping photo {0} `{1}` because the requested "\
+                    "tagkey is not set".format(photo_id, title))
+                    continue
+    
+                # Construct the save path for the photo.
+                photo_dir = ""
+                if args.save_mode == 'all':
+                  save_ranks = self.ranks
+                else:
+                  save_ranks = ('genus', 'species')
+                
+                for rank in save_ranks:
+                  if rank in taxa:
+                    photo_dir = os.path.join(photo_dir, taxa[rank])
+    
+                filename = "%s.%s" % (photo_id, ext)
+                filename = self.re_filename_replace.sub('-', filename)
+                photo_path = os.path.join(photo_dir, filename)
+    
+                real_photo_dir = os.path.join(target, photo_dir)
+                real_path = os.path.join(real_photo_dir, filename)
+    
+                # Check if the folder exists. If not, create it.
+                if not os.path.exists(real_photo_dir):
+                    logging.info("Creating directory %s", real_photo_dir)
+                    os.makedirs(real_photo_dir)
+    
+                # Download the photo.
+                if not os.path.isfile(real_path):
+                    logging.info("Downloading photo %s `%s` to %s ...",
+                        photo_id, title, real_path)
+                    self.flickr.download_photo(photo_id, real_path)
+                    downloaded += 1
+                else:
+                    logging.info("Photo %s `%s` already exists. Skipping download.",
+                        photo_id, title)
+    
+                # Insert the photo into the database.
+                self.db_insert_photo(info, photo_path, target)
 
-        n_photos = len(photos)
-        if n_photos > 0:
-            sys.stderr.write("Going to process %s photos...\n" % n_photos)
+            
+            # Determine only in the first iteration what the last page will be.
+            if last_page == args.page + 1:
+              if args.pages == 0:
+                  for information in photos.iter("photos"):
+                      last_page = int(information.get("pages")) + 1
+              else:
+                  last_page = args.page + args.pages
+            
+            # Go to the next page
+            pagenr += 1
 
-        # Download each photo and set meta data in the database.
-        n = 0
-        for n, photo in enumerate(photos, start=1):
-            photo_id = int(photo.get('id'))
-            info = self.flickr.execute('photos.getInfo', photo_id=photo_id)
-            if info is False:
-                raise RuntimeError("Failed to obtain photo info from Flickr")
-
-            # Get some photo metadata.
-            title = info.find('title')
-            title = None if title is None else title.text
-            tags = self.flickr_info_get_tags(info)
-            taxa = self.get_taxa_from_tags(tags, self.ranks)
-            ext = info.get('originalformat')
-
-            # Skip if genus or species tag is not set.
-            if not (taxa.get('genus') and taxa.get('species')):
-                logging.warning("Skipping photo {0} `{1}` because the genus or " \
-                    "species tag is not set".format(photo_id, title))
-                continue
-
-            # Construct the save path for the photo.
-            photo_dir = os.path.join(
-                taxa.get('genus', 'None'),
-                taxa.get('section', 'None'),
-                taxa.get('species', 'None')
-            )
-
-            filename = "%s.%s" % (photo_id, ext)
-            filename = self.re_filename_replace.sub('-', filename)
-            photo_path = os.path.join(photo_dir, filename)
-
-            real_photo_dir = os.path.join(target, photo_dir)
-            real_path = os.path.join(real_photo_dir, filename)
-
-            # Check if the folder exists. If not, create it.
-            if not os.path.exists(real_photo_dir):
-                logging.info("Creating directory %s", real_photo_dir)
-                os.makedirs(real_photo_dir)
-
-            # Download the photo.
-            if not os.path.isfile(real_path):
-                logging.info("Downloading photo %s `%s` to %s ...",
-                    photo_id, title, real_path)
-                self.flickr.download_photo(photo_id, real_path)
-            else:
-                logging.info("Photo %s `%s` already exists. Skipping download.",
-                    photo_id, title)
-
-            # Insert the photo into the database.
-            self.db_insert_photo(info, photo_path, target)
-
-        return n
+        return downloaded
 
     def flickr_info_get_tags(self, info):
         """Return a list of the tags from a photo info object."""
@@ -353,28 +428,45 @@ class ImageHarvester(object):
             out.append(raw)
         return out
 
-    def get_taxa_from_tags(self, tags, ranks):
-        """Return a taxa dictionary from a list of tags.
+    def get_taxa_from_tags(self, tags):
+        """Return a taxa dictionary from a list of tags and a list of all tag-keys.
 
         Searches for tags of the format ``key:value``. If the `key` exists in
-        the list of taxonomic ranks `ranks`, then this key-value pair will be
-        present in the returned taxa dictionary.
+        the list of taxonomic ranks `self.ranks`, then this key-value pair will be
+        present in the returned taxa dictionary. Every 'key' will be present in the
+        returned list.
         """
         taxa = {}
         seen = []
         for tag in tags:
             if self.re_taxon_tag.match(tag):
                 rank, taxon = self.re_taxon_tag.search(tag).group(1,2)
-                if rank not in ranks:
-                    continue
-
                 if rank not in seen:
                     seen.append(rank)
                 else:
                     logging.warning("Found multiple taxon tags with rank `%s`",
                         ranks)
+                if rank not in self.ranks:
+                    continue
                 taxa[rank] = taxon
-        return taxa
+        return taxa, seen
+        
+    def check_required_keys(self, seen, keys, mode):
+        """Check if the required keys are set for the photo.
+        
+        If required tag-keys are given ('keys'), there will be checked
+        if all or any (depending on 'mode') of the keys is present
+        in the list of seen tag-keys ('seen'). 
+        
+        Returns False if the requirements are not met, True otherwise.
+        """
+        if keys:
+            for key in keys.strip().split(","):
+                if mode == "all" and key not in seen:
+                    return False
+                elif mode == "any" and key in seen:
+                    return True
+        return True
 
     def remove_unknown_photos(self, path):
         """Remove any photos that do not exist on the Flickr account.
@@ -425,7 +517,8 @@ class FlickrDownloader(object):
         self.token = None
         self.frob = None
         self.api = flickrapi.FlickrAPI(key, secret, format='etree')
-
+        self.api.authenticate_via_browser(perms='write')
+        """
         # Flickr's two-phase authentication.
         self.token, self.frob = self.api.get_token_part_one(perms='read')
 
@@ -443,6 +536,7 @@ class FlickrDownloader(object):
             raw_input("Press ENTER after you authorized this program")
 
         self.api.get_token_part_two((self.token, self.frob))
+        """
         sys.stderr.write("Flickr authorization success\n")
 
     def execute(self, method, *args, **kwargs):
@@ -454,8 +548,8 @@ class FlickrDownloader(object):
         The Flickr method arguments `api_key` and `user_id` are automatically
         added and can be omitted when calling this method.
         """
-        if self.token is None:
-            raise RuntimeError("Flickr token not set")
+        #if self.token is None:
+        #    raise RuntimeError("Flickr token not set")
         if not isinstance(method, str):
             raise TypeError("Argument `method` must be a string")
         try:
