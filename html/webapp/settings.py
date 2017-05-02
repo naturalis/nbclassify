@@ -24,7 +24,8 @@ DEBUG = True
 
 TEMPLATE_DEBUG = True
 
-ALLOWED_HOSTS = []
+# imgrec-dev=145.136.243.86
+ALLOWED_HOSTS = [ '145.136.243.86' ]
 
 
 # Application definition
