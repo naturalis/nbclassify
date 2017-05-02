@@ -105,6 +105,7 @@ class ImageClassifier(Common):
 
         logging.debug("Using ANN `%s`" % ann_path)
         codeword = ann.run(phenotype)
+        logging.debug("Ran the ANN classifier")
 
         return codeword
 
