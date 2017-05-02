@@ -74,7 +74,9 @@ class ImageClassifier(Common):
             raise ConfigurationError("features settings not set")
 
         ann = libfann.neural_net()
+        logging.debug("Instantiated FANN object")
         ann.create_from_file(str(ann_path))
+        logging.debug("Loaded ANN topology from file")
 
         # Get the MD5 hash for the image.
         hasher = hashlib.md5()

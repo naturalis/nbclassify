@@ -3,6 +3,7 @@ import os
 import re
 import urllib
 import urllib2
+import logging
 
 from django.http import HttpResponse, HttpResponseRedirect, Http404, HttpResponseServerError
 from django.core.urlresolvers import reverse
@@ -24,6 +25,13 @@ CONFIG_FILE = os.path.join(settings.BASE_DIR, 'orchid', 'config.yml')
 TAXA_DB = os.path.join(settings.BASE_DIR, 'orchid', 'taxa.db')
 ANN_DIR = os.path.join(settings.BASE_DIR, 'orchid', 'orchid.ann')
 
+# configure logging
+loglevel = logging.WARNING
+if settings.DEBUG:
+    loglevel = logging.DEBUG
+logfrmt = '%(funcName)s [%(lineno)d]: %(levelname)s: %(message)s'
+logging.basicConfig(format=logfrmt, level=loglevel)
+
 # -----------------------------
 # View sets for the OrchID API
 # -----------------------------
@@ -37,7 +45,9 @@ class PhotoViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['get','post'])
     def identify(self, request, *args, **kwargs):
         """Identify a photo."""
+        logging.debug("going to identify photo")
         photo = self.get_object()
+        logging.debug("retrieved object")
 
         # If the ROI is set, use that. If no ROI is set, then use the existing
         # ROI if any. If the ROI is set, but evaluates to False, then set the
@@ -45,10 +55,12 @@ class PhotoViewSet(viewsets.ModelViewSet):
         roi = request.data.get('roi', photo.roi)
         if not roi:
             roi = None
+            logging.debug("no ROI")
 
         if photo.roi != roi:
             photo.roi = roi
             photo.save()
+            logging.debug("stored ROI")
 
         # Set the ROI for the classifier.
         if roi:
@@ -62,12 +74,17 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
         # Delete all photo identities, if any.
         Identity.objects.filter(photo=photo).delete()
+        logging.debug("deleted photo identities")
 
         # Classify the photo.
         config = open_config(CONFIG_FILE)
+        logging.debug("read config file")
         classifier = ImageClassifier(config)
+        logging.debug("instantiated ImageClassifier")
         classifier.set_roi(roi)
+        logging.debug("applied ROI to ImageClassifier")
         classes = classify_image(classifier, photo.image.path, ANN_DIR)
+        logging.debug("received classification")
 
         # Identify this photo.
         for c in classes:
@@ -260,7 +277,7 @@ def get_session_photo_ids(request):
         return []
 
 def classify_image(classifier, image_path, ann_dir):
-    """Classify an image using a classfication hierarchy,
+    """Classify an image using a classification hierarchy,
 
     Arguments are an instance of ImageClassifier `classifier`, file path to
     the image file `image_path`, and the path to the directory containing the
@@ -271,8 +288,9 @@ def classify_image(classifier, image_path, ann_dir):
     maps each rank to the corresponding taxon. An additional key ``error``
     specifies the mean square error for the entire classfication. The
     classifications returned are ordered by mean square error.
-    """
+    """    
     classes, errors = classifier.classify_with_hierarchy(image_path, ann_dir)
+    logging.debug("received classification with hierarchy")
 
     # Check for failed classification.
     if not classes[0]:
