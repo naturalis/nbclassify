@@ -1,2 +1,4 @@
 Veld code	Breedtegraad	Lengtegraad	beheertype	Plaatsingsdatum	Verwijderingsdatum	Locatie	Beweiding	Maaien	Minimale_hoogte	Maximale_hoogte	bidodiversiteit	gemiddeld_oppervlak_insecten	sd_insectoppervlak
 18	25.25684	14.21354	beweiding	2017-05-01	2017-05-01	M	False	True	25.00	35.00	Gemiddelde biodiversiteit			
+19	15.21547	58.21657	uitgesteld maaien	2017-05-03	2017-05-05	M	False	True	18.00	40.00	Hoge bidodiversiteit			
+22	15.21547	58.21657	uitgesteld maaien	2017-05-03	2017-05-05	M	False	True	18.00	40.00	Hoge bidodiversiteit			

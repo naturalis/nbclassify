@@ -20,6 +20,7 @@ from rest_framework.decorators import detail_route
 from sticky_traps.forms import ImageForm, VeldData
 from sticky_traps.models import Photo, Veld
 from sticky_traps.serializers import PhotoSerializer
+from sticky_traps.analyze import analyse_photo
 
 
 OUTPUT_VELD = os.path.join(settings.BASE_DIR, 'sticky_traps', 'results', 'veld_data.txt')
@@ -35,6 +36,8 @@ def generate_output(field_id):
     Foto_output_file = open(OUTPUT_FOTO, "a+")
     Veld_output_file = open(OUTPUT_VELD, "a+")
     for item in fotos_voor_veld:
+        itempath=os.path.abspath(os.path.join("media/", item.get('foto')))
+        analyse_photo(itempath)
         Foto_output_file.write("%s\t%s\t\n"%(item.get('code'), item.get('veldnr')))
     veld_output = list(Veld.objects.filter(id=field_id).values())[0]
     veld_object = Veld.objects.get(id=field_id)
@@ -91,16 +94,19 @@ def upload(request):
 
         if veld_form.is_valid() and foto_form.is_valid():
             veldnr=veld_form.cleaned_data['Veld_nummer']
+            """
             if Veld.objects.filter(Veld_nummer=veldnr).exists():
                 data['error_message'] = "De informatie voor dit veld is al eerder ingevuld."
             else:
-                    veld_ingevuld = veld_form.save()
-                    field_id = veld_ingevuld.id
-                    for form in foto_form:
-                        foto = form.save()
-                        foto.veldnr = field_id
-                        foto.save()
-                    return HttpResponseRedirect(reverse('sticky_traps:results', args=(field_id,)))
+            """
+            #TODO bovenstaande code uit aanhalingstekens halen en onderstaande code weer 1 tab verder zetten
+            veld_ingevuld = veld_form.save()
+            field_id = veld_ingevuld.id
+            for form in foto_form:
+                foto = form.save()
+                foto.veldnr = field_id
+                foto.save()
+            return HttpResponseRedirect(reverse('sticky_traps:results', args=(field_id,)))
         else:
             data['error_message'] = "Het formulier is nog niet goed ingevuld."
             print veld_form.errors
@@ -121,11 +127,15 @@ def results(request, field_id):
     veld_nummers = Veld.objects.all().values("id")
     # print(veld_nummers)
     opgeslagen = list(Veld.objects.filter(id=field_id).values('Opgeslagen'))[0]
+    generate_output(field_id)
+    #TODO zorg ervoor dat deze code weer werkt zoals in eerste instantie de bedoeling was
+    """
     if opgeslagen.get('Opgeslagen')==False:
         print "We gaan door met het opslaan van de gegevens"
         generate_output(field_id)
     else:
         print "Dit object is al opgeslagen in de outputbestanden."
+    """
     return render(request, "sticky_traps/results.html")
 
 
