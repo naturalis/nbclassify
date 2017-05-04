@@ -273,7 +273,7 @@ def surf_keypoint_detection(img):
     SURF-algorithm and keypoints and descriptors are
     calculated. The descriptors are returned.
     """
-    surf = cv2.SURF(510)
+    surf = cv2.xfeatures2d.SURF_create(510)
     kp, des = surf.detectAndCompute(img, None)
     return des
 
