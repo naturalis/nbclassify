@@ -35,21 +35,30 @@ def generate_output(field_id):
     fotos_voor_veld = list(Photo.objects.filter(veldnr=field_id).values())
     Foto_output_file = open(OUTPUT_FOTO, "a+")
     Veld_output_file = open(OUTPUT_VELD, "a+")
+    avg_area_list = []
     for item in fotos_voor_veld:
         itempath=os.path.abspath(os.path.join("media/", item.get('foto')))
-        analyse_photo(itempath)
-        Foto_output_file.write("%s\t%s\t\n"%(item.get('code'), item.get('veldnr')))
+        insect_informatie = analyse_photo(itempath)
+        print insect_informatie
+        print insect_informatie.get("geschat_aantal_insecten")
+        Foto_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(item.get('code'), item.get('veldnr'),insect_informatie["average_area"],
+                    insect_informatie["number_of_insects"], insect_informatie["smaller_than_4"], insect_informatie["between_4_and_10"],
+                    insect_informatie["larger_than_10"]))
+        avg_area_list.append(insect_informatie["average_area"])
     veld_output = list(Veld.objects.filter(id=field_id).values())[0]
     veld_object = Veld.objects.get(id=field_id)
-    print veld_object
+    gemiddeld_oppervlak_over_veld = sum(avg_area_list) / float(len(avg_area_list))
+    ssd = sum([(x- gemiddeld_oppervlak_over_veld )**2 for x in avg_area_list])
+    variance = ssd / (len(avg_area_list) - 1)
+    #print veld_object
     veld_object.Opgeslagen=True
     veld_object.save()
     #print(veld_output)
-    Veld_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t\t\t\n" %(
+    Veld_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" %(
         veld_output.get('Veld_nummer'), veld_output.get('Breedtegraad'), veld_output.get('Lengtegraad'), veld_output.get('Beheer_type'),
         veld_output.get('Plaatsings_datum'), veld_output.get('Verwijderings_datum'), veld_output.get('Locatie_binnen_veld'),
         veld_output.get('Beweiding'), veld_output.get('Maaien'), veld_output.get('Minimale_hoogte_gras'), veld_output.get('Maximale_hoogte_gras'),
-        veld_output.get('Hoeveelheid_biodiversiteit')
+        veld_output.get('Hoeveelheid_biodiversiteit'), gemiddeld_oppervlak_over_veld, variance
         ))
 
 

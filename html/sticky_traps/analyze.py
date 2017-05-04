@@ -32,7 +32,6 @@ def main():
     path = "images/sticky-traps"
     # destination = r"./without"
     image_files = get_image_paths(path)
-    print image_files
     for img in image_files:
         analyse_photo(img)
 
@@ -44,14 +43,15 @@ def analyse_photo(img):
     except:
         return None
     contours, trap = find_insects(img)
-    run_analysis(contours, img)
+    output = run_analysis(contours, img)
+    return output
 
     ellipse_img = trap.copy()
     for i in contours:
         if len(i) >= 5:
             ellipse = cv2.fitEllipse(i)
             cv2.ellipse(ellipse_img, ellipse, (0, 0, 255), 1)
-    image_list.append(ellipse_img)
+    #image_list.append(ellipse_img)
 
 
 def run_analysis(contours, filename):
@@ -63,6 +63,8 @@ def run_analysis(contours, filename):
     # possibly integrated directly with the webapp.
     properties = imgpheno.contour_properties(contours, ('Area', 'MajorAxisLength',))
     major_axes = [i['MajorAxisLength'] for i in properties]
+    # the following functions calculate the number of insects in each size category, >4, >4 & <10, and >10, all in mm.
+    # one mm in the foto however is 4 pixels.
     smaller_than_4 = [i for i in major_axes if i < 12]
     between_4_and_10 = [i for i in major_axes if i >= 12 and i < 40]
     larger_than_10 = [i for i in major_axes if i >= 40]
@@ -70,14 +72,17 @@ def run_analysis(contours, filename):
     areas = [i['Area'] for i in properties]
     average_area = np.mean(areas)
     number_of_insects = len(contours)
-    print """
-There are %s insects on the trap in %s.
-The average area of the insects in %s is %d mm square.
-The number of insects smaller than 4mm is %s
-The number of insects between 4 and 10 mm is %s
-the number of insects larger than 10mm is %s
-""" %(number_of_insects, filename, filename, (average_area/4), len(smaller_than_4),
-        len(between_4_and_10), len(larger_than_10))
+    output = {"average_area": average_area/4, "smaller_than_4": len(smaller_than_4), "between_4_and_10": len(between_4_and_10),
+              "larger_than_10": len(larger_than_10), "number_of_insects": number_of_insects}
+#     print """
+# There are %s insects on the trap in %s.
+# The average area of the insects in %s is %d mm square.
+# The number of insects smaller than 4mm is %s
+# The number of insects between 4 and 10 mm is %s
+# the number of insects larger than 10mm is %s
+# """ %(number_of_insects, filename, filename, (average_area/4), len(smaller_than_4),
+#         len(between_4_and_10), len(larger_than_10))
+    return output
 
 
 def find_insects(img_file):
@@ -115,12 +120,12 @@ def find_insects(img_file):
         trap = crop_image(trap)
 
     r_channel = trap[:, :, 2]  # selects the channel with the highest contrast
-    image_list.append(trap)  # displays the image at the end
+    #image_list.append(trap)  # displays the image at the end
     contours = find_contours(r_channel)
 
     contour_img = trap.copy()
     cv2.drawContours(contour_img, contours, -1, [0, 0, 255], -1)
-    image_list.append(contour_img)
+    #image_list.append(contour_img)
 
     return contours, trap
 
@@ -188,7 +193,6 @@ def crop_image(img):
     short_edge = yml.cropping_width.along_short_edges*4
     long_edge = yml.cropping_width.along_long_edges*4
     width, height = img.shape[0:2]
-    print img.shape
     roi = img[short_edge: width-short_edge , long_edge: height-long_edge]
     return roi
 # [width, height]
