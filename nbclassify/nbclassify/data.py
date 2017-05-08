@@ -398,7 +398,7 @@ class Phenotyper(object):
             except:
                 ( exc_type, exc_value, exc_traceback ) = sys.exc_info()
                 logging.warning("Error: %s, %s" % ( exc_type, exc_value ) )
-                logging.warning(exc_traceback.format_exc)
+                logging.warning(exc_traceback.format_exc())
             logging.info("Computed contour")
             if contour is None:
                 raise ValueError("No contour found for binary image")
