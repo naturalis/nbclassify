@@ -396,7 +396,8 @@ class Phenotyper(object):
             try:
                 contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             except:
-                logging.warning("Error: %s" % sys.exc_info()[0])
+                ( exc_type, exc_value, exc_traceback ) = sys.exc_info()
+                logging.warning("Error: %s, %s" % ( exc_type, exc_value ) )
             logging.info("Computed contour")
             if contour is None:
                 raise ValueError("No contour found for binary image")
