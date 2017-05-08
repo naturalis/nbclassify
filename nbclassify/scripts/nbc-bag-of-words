@@ -257,7 +257,7 @@ def create_codebook(descr_array, cluster_count):
     else:
         nclusters = int(np.sqrt(total_features))
     logging.info("Number of clusters: %d" % nclusters)
-    logging.info("\nCreating codebook (this will take a while)...")
+    logging.info("Creating codebook (this will take a while)...")
     codebook, distortion = vq.kmeans(descr_array, nclusters)
     return codebook
 
