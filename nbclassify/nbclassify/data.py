@@ -321,6 +321,7 @@ class Phenotyper(object):
             h, w = img.shape[:2]
             roi = (margin, margin, w - margin * 2, h - margin * 2)
 
+        logging.info("Going to run GrabCut")
         cv2.grabCut(img, mask, roi, bgdmodel, fgdmodel, iters,
             cv2.GC_INIT_WITH_RECT)
 
@@ -380,29 +381,35 @@ class Phenotyper(object):
         except:
             segmentation = {}
 
-        if segmentation:
-            logging.info("Segmenting...")
+        if segmentation:            
             iters = getattr(segmentation, 'iters', 5)
             margin = getattr(segmentation, 'margin', 1)
             output_folder = getattr(segmentation, 'output_folder', None)
+            logging.info("Segmenting iters=%s margin=%s output_folder=%s" % ( iters, margin, output_folder ) )
 
             # Get the main contour.
             self.mask = self.__grabcut(self.img, iters, self.roi, margin)
+            logging.info("Ran GrabCut, have mask")
             self.bin_mask = np.where((self.mask==cv2.GC_FGD) + \
                 (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
+            logging.info("Made mask binary")
             contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL,
                 cv2.CHAIN_APPROX_SIMPLE)
+            logging.info("Computed contour")
             if contour is None:
                 raise ValueError("No contour found for binary image")
 
             # Create a binary mask of the main contour.
             self.bin_mask = np.zeros(self.img.shape[:2], dtype=np.uint8)
+            logging.info("Created binary mask of main contour")
             cv2.drawContours(self.bin_mask, [contour], 0, 255, -1)
+            logging.info("Drew contour")
 
             # Save the masked image to the output folder.
             if output_folder:
                 img_masked = cv2.bitwise_and(self.img, self.img,
                     mask=self.bin_mask)
+                logging.info("Masked image")
 
                 out_path = os.path.join(output_folder, self.path)
                 out_dir = os.path.dirname(out_path)
@@ -410,6 +417,7 @@ class Phenotyper(object):
                     os.makedirs(out_dir)
 
                 cv2.imwrite(out_path, img_masked)
+                logging.info("Wrote image to file")
         else:
             # Crop image in stead of segmenting.
             try:
