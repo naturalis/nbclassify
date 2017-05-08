@@ -201,7 +201,6 @@ def print_duration(starttime, previous):
     logging.info("Present time: %s" % current)
     logging.info("Duration of step: %s" % (current - previous))
     logging.info("Total time: %s" % (current - starttime))
-    logging.info("\n")
     return current
 
 
