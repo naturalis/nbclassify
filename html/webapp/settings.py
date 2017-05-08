@@ -25,7 +25,7 @@ DEBUG = True
 TEMPLATE_DEBUG = True
 
 # imgrec-dev=145.136.243.86
-ALLOWED_HOSTS = [ '145.136.243.86' ]
+ALLOWED_HOSTS = [ '145.136.243.86', 'orch-id-dev.naturalis.nl' ]
 
 
 # Application definition
