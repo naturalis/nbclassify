@@ -321,7 +321,7 @@ class Phenotyper(object):
             h, w = img.shape[:2]
             roi = (margin, margin, w - margin * 2, h - margin * 2)
 
-        logging.info("Going to run GrabCut")
+        logging.debug("Going to run GrabCut")
         cv2.grabCut(img, mask, roi, bgdmodel, fgdmodel, iters,
             cv2.GC_INIT_WITH_RECT)
 
@@ -385,16 +385,18 @@ class Phenotyper(object):
             iters = getattr(segmentation, 'iters', 5)
             margin = getattr(segmentation, 'margin', 1)
             output_folder = getattr(segmentation, 'output_folder', None)
-            logging.info("Segmenting iters=%s margin=%s output_folder=%s" % ( iters, margin, output_folder ) )
+            logging.debug("Segmenting iters=%s margin=%s output_folder=%s" % ( iters, margin, output_folder ) )
 
             # Get the main contour.
             self.mask = self.__grabcut(self.img, iters, self.roi, margin)
-            logging.info("Ran GrabCut, have mask")
+            logging.debug("Ran GrabCut, have mask")
             self.bin_mask = np.where((self.mask==cv2.GC_FGD) + \
                 (self.mask==cv2.GC_PR_FGD), 255, 0).astype('uint8')
-            logging.info("Made mask binary")
-            contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL,
-                cv2.CHAIN_APPROX_SIMPLE)
+            logging.debug("Made mask binary")
+            try:
+                contour = ft.get_largest_contour(self.bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            except:
+                logging.warning("Error: %s" % sys.exc_info()[0])
             logging.info("Computed contour")
             if contour is None:
                 raise ValueError("No contour found for binary image")
