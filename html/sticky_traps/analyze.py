@@ -70,9 +70,10 @@ def run_analysis(contours, filename):
     larger_than_10 = [i for i in major_axes if i >= 40]
 
     areas = [i['Area'] for i in properties]
-    average_area = np.mean(areas)
+    # print areas
+    total_area = np.sum(areas)
     number_of_insects = len(contours)
-    output = {"average_area": average_area/4, "smaller_than_4": len(smaller_than_4), "between_4_and_10": len(between_4_and_10),
+    output = {"total_area": total_area/4, "smaller_than_4": len(smaller_than_4), "between_4_and_10": len(between_4_and_10),
               "larger_than_10": len(larger_than_10), "number_of_insects": number_of_insects}
 #     print """
 # There are %s insects on the trap in %s.

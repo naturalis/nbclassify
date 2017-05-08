@@ -38,7 +38,6 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'sorl.thumbnail',
     'rest_framework',
-    'orchid',
     'sticky_traps',
 )
 

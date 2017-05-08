@@ -7,9 +7,8 @@ admin.autodiscover()
 urlpatterns = patterns('',
     #url(r'^$', 'orchid.views.home'),
     #url(r'^orchid/', include('orchid.urls', namespace="orchid")),
-    url(r'^', include('orchid.urls', namespace="orchid")),
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^traps/', include('sticky_traps.urls', namespace="sticky_traps")),
+    url(r'^', include('sticky_traps.urls', namespace="sticky_traps")),
 )
 
 # Serving files uploaded by a user during development.
