@@ -19,70 +19,12 @@ This package comes with the following scripts:
 
 * ``nbc-add-tags``: Add tags from a local spreadsheet file to images on Flickr.
 
+* ``nbc-bag-of-words``: Pseudo-homologizes variable-length SURF features. 
 
-Requirements
-============
+* ``nbc-create-mean-bgr-file``: Creates BGR features files. Needs to be 
+  refactored so that feature extraction is in imgpheno. Maybe the remaining
+  program logic needs to be in nbc-trainer.
 
-This Python package has the following dependencies:
-
-* FANN_ (>=2.1.0)
-
-  * Python bindings
-
-* ImgPheno_
-
-* NumPy_
-
-* OpenCV_ (2.4.x)
-
-  * Python bindings
-
-* Python_ (>=2.7 && <2.8)
-
-  * SQLite (>=3.6.19)
-
-* `Python Flickr API`_ (1.4.5)
-
-* PyYAML_
-
-* scikit-learn_ (>=0.15)
-
-* SciPy
-
-* SQLAlchemy_ (>=0.9.1)
-
-On Debian (based) systems, most dependencies can be installed from the
-software repository::
-
-    apt-get install python-flickrapi python-numpy python-opencv python-pyfann \
-    python-sklearn python-sqlalchemy python-yaml
-
-More recent versions of some Python packages can be obtained via the Python
-Package Index::
-
-    pip install -r requirements.txt
-
-The ImgPheno_ package can be installed from the GitHub repository.
-
-Installation
-============
-
-From the GitHub repository::
-
-    git clone https://github.com/naturalis/nbclassify.git
-    pip install nbclassify/nbclassify/
-
-Or if you have a source archive file::
-
-    pip install nbclassify-0.1.0.tar.gz
-
-
-.. _ImgPheno: https://github.com/naturalis/imgpheno
-.. _FANN: http://leenissen.dk/fann/wp/
-.. _NumPy: http://www.numpy.org/
-.. _OpenCV: http://opencv.org/
-.. _Python: https://www.python.org/
-.. _`Python Flickr API`: https://pypi.python.org/pypi/flickrapi
-.. _PyYAML: https://pypi.python.org/pypi/PyYAML
-.. _scikit-learn: http://scikit-learn.org
-.. _SQLAlchemy: http://www.sqlalchemy.org/
+* ``nbc-feature-extraction``: Creates SURF features files. Needs to be 
+  refactored so that feature extraction is in imgpheno. Maybe the remainined
+  program logic needs to be in nbc-trainer.
