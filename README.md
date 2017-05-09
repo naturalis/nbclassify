@@ -15,3 +15,5 @@ is as follows:
 [![Documentation Status](https://readthedocs.org/projects/nbclassify/badge/?version=latest)](https://readthedocs.org/projects/nbclassify/?badge=latest)
 
 [1]: https://github.com/naturalis/imgpheno
+
+For installation instructions, consult http://github.com/naturalis/puppet-orchid
