@@ -128,7 +128,7 @@ def print_duration(starttime, previous):
     print("\n")
     return current
 
-
+# XXX move to imgpheno
 def check_roi(args):
     """
     Check if a valid ROI is given to the argument parser.
@@ -184,7 +184,7 @@ def check_roi(args):
     sys.stderr.write("Images will be processed without a ROI.\n\n")
     return None
 
-
+# XXX move to imgpheno
 def split_roi(roistring, decimal):
     """
     Transform a string to a list of either integers
@@ -204,7 +204,7 @@ def split_roi(roistring, decimal):
             roi[x] = int(roi[x])
     return roi
 
-
+# XXX move to imgpheno
 def feature_extraction(args, what_roi):
     """
     The function takes the result of the argument parser.
@@ -243,7 +243,7 @@ def feature_extraction(args, what_roi):
     print("\nAll images have been processed.")
     return descr_dict, file_list
 
-
+# XXX move to imgpheno
 def apply_roi(args, what_roi, img):
     """
     The function takes the result of an argument parser,
@@ -264,7 +264,7 @@ def apply_roi(args, what_roi, img):
         img = img[roi[1]: roi[1] + roi[3], roi[0]: roi[0] + roi[2]]
     return img
 
-
+# XXX move to imgpheno
 def surf_keypoint_detection(img):
     """
     The function takes an image in grayscale of

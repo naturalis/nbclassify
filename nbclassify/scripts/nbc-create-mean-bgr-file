@@ -124,7 +124,7 @@ def main():
     with db.session_scope(args.meta_file) as (session, metadata):
         make_histogram(args, what_roi, session, metadata)
 
-
+# XXX move to imgpheno
 def check_roi(args):
     """
     Check if a valid ROI is given to the argument parser.
@@ -180,7 +180,7 @@ def check_roi(args):
     sys.stderr.write("Images will be processed without a ROI.\n\n")
     return None
 
-
+# XXX move to imgpheno
 def split_roi(roistring, decimal):
     """
     Transform a string to a list of either integers
@@ -229,7 +229,7 @@ def create_output_file(args):
     filename.write(header)
     filename.close()
 
-
+# XXX move to imgpheno
 def make_histogram(args, what_roi, session, metadata):
     """
     Make a histogram of every image and write the values
@@ -286,7 +286,7 @@ def make_histogram(args, what_roi, session, metadata):
     # Close outputfile.
     outputfile.close()
 
-
+# XXX move to imgpheno
 def create_mask(img, args, what_roi):
     """
     Create a binary mask for an image.
@@ -324,7 +324,7 @@ def create_mask(img, args, what_roi):
 
     return img_masked, contour
 
-
+# XXX move to imgpheno
 def hist_means(hist):
     """
     Normalizes the values in a list and returns a list
