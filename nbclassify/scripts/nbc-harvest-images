@@ -50,9 +50,11 @@ def main():
     parser.add_argument(
         "flickr_uid",
         metavar="FLICKR_UID",
+        default="113733456@N06",
         help="The Flickr user ID to harvest photos from (e.g. 123456789@A12)")
     parser.add_argument(
         "meta_file",
+        default="meta.db",
         metavar="FILE",
         help="File name of the meta data file (e.g. meta.db).")
     parser.add_argument(
