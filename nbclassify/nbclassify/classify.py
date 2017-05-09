@@ -103,9 +103,9 @@ class ImageClassifier(Common):
             # Cache the phenotypes, in case they are needed again.
             self.cache[hash_] = phenotype
 
-        logging.debug("Using ANN `%s`" % ann_path)
+        logging.debug("Using ANN '%s'" % ann_path)
         codeword = ann.run(phenotype)
-        logging.debug("Ran the ANN classifier")
+        logging.debug("ANN classifier returned '%s'" % codeword)
 
         return codeword
 
@@ -131,6 +131,7 @@ class ImageClassifier(Common):
         mean square error of each classification.
         """
         levels = self.get_classification_hierarchy_levels()
+        logging.debug("Classification hierarchy levels: %s" % levels)
         paths = []
         paths_errors = []
 
@@ -141,6 +142,7 @@ class ImageClassifier(Common):
 
         # Get the level specific configurations.
         level = conf = self.class_hr[len(path)]
+        logging.debug("Configuration for this level: %s" % level)
 
         # Replace any placeholders in the ANN path.
         ann_file = level.ann_file
@@ -150,6 +152,7 @@ class ImageClassifier(Common):
 
         # Get the class names for this node in the taxonomic hierarchy.
         level_classes = get_childs_from_hierarchy(self.taxon_hr, path)
+        logging.debug("Class names for this node: %s" % level_classes)
 
         # Some levels must have classes set.
         if level_classes == [None] and level.name in ('genus','species'):
@@ -159,13 +162,16 @@ class ImageClassifier(Common):
             # No need to classify if there are no classes for current level.
             classes = level_classes
             class_errors = [0.0]
+            logging.debug("No classes at this level, nothing to be done")
         elif len(level_classes) == 1:
             # Also no need to classify if there is only one class.
             classes = level_classes
             class_errors = [0.0]
+            logging.debug("Only a single class at this level, nothing to be done")
         else:
             # Get the codewords for the classes.
             class_codewords = get_codewords(level_classes)
+            logging.debug("Codewords for classes at this level: %s" % class_codewords)
 
             # Classify the image and obtain the codeword.
             ann_path = os.path.join(ann_base_path, ann_file)
@@ -174,12 +180,13 @@ class ImageClassifier(Common):
             # Set the maximum classification error for this level.
             try:
                 max_error = level.max_error
+                logging.debug("Max error from level: %s" % max_error)
             except:
                 max_error = self.error
+                logging.debug("Max error from self: %s" % max_error)
 
             # Get the class name associated with this codeword.
-            classes = get_classification(class_codewords,
-                codeword, max_error)
+            classes = get_classification(class_codewords, codeword, max_error)
             if classes:
                 class_errors, classes = zip(*classes)
             else:
