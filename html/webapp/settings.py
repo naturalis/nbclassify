@@ -36,6 +36,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'geoposition',
     'sorl.thumbnail',
     'rest_framework',
     'sticky_traps',
@@ -117,3 +118,14 @@ REST_FRAMEWORK = {
 }
 
 DATE_INPUT_FORMATS = ('%d-%m-%Y')
+
+GEOPOSITION_GOOGLE_MAPS_API_KEY = 'AIzaSyBZIEGJZPHMZ8Oumwfqv3eqMk-WloQugKo'
+
+GEOPOSITION_MAP_OPTIONS = {
+    'minZoom': 8,
+    'maxZoom': 0,
+    'center' : {'lat': 52, 'lng': 5},
+}
+
+
+GEOPOSITION_MAP_WIDGET_HEIGHT = 700

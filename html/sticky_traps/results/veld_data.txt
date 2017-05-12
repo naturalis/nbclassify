@@ -1,7 +1,1 @@
-Veld code	Breedtegraad	Lengtegraad	beheertype	Plaatsingsdatum	Verwijderingsdatum	Locatie	Beweiding	Maaien	Minimale_hoogte	Maximale_hoogte	bidodiversiteit	gemiddeld_oppervlak_insecten	sd_insectoppervlak
-22	15.21547	58.21657	uitgesteld maaien	2017-05-03	2017-05-05	M	False	True	18.00	40.00	Hoge bidodiversiteit	5658.6625	4446.34528958
-22	15.21547	58.21657	uitgesteld maaien	2017-05-03	2017-05-05	M	False	True	18.00	40.00	Hoge bidodiversiteit	5658.6625	4446.34528958
-22	15.21547	58.21657	uitgesteld maaien	2017-05-03	2017-05-05	M	False	True	18.00	40.00	Hoge bidodiversiteit	5658.6625	4446.34528958
-22	15.21547	58.21657	uitgesteld maaien	2017-05-03	2017-05-05	M	False	True	18.00	40.00	Hoge bidodiversiteit	5658.6625	4446.34528958
-22	15.21547	58.21657	uitgesteld maaien	2017-05-03	2017-05-05	M	False	True	18.00	40.00	Hoge bidodiversiteit	5658.6625	4446.34528958
-22	15.21547	58.21657	uitgesteld maaien	2017-05-03	2017-05-05	M	False	True	18.00	40.00	Hoge bidodiversiteit	5658.6625	4446.34528958
+Veld code	Coordinaten	beheertype	Plaatsingsdatum	Beweiding	Maaien	Minimale_hoogte	Maximale_hoogte	bidodiversiteit	gemiddeld_oppervlak_insecten	sd_insectoppervlak

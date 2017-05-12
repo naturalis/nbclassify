@@ -6,6 +6,7 @@ import datetime
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch.dispatcher import receiver
+from geoposition.fields import GeopositionField
 
 def get_image_path(instance, filename):
     """Return the path for an uploaded image.
@@ -29,25 +30,10 @@ def get_image_path(instance, filename):
 
 class Veld(models.Model):
     Opgeslagen = models.BooleanField(default=False)
-    Veld_nummer = models.CharField(max_length=50)
-    Breedtegraad = models.DecimalField(decimal_places=5, max_digits=10)
-    Lengtegraad = models.DecimalField(decimal_places=5, max_digits=10)
-    Beheer_type = models.CharField(max_length=50)
+    Veld_identificatie_code = models.CharField(max_length=50)
+    Locatie = GeopositionField()
+    Beheer_type = models.CharField(max_length=50, null=True)
     Plaatsings_datum = models.DateField(default=datetime.datetime.now)
-    Verwijderings_datum = models.DateField(default=datetime.datetime.now)
-    MIDDEN = "M"
-    RAND = "R"
-    SLOOTKANT = "S"
-    Locatie_binnen_veld_keuzes = (
-        (MIDDEN, "Midden van het veld"),
-        (RAND, "Aan de rand van het veld"),
-        (SLOOTKANT, "Bij een sloot")
-        )
-    Locatie_binnen_veld = models.CharField(
-        max_length=30,
-        choices=Locatie_binnen_veld_keuzes,
-        blank=False
-        )
     Beweiding = models.BooleanField(default=False)
     Maaien = models.BooleanField(default=False)
     Minimale_hoogte_gras = models.DecimalField(decimal_places=2, max_digits=5)
@@ -67,14 +53,14 @@ class Veld(models.Model):
     )
 
     def __str__(self):
-        return str(self.Veld_nummer)
+        return str(self.Veld_identificatie_code)
 
 class Photo(models.Model):
     """Model for uploaded photos."""
     foto = models.ImageField(upload_to=get_image_path)
     veld = models.ForeignKey(Veld, null=True)
     veldnr = models.PositiveIntegerField(null=True)
-    code = models.CharField(max_length=30)
+    Val_nummer = models.CharField(max_length=30)
 
 
     def __unicode__(self):

@@ -48,9 +48,9 @@ def upload(request):
         foto_form = FotoFormSet(request.POST, request.FILES, queryset=Photo.objects.none(), prefix = "foto's")
 
         if veld_form.is_valid() and foto_form.is_valid():
-            veldnr=veld_form.cleaned_data['Veld_nummer']
+            veldnr=veld_form.cleaned_data['Veld_identificatie_code']
             """
-            if Veld.objects.filter(Veld_nummer=veldnr).exists():
+            if Veld.objects.filter(Veld_identificatie_code=veldnr).exists():
                 data['error_message'] = "De informatie voor dit veld is al eerder ingevuld."
             else:
             """
@@ -111,7 +111,7 @@ def generate_output(field_id):
         insect_informatie = analyse_photo(itempath)
         # print insect_informatie
         # print insect_informatie.get("geschat_aantal_insecten")
-        Foto_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(item.get('code'), item.get('veldnr'),insect_informatie["total_area"],
+        Foto_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(item.get('Val_nummer'), item.get('veldnr'),insect_informatie["total_area"],
                     insect_informatie["number_of_insects"], insect_informatie["smaller_than_4"], insect_informatie["between_4_and_10"],
                     insect_informatie["larger_than_10"]))
         avg_area_list.append(insect_informatie["total_area"])
@@ -124,10 +124,10 @@ def generate_output(field_id):
     veld_object.Opgeslagen=True
     veld_object.save()
     #print(veld_output)
-    Veld_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" %(
-        veld_output.get('Veld_nummer'), veld_output.get('Breedtegraad'), veld_output.get('Lengtegraad'), veld_output.get('Beheer_type'),
-        veld_output.get('Plaatsings_datum'), veld_output.get('Verwijderings_datum'), veld_output.get('Locatie_binnen_veld'),
-        veld_output.get('Beweiding'), veld_output.get('Maaien'), veld_output.get('Minimale_hoogte_gras'), veld_output.get('Maximale_hoogte_gras'),
+    Veld_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" %(
+        veld_output.get('Veld_identificatie_code'), veld_output.get('Locatie'), veld_output.get('Beheer_type'),
+        veld_output.get('Plaatsings_datum'),veld_output.get('Beweiding'),
+        veld_output.get('Maaien'), veld_output.get('Minimale_hoogte_gras'), veld_output.get('Maximale_hoogte_gras'),
         veld_output.get('Hoeveelheid_biodiversiteit'), gemiddeld_oppervlak_over_veld, variance
         ))
     return gemiddeld_oppervlak_over_veld, variance
