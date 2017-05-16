@@ -10,7 +10,7 @@ class VeldData(forms.ModelForm):
 
     class Meta:
         model = Veld
-        exclude = ('Opgeslagen',)
+        exclude = ('Opgeslagen','gemiddeld_oppervlak_over_veld', 'variance')
 
 class ImageForm(forms.ModelForm):
 

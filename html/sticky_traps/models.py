@@ -30,14 +30,14 @@ def get_image_path(instance, filename):
 
 class Veld(models.Model):
     Opgeslagen = models.BooleanField(default=False)
-    Veld_identificatie_code = models.CharField(max_length=50)
-    Locatie = GeopositionField()
-    Beheer_type = models.CharField(max_length=50, null=True)
-    Plaatsings_datum = models.DateField(default=datetime.datetime.now)
-    Beweiding = models.BooleanField(default=False)
-    Maaien = models.BooleanField(default=False)
-    Minimale_hoogte_gras = models.DecimalField(decimal_places=2, max_digits=5)
-    Maximale_hoogte_gras = models.DecimalField(decimal_places=2, max_digits=5)
+    Veld_identificatie_code = models.CharField(max_length=50, help_text="Het eerste deel van de code die op de val staat. Als op de val bijvoorbeeld Koning-UG-03 staat, schrijf dan Koning-UG op.")
+    Locatie = GeopositionField(help_text="Zoek op de plaatsnaam van de boerderij en versleep de marker vervolgens naar het midden van het veld waar de vallen zijn uitgezet.")
+    Beheer_type = models.CharField(max_length=50, null=True, help_text="Het type beheer wat word gebruikt zoals uitgesteld maaien of legselbescherming.")
+    Plaatsings_datum = models.DateField(default=datetime.datetime.now, help_text="De datum waarop de vallen zijn uitgezet")
+    Beweiding = models.BooleanField(default=False, help_text="Vink dit vakje aan als er beweid word.")
+    Maaien = models.BooleanField(default=False, help_text="Vink dit vakje aan als er op dit perceel gemaaid word")
+    Minimale_hoogte_gras = models.DecimalField(decimal_places=2, max_digits=5, help_text="de geschatte minimale hoogte van het gras op dit perceel in centimeters")
+    Maximale_hoogte_gras = models.DecimalField(decimal_places=2, max_digits=5, help_text="de geschatte maximale hoogte van het gras op dit perceel in centimeters")
     WEINIG = "Weinig biodiversiteit"
     GEMIDDELD = "Gemiddelde biodiversiteit"
     VEEL = "Hoge bidodiversiteit"
@@ -49,18 +49,22 @@ class Veld(models.Model):
     Hoeveelheid_biodiversiteit = models.CharField(
     max_length=30,
     choices=Hoeveelheid_biodiversiteit_keuzes,
-    blank=False
+    blank=False,
+    help_text="geef een schatting van de hoeveelheid verschillende kruiden in dit veld; veel, gemiddeld, of weinig"
     )
+    Opmerkingen_en_bijzonderheden = models.TextField(null=True, help_text="geef eventuele bijzonderheden of opmerkingen hier aan")
+    gemiddeld_oppervlak_over_veld = models.FloatField(null=True)
+    variance = models.FloatField(null=True)
 
     def __str__(self):
         return str(self.Veld_identificatie_code)
 
 class Photo(models.Model):
     """Model for uploaded photos."""
-    foto = models.ImageField(upload_to=get_image_path)
+    foto = models.ImageField(upload_to=get_image_path, null=True, help_text="selecteer de goede afbeelding vanaf uw computer of smartphone")
     veld = models.ForeignKey(Veld, null=True)
     veldnr = models.PositiveIntegerField(null=True)
-    Val_nummer = models.CharField(max_length=30)
+    Val_nummer = models.CharField(max_length=30, null=True, help_text="Het laatste deel van de code op de val. Als op de val bijvoorbeeld Koning-UG-03 staat, vul dan 03 in.")
 
 
     def __unicode__(self):
