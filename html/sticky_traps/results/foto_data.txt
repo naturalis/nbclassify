@@ -1,1 +1,1 @@
-Fotonr	veld	totale_insectoppervlak	geschat_aantal_insecten	kleiner_dan_4mm	tussen_4_en_10mm	groter_dan_10
+Fotonr	veld	datum	totale_insectoppervlak	geschat_aantal_insecten	kleiner_dan_4mm	tussen_4_en_10mm	groter_dan_10

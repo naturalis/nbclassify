@@ -50,16 +50,21 @@ def upload(request):
 
         if veld_form.is_valid() and foto_form.is_valid():
             veldnr=veld_form.cleaned_data['Veld_identificatie_code']
-            if Veld.objects.filter(Veld_identificatie_code=veldnr).exists():
-                data['error_message'] = "De informatie voor dit veld is al eerder ingevuld."
+            datum = veld_form.cleaned_data['Plaatsings_datum']
+            if Veld.objects.filter(Veld_identificatie_code=veldnr, Plaatsings_datum=datum).exists():
+                data['error_message'] = "De informatie voor dit veld op deze datum is al eerder ingevuld."
             else:
                 veld_ingevuld = veld_form.save()
                 field_id = veld_ingevuld.id
                 for form in foto_form:
 
                     foto = form.save()
-                    foto.veldnr = field_id
+                    foto.veldnr = veldnr
+                    foto.unieke_veld_code = field_id
+                    foto.datum = datum
                     foto.save()
+
+
                 return HttpResponseRedirect(reverse('sticky_traps:results', args=(field_id,)))
         else:
             data['error_message'] = "Het formulier is nog niet goed ingevuld."
@@ -102,7 +107,7 @@ def results(request, field_id):
 
 def generate_output(field_id):
 
-    fotos_voor_veld = list(Photo.objects.filter(veldnr=field_id).values())
+    fotos_voor_veld = list(Photo.objects.filter(unieke_veld_code=field_id).values())
     Foto_output_file = open(OUTPUT_FOTO, "a+")
     avg_area_list = []
     for item in fotos_voor_veld:
@@ -112,16 +117,20 @@ def generate_output(field_id):
             insect_informatie = analyse_photo(itempath)
         # print insect_informatie
         # print insect_informatie.get("geschat_aantal_insecten")
-            Foto_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(item.get('Val_nummer'), item.get('veldnr'),insect_informatie["total_area"],
+            Foto_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(item.get('Val_nummer'), item.get('veldnr'), item.get('datum'), insect_informatie["total_area"],
                     insect_informatie["number_of_insects"], insect_informatie["smaller_than_4"], insect_informatie["between_4_and_10"],
                     insect_informatie["larger_than_10"]))
             avg_area_list.append(insect_informatie["total_area"])
     Foto_output_file.close()
     veld_output = list(Veld.objects.filter(id=field_id).values())[0]
     veld_object = Veld.objects.get(id=field_id)
-    gemiddeld_oppervlak = sum(avg_area_list) / float(len(avg_area_list))
-    ssd = sum([(x- gemiddeld_oppervlak )**2 for x in avg_area_list])
-    variance = math.sqrt(ssd / (len(avg_area_list) - 1))
+    try:
+        gemiddeld_oppervlak = sum(avg_area_list) / float(len(avg_area_list))
+        ssd = sum([(x- gemiddeld_oppervlak )**2 for x in avg_area_list])
+        variance = math.sqrt(ssd / (len(avg_area_list) - 1))
+    except:
+        gemiddeld_oppervlak= None
+        variance= None
     #print veld_object
     veld_object.Opgeslagen=True
     veld_object.gemiddeld_oppervlak_over_veld=gemiddeld_oppervlak

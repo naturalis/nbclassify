@@ -61,10 +61,12 @@ class Veld(models.Model):
 
 class Photo(models.Model):
     """Model for uploaded photos."""
-    foto = models.ImageField(upload_to=get_image_path, null=True, help_text="selecteer de goede afbeelding vanaf uw computer of smartphone")
     veld = models.ForeignKey(Veld, null=True)
-    veldnr = models.PositiveIntegerField(null=True)
+    veldnr = models.CharField(null=True, max_length=50)
+    unieke_veld_code = models.IntegerField(null=True)
     Val_nummer = models.CharField(max_length=30, null=True, help_text="Het laatste deel van de code op de val. Als op de val bijvoorbeeld Koning-UG-03 staat, vul dan 03 in.")
+    foto = models.ImageField(upload_to=get_image_path, null=True, help_text="selecteer de goede afbeelding vanaf uw computer of smartphone")
+    datum = models.DateField(null=True)
 
 
     def __unicode__(self):

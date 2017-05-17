@@ -16,4 +16,4 @@ class ImageForm(forms.ModelForm):
 
     class Meta:
         model = Photo
-        fields = ('foto', 'Val_nummer', )
+        fields = ('Val_nummer', 'foto', )
