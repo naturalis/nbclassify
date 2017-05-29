@@ -213,29 +213,31 @@ def show_corners(corners, img, img_file):
 
 
 def show_images():
-    "Shows all images made during the running of the program in order to easily check the results of the program."
-    if len(image_list) == 0:
+    """Shows all images made during the running of the program in order to easily check the results of the program.
+    Part of the code copied from OpenCv2 tutorial.
+    """
+    if len(image_list) == 0:  #if there are no images to display, there is no need to run the function.
         return
-    cv2.namedWindow('image')
-    i = 0
-    cv2.imshow("image", image_list[i])
+    cv2.namedWindow('image')  # create the window in wich the images are displayed
+    i = 0  # set the iterator value to zero, keeps track of the image beeing displayed.
+    cv2.imshow("image", image_list[i])  # show the first image.
     while True:
-        k = cv2.waitKey(0) & 0xFF
+        k = cv2.waitKey(0) & 0xFF  # have the program wait for instructions indefinitly.
 
-        if k == ord('n'):
+        if k == ord('n'):  # if the n key is pressed, go to the next photo in the list
             i += 1
-            if i >= len(image_list):
+            if i >= len(image_list):  # if the end of the list is reached, the first photo is displayed instead.
                 i = 0
-            cv2.imshow("image", image_list[i])
-        elif k == ord('p'):
-            i -= 1
-            if i < 0:
-                i = len(image_list) - 1
-            cv2.imshow("image", image_list[i])
-        elif k == ord('q'):
+            cv2.imshow("image", image_list[i])  # show the selected image again.
+        elif k == ord('p'):  # go to the previous photo when p is pressed. almost identical to code above
+            i -= 1  # move the indicator value back one place
+            if i < 0:  # if the function scrolled before the first photo, then display the last image in the list
+                i = len(image_list) - 1  # set the iterator value
+            cv2.imshow("image", image_list[i])  # display the image
+        elif k == ord('q'):  # if q is pressed, then close the window and end the function
             break
 
-    cv2.destroyAllWindows()
+    cv2.destroyAllWindows()  # close the window created at the start of the function.
 
 
 def write_images(destination, images):
@@ -243,13 +245,14 @@ def write_images(destination, images):
     this function takes two arguments: an already existing path where the images are saved,
     and a list of images in the Mat format.
     the function then saves them, naming them according to their place in the image list.
+    used in testing the program.
     """
     for i in range(len(images)):
         name = r"%s/Image_%s.jpg" %(destination, (i+1))
         cv2.imwrite(name, image_list[i])
 
-def open_yaml(path):
-    if not os.path.isfile(path):
+def open_yaml(path):  # funtion used to access the settings contained in the YAML file contained in the path.
+    if not os.path.isfile(path):  # return an error if the specified file does not exist.
         logging.error("Cannot open %s (no such file)" % path)
         return None
 
