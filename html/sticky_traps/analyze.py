@@ -25,20 +25,30 @@ image_list = []
 
 def main():
     """start of program,
-    creates parser to obtain the path to images to analyse.
-    This code is a placehoder as of yet to accelerate the process of testing. this will change in the final version.
+    this code calls other functions in the program and first obtains the paths to the images,
+    before calling the function that coordinates the analysis itself
     """
-    # TODO: Change the code that gets the path to the images to either be fully automatic
-    path = "images/sticky-traps"
+    path = "2e-ronde"
     # destination = r"./without"
     image_files = get_image_paths(path)
     for img in image_files:
         analyse_photo(img)
 
+"""
+OUTPUT_FOTO = ./output.txt
+    Foto_output_file = open(OUTPUT_FOTO, "a+")
+itempath=os.path.abspath(os.path.join("media/", item.get('foto')))
+            insect_informatie = analyse_photo(itempath)
+        # print insect_informatie
+        # print insect_informatie.get("geschat_aantal_insecten")
+            Foto_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(item.get('Val_nummer'), item.get('veldnr'), item.get('datum'), insect_informatie["total_area"],
+                    insect_informatie["number_of_insects"], insect_informatie["smaller_than_4"], insect_informatie["between_4_and_10"],
+                    insect_informatie["larger_than_10"]))
+"""
 
 
 def analyse_photo(img):
-    """This function is called by the stickytraps website.
+    """This function is called by the sticky traps website.
     It takes a path to an image file, and uses this to call the other functions to perform the main analysis.
     """
     try:
@@ -46,11 +56,14 @@ def analyse_photo(img):
     except:
         return None
     contours, trap = find_insects(img)  # this function takes the path of the image and returns the contours of the insects found.
+    if contours == None:
+        return None
     output = run_analysis(contours, img)  # this function takes the contours and the image of the trap and then gives the relevant data
     return output
 
 
-    def find_insects(img_file):
+
+def find_insects(img_file):
         """Call all functions in order to analyse the image."""
         img = read_img(img_file)  # the image that the path is pointing to is read and returned as a numpy array
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)  # converts to HSV colourspace for trap detection
@@ -68,7 +81,8 @@ def analyse_photo(img):
         points_new = np.array([[0, 0], [width, 0], [0, height], [width, height]], np.float32)
         trap = imgpheno.perspective_transform(img, corners, points_new)  # resizes the image based on the previous calculations.
         if trap is None:  # This code shows the corners returned by find_corners, in case not exactly 4 were returned.
-            show_corners(corners, img, img_file)
+            # show_corners(corners, img, img_file)
+	    return None, trap
         # after this the program needs to find the insects present on the trap.
 
         """
@@ -111,7 +125,7 @@ def run_analysis(contours, filename):
     # this function only gives a very rough estimate of size, however accurate estimations are quite complicated.
     areas = [i['Area'] for i in properties]
 
-    # the next line splits the areas into three categories.
+    # the next lines split the areas into three categories based on the area measured in pixels.
     smaller_than_4 = [i for i in areas if i < 256]
     between_4_and_10 = [i for i in areas if i >= 256 and i < 1600]
     larger_than_10 = [i for i in areas if i >= 1600]
@@ -256,7 +270,7 @@ def open_yaml(path):  # funtion used to access the settings contained in the YAM
         logging.error("Cannot open %s (no such file)" % path)
         return None
 
-    f = open(path, 'r')
+    f = open(path, 'r')  # opening the file as read only to avoid any overwriting of the file.
     yml = yaml.load(f)
     yml = common.DictObject(yml)
     f.close()
@@ -265,6 +279,7 @@ def open_yaml(path):  # funtion used to access the settings contained in the YAM
 
 
 yml = open_yaml('sticky_traps.yml')
+
 
 
 if __name__ == "__main__":
