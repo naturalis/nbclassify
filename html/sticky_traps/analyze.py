@@ -28,39 +28,31 @@ def main():
     this code calls other functions in the program and first obtains the paths to the images,
     before calling the function that coordinates the analysis itself
     """
-    path = "2e-ronde"
+    path = "Fotos_Professioneel"
     # destination = r"./without"
     image_files = get_image_paths(path)
+    OUTPUT_FOTO = "./foto_data_professioneel.txt"
+    Foto_output_file = open(OUTPUT_FOTO, "a+")
     for img in image_files:
-        analyse_photo(img)
+        insect_informatie = analyse_photo(img)
+        if insect_informatie == None:
+            Foto_output_file.write("%s\tNA\tNA\tNA\tNA\tNA\n"%(img))
+        else:
+            Foto_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\n"%(img, insect_informatie["total_area"],
+                    insect_informatie["number_of_insects"], insect_informatie["smaller_than_4"], insect_informatie["between_4_and_10"],
+                    insect_informatie["larger_than_10"]))
 
 """
 OUTPUT_FOTO = ./output.txt
     Foto_output_file = open(OUTPUT_FOTO, "a+")
-itempath=os.path.abspath(os.path.join("media/", item.get('foto')))
-            insect_informatie = analyse_photo(itempath)
+
+            insect_informatie = analyse_photo(img)
         # print insect_informatie
         # print insect_informatie.get("geschat_aantal_insecten")
             Foto_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(item.get('Val_nummer'), item.get('veldnr'), item.get('datum'), insect_informatie["total_area"],
                     insect_informatie["number_of_insects"], insect_informatie["smaller_than_4"], insect_informatie["between_4_and_10"],
                     insect_informatie["larger_than_10"]))
 """
-
-
-def analyse_photo(img):
-    """This function is called by the sticky traps website.
-    It takes a path to an image file, and uses this to call the other functions to perform the main analysis.
-    """
-    try:
-        img = r"%s"%(str(img)) # this step is required to eliminate some bugs where special characters are present in the image path.
-    except:
-        return None
-    contours, trap = find_insects(img)  # this function takes the path of the image and returns the contours of the insects found.
-    if contours == None:
-        return None
-    output = run_analysis(contours, img)  # this function takes the contours and the image of the trap and then gives the relevant data
-    return output
-
 
 
 def find_insects(img_file):
@@ -81,7 +73,7 @@ def find_insects(img_file):
         points_new = np.array([[0, 0], [width, 0], [0, height], [width, height]], np.float32)
         trap = imgpheno.perspective_transform(img, corners, points_new)  # resizes the image based on the previous calculations.
         if trap is None:  # This code shows the corners returned by find_corners, in case not exactly 4 were returned.
-            # show_corners(corners, img, img_file)
+            show_corners(corners, img, img_file)
 	    return None, trap
         # after this the program needs to find the insects present on the trap.
 
@@ -221,9 +213,10 @@ def show_corners(corners, img, img_file):
     for i in corners:
         cv2.circle(img, tuple(i), 5, [0, 0, 255], -1)  # this draws the corners in the image
     msg = "corners found in " + str(img_file)
-    cv2.imshow(msg, img)  # these lines show the image and wait until a key is pressed before the window is closed again.
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    image_list.append(img)
+    #cv2.imshow(msg, img)  # these lines show the image and wait until a key is pressed before the window is closed again.
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
 
 
 def show_images():
@@ -281,7 +274,22 @@ def open_yaml(path):  # funtion used to access the settings contained in the YAM
 yml = open_yaml('sticky_traps.yml')
 
 
+def analyse_photo(img):
+    """This function is called by the sticky traps website.
+    It takes a path to an image file, and uses this to call the other functions to perform the main analysis.
+    """
+    try:
+        img = r"%s"%(str(img)) # this step is required to eliminate some bugs where special characters are present in the image path.
+    except:
+        return None
+    contours, trap = find_insects(img)  # this function takes the path of the image and returns the contours of the insects found.
+    if contours == None:
+        return None
+    output = run_analysis(contours, img)  # this function takes the contours and the image of the trap and then gives the relevant data
+    return output
+
+
 
 if __name__ == "__main__":
     main()
-    show_images()
+    write_images("tests", image_list)
