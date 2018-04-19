@@ -19,7 +19,7 @@ def get_image_path(instance, filename):
     hasher.update(buf)
     parts = os.path.splitext(filename)
     filename_ = "%s%s" % (hasher.hexdigest()[:10], parts[1])
-    path = "sticky_traps/uploads/%%Y/%%m/%%d/%s" % (filename_,)
+    path = "%%Y/%%m/%%d/%s" % (filename_,)
     return time.strftime(path)
 
     def __unicode__(self):
@@ -93,5 +93,10 @@ def photo_delete_hook(sender, instance, **kwargs):
     is removed from the Django Admin.
     """
     # Pass False so ImageField doesn't save the model.
-    if instance.image:
-        instance.image.delete(False)
+    try:
+        if instance.image:
+            instance.image.delete(False)
+        else:
+            pass
+    except AttributeError:
+        pass

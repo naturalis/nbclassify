@@ -2,10 +2,10 @@
 Django settings for webapp project.
 
 For more information on this file, see
-https://docs.djangoproject.com/en/1.6/topics/settings/
+https://docs.djangoproject.com/en/1.11/topics/settings/
 
 For the full list of settings and their values, see
-https://docs.djangoproject.com/en/1.6/ref/settings/
+https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -24,7 +24,7 @@ DEBUG = False
 
 TEMPLATE_DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['plakvallen.naturalis.nl']
 
 
 # Application definition
@@ -83,6 +83,10 @@ USE_TZ = True
 # Example: "/static/" or "http://static.example.com/"
 STATIC_URL = '/static/'
 
+# Set the full path to the static root here, to avoid confusion over the
+# templates that need to be used for the specific project.
+# STATIC_ROOT = "full/path/to/sticky_traps/static/"
+
 # The list of finder backends that know how to find static files in various
 # locations.
 STATICFILES_FINDERS = (
@@ -92,20 +96,42 @@ STATICFILES_FINDERS = (
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/var/www/example.com/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
+# Set the full path to the uploads directory below if the media root cannot be
+# found.
+# MEDIA_ROOT = 'full/path/to/sticky_traps/uploads/'
+
+# If the automated template loader has trouble finding the templates, use 
+# TEMPLATES as shown below.
+# The exact path was given for the sticky_traps project.
+# TEMPLATES = [
+    # {
+        # "BACKEND": "django.template.backends.django.DjangoTemplates",
+        # "DIRS": [
+            # "full/path/to/sticky_traps/templates/sticky_traps",
+            # "full/path/to/sticky_traps/templates",
+        # ],
+        # "OPTIONS": {
+            # "context_processors": [
+                # "django.contrib.auth.context_processors.auth",
+            # ]
+        # }
+    # },
+# ]
 
 # URL that handles the media served from MEDIA_ROOT, used for managing stored
 # files. It must end in a slash if set to a non-empty value. You will need to
 # configure these files to be served in both development and production.
 # Example: "http://media.example.com/"
-MEDIA_URL = "/media/"
+MEDIA_URL = "set/full/path/to/uploads/"
+
 
 # A dictionary containing the settings for all caches to be used with Django.
 # https://docs.djangoproject.com/en/1.6/ref/settings/#caches
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-        'LOCATION': '127.0.0.1:11211',
+        'LOCATION': '127.0.0.1:11211', # Set server IP here.
     }
 }
 
@@ -119,12 +145,11 @@ REST_FRAMEWORK = {
 
 DATE_INPUT_FORMATS = ('%d-%m-%Y')
 
-GEOPOSITION_GOOGLE_MAPS_API_KEY = 'insert your own key here'
+GEOPOSITION_GOOGLE_MAPS_API_KEY = 'insert your own key here' # Set the API-key.
 
 GEOPOSITION_MAP_OPTIONS = {
     'minZoom': 8,
     'maxZoom': 0,
-    'center' : {'lat': 52, 'lng': 5},
 }
 
 

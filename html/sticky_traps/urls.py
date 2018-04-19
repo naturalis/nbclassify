@@ -1,7 +1,7 @@
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 from rest_framework import routers
 
-from sticky_traps import views
+import views
 
 # Create a router and register the viewsets with it.
 router = routers.DefaultRouter()

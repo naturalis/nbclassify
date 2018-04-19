@@ -21,7 +21,7 @@ from django.forms import modelformset_factory
 from sticky_traps.forms import ImageForm, VeldData
 from sticky_traps.models import Photo, Veld
 from sticky_traps.analyze import analyse_photo
-
+from sticky_traps import find_insects
 
 OUTPUT_VELD = os.path.join(settings.BASE_DIR, 'sticky_traps', 'results', 'veld_data.txt')
 OUTPUT_FOTO = os.path.join(settings.BASE_DIR, 'sticky_traps', 'results', 'foto_data.txt')
@@ -39,7 +39,6 @@ def home(request):
 
 
 def upload(request):
-
     data = {}
     FotoFormSet = modelformset_factory(Photo, form=ImageForm, extra=10)
 
@@ -68,8 +67,6 @@ def upload(request):
                 return HttpResponseRedirect(reverse('sticky_traps:results', args=(field_id,)))
         else:
             data['error_message'] = "Het formulier is nog niet goed ingevuld."
-            # print veld_form.errors
-            # print foto_form.errors
     else:
         veld_form = VeldData(prefix = 'veld1')
         foto_form = FotoFormSet(queryset=Photo.objects.none(), prefix= "foto's")
@@ -79,51 +76,69 @@ def upload(request):
     return render(request, "sticky_traps/upload.html", data)
 
 
-
 def results(request, field_id):
     data = {}
     velden = Veld.objects.all().values()
-    # print(velden)
     veld_nummers = Veld.objects.all().values("id")
-    # print(veld_nummers)
     opgeslagen = list(Veld.objects.filter(id=field_id).values('Opgeslagen'))[0]
 
     #TODO zorg ervoor dat deze code weer werkt zoals in eerste instantie de bedoeling was
-
+    # Uploads that contain images that cannot be analysed, because of failure to find all corners, are raised as an error_message
+    # and the user is recommended to remake the picture of the trap. All of the uploaded images (including the faulty one) are deleted from the database
+    # to refrain from getting the "De informatie voor dit veld op deze datum is al eerder ingevuld."-error_message. The images can then be uploaded again with the same information.
     if opgeslagen.get('Opgeslagen')==False:
-        gemiddeld_oppervlak_over_veld, variance = generate_output(field_id)
-        data["oppervlak"] = gemiddeld_oppervlak_over_veld
-        data["variance"] = variance
+        gemiddeld_oppervlak_over_veld, variance, valnrfout = generate_output(field_id)
+        if valnrfout == "":
+            data["oppervlak"] = gemiddeld_oppervlak_over_veld
+            data["variance"] = variance
+        else:
+            data['error_message'] = "De foto met het valnummer "+valnrfout+" kan niet worden geanalyseerd doordat de hoeken van de val niet te vinden zijn. Dit kan komen door reflectie van licht op de val, of doordat de val niet helemaal op de foto staat. Probeer het opnieuw door een andere foto te maken en deze te uploaden, samen met de andere geüploade foto's."
+            data['oppervlak'] = "N/A"
+            data['variance'] = "N/A"
     else:
-        veld_object = Veld.objects.get(id=field_id)
-        data["oppervlak"] = veld_object.gemiddeld_oppervlak_over_veld
-        data["variance"] = veld_object.variance
+        if valnrfout == "":
+            veld_object = Veld.objects.get(id=field_id)
+            data["oppervlak"] = veld_object.gemiddeld_oppervlak_over_veld
+            data["variance"] = veld_object.variance
+        else:
+            data['error_message'] = "De foto met het valnummer "+valnrfout+" kan niet worden geanalyseerd doordat de hoeken van de val niet te vinden zijn. Dit kan komen door reflectie van licht op de val, of doordat de val niet helemaal op de foto staat. Probeer het opnieuw door een andere foto te maken en deze te uploaden, samen met de andere geüploade foto's."
+            data['oppervlak'] = "N/A"
+            data['variance'] = "N/A"
 
     return render(request, "sticky_traps/results.html", data)
+
 
 # ---------
 # Functions
 # ---------
 
+# If not all corners of an image can be found it removes the saved data and stops the rest of the code from being run. The trapnumber is returned to inform the user of the faulty    # image.
 def generate_output(field_id):
-
     fotos_voor_veld = list(Photo.objects.filter(unieke_veld_code=field_id).values())
     Foto_output_file = open(OUTPUT_FOTO, "a+")
     avg_area_list = []
     for item in fotos_voor_veld:
-        print item.get('foto')
         if len(item.get('foto')) != 0:
-            itempath=os.path.abspath(os.path.join("media/", item.get('foto')))
-            insect_informatie = analyse_photo(itempath)
-        # print insect_informatie
-        # print insect_informatie.get("geschat_aantal_insecten")
-            Foto_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(item.get('Val_nummer'), item.get('veldnr'), item.get('datum'), insect_informatie["total_area"],
-                    insect_informatie["number_of_insects"], insect_informatie["smaller_than_4"], insect_informatie["between_4_and_10"],
-                    insect_informatie["larger_than_10"]))
-            avg_area_list.append(insect_informatie["total_area"])
+            itempath=(os.path.join(settings.BASE_DIR, "sticky_traps/uploads/", item.get('foto')))
+            insect_informatie, nocorners = analyse_photo(itempath)
+            if nocorners == False:
+                valnrfout = ""
+                Foto_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(item.get('Val_nummer'), item.get('veldnr'), item.get('datum'), insect_informatie["average_area"], insect_informatie["number_of_insects"], insect_informatie["smaller_than_4"], insect_informatie["between_4_and_10"], insect_informatie["larger_than_10"]))
+                avg_area_list.append(insect_informatie["average_area"])
+            else:
+                valnrfout = str(item.get('Val_nummer'))
+                print(valnrfout)
+                gemiddeld_oppervlak = None
+                variance = None
+                Photo.objects.filter(unieke_veld_code=field_id).delete()
+                Veld.objects.filter(id=field_id).delete()
     Foto_output_file.close()
-    veld_output = list(Veld.objects.filter(id=field_id).values())[0]
-    veld_object = Veld.objects.get(id=field_id)
+    try:
+        veld_output = list(Veld.objects.filter(id=field_id).values())[0]
+        veld_object = Veld.objects.get(id=field_id)
+    except:
+        veld_output = None
+        veld_object = None
     try:
         gemiddeld_oppervlak = sum(avg_area_list) / float(len(avg_area_list))
         ssd = sum([(x- gemiddeld_oppervlak )**2 for x in avg_area_list])
@@ -131,21 +146,17 @@ def generate_output(field_id):
     except:
         gemiddeld_oppervlak= None
         variance= None
-    #print veld_object
-    veld_object.Opgeslagen=True
-    veld_object.gemiddeld_oppervlak_over_veld=gemiddeld_oppervlak
-    veld_object.variance=variance
-    veld_object.save()
-    #print(veld_output)
-    Veld_output_file = open(OUTPUT_VELD, "a+")
-    Veld_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" %(
-        veld_output.get('Veld_identificatie_code'), veld_output.get('Locatie'), veld_output.get('Beheer_type'),
-        veld_output.get('Plaatsings_datum'), veld_output.get('Beweiding'),
-        veld_output.get('Maaien'), veld_output.get('Minimale_hoogte_gras'), veld_output.get('Maximale_hoogte_gras'),
-        veld_output.get('Hoeveelheid_biodiversiteit'), gemiddeld_oppervlak, variance
-        ))
-    Veld_output_file.close()
-    Opmerkingen_output_file = open(OUTPUT_OPMERKINGEN, "a+")
-    Opmerkingen_output_file.write("%s\t%s\n"%(veld_output.get('Veld_identificatie_code'), veld_output.get('Opmerkingen_en_bijzonderheden')))
-    Opmerkingen_output_file.close()
-    return gemiddeld_oppervlak, variance
+    try:
+        veld_object.Opgeslagen=True
+        veld_object.gemiddeld_oppervlak_over_veld=gemiddeld_oppervlak
+        veld_object.variance=variance
+        veld_object.save()
+        Veld_output_file = open(OUTPUT_VELD, "a+")
+        Veld_output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" %(veld_output.get('Veld_identificatie_code'), veld_output.get('Locatie'), veld_output.get('Beheer_type'), veld_output.get('Plaatsings_datum'), veld_output.get('Beweiding'),veld_output.get('Maaien'), veld_output.get('Minimale_hoogte_gras'), veld_output.get('Maximale_hoogte_gras'),veld_output.get('Hoeveelheid_biodiversiteit'), gemiddeld_oppervlak, variance))
+        Veld_output_file.close()
+        Opmerkingen_output_file = open(OUTPUT_OPMERKINGEN, "a+")
+        Opmerkingen_output_file.write("%s\t%s\n"%(veld_output.get('Veld_identificatie_code'), veld_output.get('Opmerkingen_en_bijzonderheden')))
+        Opmerkingen_output_file.close()
+    except: 
+        pass
+    return gemiddeld_oppervlak, variance, valnrfout

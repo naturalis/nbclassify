@@ -1,7 +1,7 @@
 from django import forms
 
-from sticky_traps.models import Photo
-from sticky_traps.models import Veld
+from models import Photo
+from models import Veld
 import datetime
 
 
