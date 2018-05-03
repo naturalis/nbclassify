@@ -28,11 +28,6 @@ OUTPUT_VELD = os.path.join(settings.BASE_DIR, 'sticky_traps', 'results', 'veld_d
 OUTPUT_FOTO = os.path.join(settings.BASE_DIR, 'sticky_traps', 'results', 'foto_data.txt')
 OUTPUT_OPMERKINGEN = os.path.join(settings.BASE_DIR, 'sticky_traps', 'results', 'opmerkingen.txt')
 
-testfile = os.path.join(settings.BASE_DIR, 'sticky_traps', 'tf.txt')
-tf = open(testfile, "a")
-
-import logging
-logging.basicConfig(filename=os.path.join(settings.BASE_DIR, 'sticky_traps','pylog.log'), level=logging.DEBUG) #DELETE LOGFILE SETTINGS
 # --------------------------
 # Standard Sticky traps views
 # --------------------------
@@ -97,15 +92,15 @@ def results(request, field_id):
         if valnrfout == "":
             data["oppervlak"] = gemiddeld_oppervlak_over_veld
             data["variance"] = variance
-            op = "".join(output)
-            tb = op.replace("'", "").replace(", ", "<br>")
-            data["output"] = tb
+            result = "".join(output).replace("'", "").replace(", ", "<br>")
+            data["output"] = result
         else:
             data['error_message'] = "De foto met het valnummer "+valnrfout+" kan niet worden geanalyseerd doordat\
              de hoeken van de val niet te vinden zijn. Dit kan komen door reflectie van licht op de val, of doordat de val niet helemaal op de foto staat.\
              Probeer het opnieuw door een andere foto te maken en deze te uploaden, samen met de andere geüploade foto's."
             data['oppervlak'] = "N/A"
             data['variance'] = "N/A"
+            data["output"] = "N/A"
 
     else:
         if valnrfout == "":
@@ -113,13 +108,15 @@ def results(request, field_id):
             veld_object = Veld.objects.get(id=field_id)
             data["oppervlak"] = veld_object.gemiddeld_oppervlak_over_veld
             data["variance"] = veld_object.variance
-            data["output"] = output
+            result = "".join(output).replace("'", "").replace(", ", "<br>")
+            data["output"] = result
         else:
             data['error_message'] = "De foto met het valnummer "+valnrfout+" kan niet worden geanalyseerd doordat\
              de hoeken van de val niet te vinden zijn. Dit kan komen door reflectie van licht op de val, of doordat de val niet helemaal op de foto staat.\
               Probeer het opnieuw door een andere foto te maken en deze te uploaden, samen met de andere geüploade foto's."
             data['oppervlak'] = "N/A"
             data['variance'] = "N/A"
+            data["output"] = "N/A"
 
 
     return render(request, "sticky_traps/results.html", data)
@@ -149,7 +146,6 @@ def generate_output(field_id):
                 str(insect_informatie["between_4_and_10"]) +"\t\t"+ str(insect_informatie["larger_than_10"]) +"\n")
             else:
                 valnrfout = str(item.get('Val_nummer'))
-                print(valnrfout)
                 gemiddeld_oppervlak = None
                 variance = None
                 insect_informatie = None
