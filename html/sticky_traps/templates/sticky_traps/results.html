@@ -1,10 +1,13 @@
 {% extends "sticky_traps/base_layout.html" %}
 
 {% block content %}
-<h1>Sticky traps upload</i></h1>
+<h1>Resultaten Plakvallen</i></h1>
 
 <p>Op dit veld is gemiddeld {{oppervlak}} vierkante millimeter van iedere val bedekt met insecten.
-  Er is ongeveer {{variance}} vierkante millimeter variantie tussen de vallen. 
+  Er is ongeveer {{variance}} vierkante millimeter variantie tussen de vallen.
+<pre><font size="3" face="Open Sans",sans-serif color="#3C4043">                     Insecten
+       Val         Totaal   <4mm   4-10mm   >10mm
+{{output}}</font></pre>
 </p>
 
 {% if error_message %}

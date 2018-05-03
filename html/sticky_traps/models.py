@@ -32,8 +32,33 @@ class Veld(models.Model):
     Opgeslagen = models.BooleanField(default=False)
     Veld_identificatie_code = models.CharField(max_length=50, help_text="Het eerste deel van de code die op de val staat. Als op de val bijvoorbeeld Koning-UG-03 staat, schrijf dan Koning-UG op.")
     Locatie = GeopositionField(help_text="Zoek op de plaatsnaam van de boerderij en versleep de marker vervolgens naar het midden van het veld waar de vallen zijn uitgezet.")
-    Beheer_type = models.CharField(max_length=50, null=True, help_text="Het type beheer wat word gebruikt zoals uitgesteld maaien of legselbescherming.")
     Plaatsings_datum = models.DateField(default=datetime.datetime.now, help_text="De datum waarop de vallen zijn uitgezet")
+    GEEN = "Landbouw: geen beheerpakket"
+    UM = "Landbouw: uitgesteld maaien"
+    LB = "Landbouw: legselbeheer"
+    KG = "Landbouw: kruidenrijk grasland"
+    VH = "Natuur: vochtig hooiland"
+    WP = "Natuur: weidevogel pakket"
+    NO = "Weet ik niet"
+    Beheer_type_keuzes = (
+        (GEEN, "Landbouw: geen beheerpakket"),
+        (UM, "Landbouw: uitgesteld maaien"),
+        (LB, "Landbouw: legselbeheer"),
+        (KG, "Landbouw: kruidenrijk grasland"),
+        (VH, "Natuur: vochtig hooiland"),
+        (WP, "Natuur: weidevogel pakket"),
+        (NO, "Weet ik niet")
+        )
+    Beheer_type = models.CharField(max_length=50, choices=Beheer_type_keuzes, blank=False, help_text="Het type beheer wat word gebruikt in het weiland.")
+    VAST = "Vaste mest"
+    RUIG = "Ruige mest"
+    NO = "Weet ik niet"
+    Bemesting_keuzes = (
+        (VAST, "Vaste mest"),
+        (RUIG, "Ruige mest"),
+        (NO, "Weet ik niet")
+        )
+    Bemesting = models.CharField(max_length=30, choices=Bemesting_keuzes, blank=False, help_text="Geef het type bemesting aan.")
     Beweiding = models.BooleanField(default=False, help_text="Vink dit vakje aan als er beweid word.")
     Maaien = models.BooleanField(default=False, help_text="Vink dit vakje aan als er op dit perceel gemaaid word")
     Minimale_hoogte_gras = models.DecimalField(decimal_places=2, max_digits=5, help_text="de geschatte minimale hoogte van het gras op dit perceel in centimeters")
@@ -46,13 +71,8 @@ class Veld(models.Model):
         (GEMIDDELD, "Gemiddelde biodiversiteit"),
         (VEEL, "Hoge biodiversiteit")
         )
-    Hoeveelheid_biodiversiteit = models.CharField(
-    max_length=30,
-    choices=Hoeveelheid_biodiversiteit_keuzes,
-    blank=False,
-    help_text="geef een schatting van de hoeveelheid verschillende kruiden in dit veld; veel, gemiddeld, of weinig"
-    )
-    Opmerkingen_en_bijzonderheden = models.TextField(null=True, help_text="geef eventuele bijzonderheden of opmerkingen hier aan")
+    Hoeveelheid_biodiversiteit = models.CharField(max_length=30, choices=Hoeveelheid_biodiversiteit_keuzes, blank=False, help_text="geef een schatting van de hoeveelheid verschillende kruiden in dit veld; veel, gemiddeld, of weinig")
+    Opmerkingen_en_bijzonderheden = models.TextField(max_length=100, help_text="geef eventuele bijzonderheden of opmerkingen hier aan")
     gemiddeld_oppervlak_over_veld = models.FloatField(null=True)
     variance = models.FloatField(null=True)
 

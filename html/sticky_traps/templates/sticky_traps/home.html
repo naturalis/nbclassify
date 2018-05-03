@@ -1,7 +1,7 @@
 {% extends "sticky_traps/base_layout.html" %}
 
 {% block content %}
-<h1>Project Vitale weidevogels</i></h1>
+<h1>Vitale Weidevogels</i></h1>
 
 <p>Welkom op de vrijwilliger site van het project Vitale Weidevogels.
 Dit project heeft als doel om op lange termijn de voedselvoorziening van de weidevogelkuikens te monitoren over een groot gebied.
@@ -16,7 +16,7 @@ Als de foto's niet aan deze eisen voldoen zal het analyseren van de foto mislukk
     <li><i class="fa-li fa fa-check-square-o"></i> De hele plakval bevat;</li>
     <li><i class="fa-li fa fa-check-square-o"></i> Recht boven de val is genomen, zodat hij er recht opstaat;</li>
     <li><i class="fa-li fa fa-check-square-o"></i> Een donkere achtergrond heeft;</li>
-    <li><i class="fa-li fa fa-check-square-o"></i> Groot en scherp genoeg is om de kleinste insecten te kunnen onderscheiden.).</li>
+    <li><i class="fa-li fa fa-check-square-o"></i> Groot en scherp genoeg is om de kleinste insecten te kunnen onderscheiden.</li>
 </ul>
 
 
@@ -24,6 +24,6 @@ Als de foto's niet aan deze eisen voldoen zal het analyseren van de foto mislukk
     <div class="alert alert-warning" role="alert"><i class="fa fa-exclamation-circle fa-fw"></i> {{error_message}}</div>
 {% endif %}
 
-<div class="btn btn-primary btn-lg"> <i class="fa fa-upload fa-fw"></i> <a class="h3" href="{% url 'sticky_traps:upload' %}">Upload fotos</a></div>
+<div class="btn btn-primary btn-lg"> <i class="fa fa-upload fa-fw"></i> <a class="h3" href="{% url 'sticky_traps:upload' %}">Upload foto's</a></div>
 
 {% endblock %}
