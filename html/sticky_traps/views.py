@@ -28,6 +28,8 @@ OUTPUT_VELD = os.path.join(settings.BASE_DIR, 'sticky_traps', 'results', 'veld_d
 OUTPUT_FOTO = os.path.join(settings.BASE_DIR, 'sticky_traps', 'results', 'foto_data.txt')
 OUTPUT_OPMERKINGEN = os.path.join(settings.BASE_DIR, 'sticky_traps', 'results', 'opmerkingen.txt')
 
+import logging
+logging.basicConfig(filename=os.path.join(settings.BASE_DIR, 'sticky_traps','pylog.log'), level=logging.DEBUG) #DELETE LOGFILE SETTINGS
 # --------------------------
 # Standard Sticky traps views
 # --------------------------
@@ -100,7 +102,7 @@ def results(request, field_id):
              Probeer het opnieuw door een andere foto te maken en deze te uploaden, samen met de andere geüploade foto's."
             data['oppervlak'] = "N/A"
             data['variance'] = "N/A"
-            data["output"] = "N/A"
+            data['output'] = "N/A"
 
     else:
         if valnrfout == "":
@@ -116,7 +118,7 @@ def results(request, field_id):
               Probeer het opnieuw door een andere foto te maken en deze te uploaden, samen met de andere geüploade foto's."
             data['oppervlak'] = "N/A"
             data['variance'] = "N/A"
-            data["output"] = "N/A"
+            data['output'] = "N/A"
 
 
     return render(request, "sticky_traps/results.html", data)

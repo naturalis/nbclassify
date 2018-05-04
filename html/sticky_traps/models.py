@@ -37,6 +37,7 @@ class Veld(models.Model):
     UM = "Landbouw: uitgesteld maaien"
     LB = "Landbouw: legselbeheer"
     KG = "Landbouw: kruidenrijk grasland"
+    EW = "Landbouw: extensief weiden"
     VH = "Natuur: vochtig hooiland"
     WP = "Natuur: weidevogel pakket"
     NO = "Weet ik niet"
@@ -45,6 +46,7 @@ class Veld(models.Model):
         (UM, "Landbouw: uitgesteld maaien"),
         (LB, "Landbouw: legselbeheer"),
         (KG, "Landbouw: kruidenrijk grasland"),
+        (EW, "Landbouw: extensief weiden"),
         (VH, "Natuur: vochtig hooiland"),
         (WP, "Natuur: weidevogel pakket"),
         (NO, "Weet ik niet")
