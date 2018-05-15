@@ -3,12 +3,13 @@
 {% block content %}
 <h1>Resultaten Plakvallen</i></h1>
 
-<p>Op dit veld is gemiddeld {{oppervlak}} vierkante millimeter van iedere val bedekt met insecten.
-  Er is ongeveer {{variance}} vierkante millimeter variantie tussen de vallen.
+<p>Op dit veld is gemiddeld {{oppervlak|floatformat:2}} mm2 van iedere val bedekt met insecten.
+  Er is ongeveer {{variance|floatformat:2}} mm2 variantie tussen de vallen.</p>
 <pre><font size="3" face="Open Sans",sans-serif color="#3C4043">                     Insecten
        Val         Totaal   <4mm   4-10mm   >10mm
-{{output}}</font></pre>
-</p>
+{{output}}
+Gemiddeld aantal     {{gem_4|floatformat:2}}     {{gem_4_10|floatformat:2}}    {{gem_10|floatformat:2}}</font></pre>
+
 
 {% if error_message %}
     <div class="alert alert-warning" role="alert"><i class="fa fa-exclamation-circle fa-fw"></i> {{error_message}}</div>
