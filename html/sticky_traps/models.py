@@ -1,24 +1,17 @@
+# Importing useful modules.
 import hashlib
 import os.path
 import time
 import datetime
-import re
-
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch.dispatcher import receiver
 from geoposition.fields import GeopositionField
 
-from django.conf import settings
-# tf = os.path.join(settings.BASE_DIR, 'sticky_traps', 'tf.txt')
 
-
+# Return the path for an uploaded image. Uploaded images are placed in ``sticky_traps/uploads/`` and the file is
+# renamed to the file's MD5 sum.
 def get_image_path(instance, filename):
-    """Return the path for an uploaded image.
-
-    Uploaded images are placed in ``sticky_traps/uploads/`` and the file is renamed to
-    the file's MD5 sum.
-    """
     hasher = hashlib.md5()
     buf = instance.foto.read()
     hasher.update(buf)
@@ -27,27 +20,9 @@ def get_image_path(instance, filename):
     path = "%%Y/%%m/%%d/%s" % (filename_,)
 
     return time.strftime(path)
-    # Uploaden meerdere foto's en het verkrijgen van valnaam via naam van afbeelding
-    # for files in filename:
-    # open(tf, "w").close()
-    # testf = open(tf, "a+")
-    # testf.write((re.sub("\D", "", files)) + "\n")
-    # hasher = hashlib.md5()
-    # buf = instance.foto.read()
-    # hasher.update(buf)
-    # parts = os.path.splitext(files)
-    # filename_ = "%s%s" % (hasher.hexdigest()[:10], parts[1])
-    # path = "%%Y/%%m/%%d/%s" % (filename_,)
-    # testf.close()
-    # return time.strftime(path)
-
-    def __unicode__(self):
-        if self.species:
-            return "%s %s" % (self.genus, self.species)
-        else:
-            return self.genus
 
 
+# Creating the fields for the model Veld.
 class Veld(models.Model):
     Opgeslagen = models.BooleanField(default=False)
     Veld_identificatie_code = models.CharField(max_length=50, help_text="Het eerste deel van de code die op de val \
@@ -143,10 +118,12 @@ class Veld(models.Model):
     gem_4_10_mm = models.FloatField(null=True)
     gem_10_mm = models.FloatField(null=True)
 
+
     def __str__(self):
         return str(self.Veld_identificatie_code)
 
 
+# Creating the fields for the model Photo.
 class Photo(models.Model):
     """Model for uploaded photos."""
     veld = models.ForeignKey(Veld, null=True)
@@ -161,8 +138,10 @@ class Photo(models.Model):
     def __unicode__(self):
         return self.file_name()
 
+
     def file_name(self):
         return os.path.basename(self.foto.name)
+
 
     def image_tag(self):
         if self.image:
@@ -174,14 +153,10 @@ class Photo(models.Model):
     image_tag.allow_tags = True
 
 
+# Delete file associated with Photo instance. Receive the ``post_delete`` signal and delete the file associated with the
+# model instance. This removes the associated file when the model instance is removed from the Django Admin.
 @receiver(post_delete, sender=Photo)
 def photo_delete_hook(sender, instance, **kwargs):
-    """Delete file associated with Photo instance.
-
-    Receive the ``post_delete`` signal and delete the file associated with the
-    model instance. This removes the associated file when the model instance
-    is removed from the Django Admin.
-    """
     # Pass False so ImageField doesn't save the model.
     try:
         if instance.image:
